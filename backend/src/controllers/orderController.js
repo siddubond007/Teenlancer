@@ -7,9 +7,16 @@ const {
   getGigOrderCapacity
 } = require('../services/gigOrderCapacityService');
 
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+
+if (!razorpayKeyId || !razorpayKeySecret) {
+  throw new Error('Razorpay API credentials are not configured.');
+}
+
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key_for_dev',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret'
+  key_id: razorpayKeyId,
+  key_secret: razorpayKeySecret
 });
 
 // Create Order & Fund Escrow
@@ -381,7 +388,7 @@ exports.verifyPayment = async (req, res) => {
     }
 
     const expectedSignature = require('crypto')
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'dummy_secret')
+      .createHmac('sha256', razorpayKeySecret)
       .update(razorpayOrderId + '|' + razorpayPaymentId)
       .digest('hex');
 
