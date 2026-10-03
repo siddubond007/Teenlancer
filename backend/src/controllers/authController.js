@@ -2,6 +2,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/db');
 
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not configured.');
+}
+
 async function createAdminLoginLog(adminId, email, ipAddress, userAgent, loginStatus) {
   try {
     await prisma.adminLoginLog.create({
@@ -118,7 +124,7 @@ exports.register = async (req, res) => {
       include: { profile: true, wallet: true }
     });
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     const { passwordHash: _passwordHash, ...safeUser } = user;
     res.status(201).json({
       message: 'Registration successful',
@@ -197,7 +203,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     if (user.role === 'ADMIN') {
       await createAdminLoginLog(
