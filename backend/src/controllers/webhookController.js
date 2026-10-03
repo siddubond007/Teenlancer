@@ -3,7 +3,12 @@ const prisma = require('../config/db');
 
 exports.handleRazorpayWebhook = async (req, res) => {
   try {
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET || 'fallback_secret_for_dev';
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    if (!secret) {
+      console.error('❌ Razorpay webhook secret is not configured.');
+      return res.status(503).json({ error: 'Webhook processing is not configured.' });
+    }
     const signature = req.headers['x-razorpay-signature'];
     const eventId = req.headers['x-razorpay-event-id'];
 
