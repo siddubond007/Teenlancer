@@ -93,7 +93,13 @@ router.post('/admin-login', async (req, res) => {
       }
     });
 
-    res.json({ message: 'Master Admin Access Granted', token, user: adminUser });
+    const { passwordHash: _passwordHash, ...safeAdminUser } = adminUser;
+
+    res.json({
+      message: 'Master Admin Access Granted',
+      token,
+      user: safeAdminUser
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
