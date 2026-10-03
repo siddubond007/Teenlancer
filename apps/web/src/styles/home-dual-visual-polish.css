@@ -1,0 +1,55 @@
+/* HP-02 visual polish: readable card copy + fluid blue gradient rail. */
+.home-dual__client-pitch-card p {
+  color: #c1ced8 !important;
+  font-size: 0.76rem !important;
+  line-height: 1.62 !important;
+  opacity: 0.98 !important;
+}
+
+.home-dual__client-trust-item span {
+  color: #b0bfca !important;
+  opacity: 0.98 !important;
+}
+
+.home-dual__rail-word {
+  background: linear-gradient(
+    112deg,
+    #b9f2ff 0%,
+    #62c8ff 28%,
+    #4f8cff 52%,
+    #8f6cff 76%,
+    #69e0ff 100%
+  ) !important;
+  background-size: 260% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  animation: home-dual-rail-blue-flow 7s ease-in-out infinite !important;
+  transform-origin: left center;
+  transition:
+    transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    letter-spacing 520ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, filter;
+}
+
+@keyframes home-dual-rail-blue-flow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.home-dual__rail-word:hover {
+  transform: translate3d(10px, -4px, 0) scale(1.045) skewX(-2deg) rotate(-0.7deg) !important;
+  filter:
+    drop-shadow(0 0 10px rgba(98, 200, 255, 0.20))
+    drop-shadow(0 0 24px rgba(143, 108, 255, 0.14));
+  letter-spacing: -0.048em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-dual__rail-word {
+    animation: none !important;
+    transition: none !important;
+  }
+}

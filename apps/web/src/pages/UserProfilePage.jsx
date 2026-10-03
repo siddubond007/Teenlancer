@@ -1,0 +1,2190 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { 
+  Star, ShieldCheck, ShieldAlert, CheckCircle2, MapPin, Clock, DollarSign, 
+  Award, Mail, Phone, Check, ArrowRight, MessageSquare, Briefcase, 
+  ChevronRight, ExternalLink, Calendar, BookOpen, GraduationCap,
+  Sparkles, User, Edit3, ImagePlus, PlusCircle, Trash2, X, Plus,
+  FileCheck, ScrollText, Bookmark, Search, CheckCircle, Camera, Upload, Loader2,
+  FileText, Link2, Globe, Code, TrendingUp, BarChart3, Activity, XCircle, Target
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
+import API from '../services/api';
+import ImageCropModal from '../components/ImageCropModal';
+import { INDIAN_COLLEGES } from '../data/collegesData';
+import { ALL_DEGREES_PROGRAMS } from '../data/degreesData';
+import { ALL_SCHOOLS_DATA, ALL_SCHOOL_PROGRAMS } from '../data/schoolsData';
+import { COMPREHENSIVE_CATEGORIES } from '../data/categoriesData';
+
+
+// Skills Database as plain strings for .toLowerCase() compatibility
+export const ALL_SKILLS_DATABASE = [
+  'React', 'Node.js', 'Python', 'JavaScript', 'TypeScript', 'HTML', 'CSS', 'Tailwind CSS',
+  'Java', 'C++', 'C#', 'SQL', 'PostgreSQL', 'MongoDB', 'MySQL', 'Firebase', 'Supabase', 'Redis',
+  'Git', 'GitHub', 'Docker', 'Kubernetes', 'AWS', 'Google Cloud', 'Azure', 'Linux',
+  'UI/UX Design', 'Figma', 'Adobe XD', 'Photoshop', 'Illustrator', 'Graphic Design', 'Video Editing',
+  'Machine Learning', 'Deep Learning', 'Data Analysis', 'Data Science', 'Pandas', 'NumPy', 'TensorFlow', 'PyTorch',
+  'Content Writing', 'Copywriting', 'SEO', 'Digital Marketing', 'Social Media Marketing',
+  'Mobile App Development', 'Flutter', 'React Native', 'Android Development', 'iOS Development',
+  'Cybersecurity', 'Ethical Hacking', 'Penetration Testing', 'Network Security',
+  'Communication', 'Project Management', 'Problem Solving', 'Leadership', 'Public Speaking'
+];
+
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June', 
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+
+const YEARS = Array.from({ length: 30 }, (_, i) => String(2026 - i));
+
+const getReputationLevel = (points = 50) => {
+  if (points >= 1000) return { title: '👑 Campus Legend', color: 'text-yellow-400' };
+  if (points >= 500) return { title: '💎 Elite Freelancer', color: 'text-cyan-400' };
+  if (points >= 250) return { title: '🔥 Trusted Freelancer', color: 'text-pink-400' };
+  if (points >= 100) return { title: '⭐ Rising Freelancer', color: 'text-indigo-400' };
+  return { title: '🌱 New Talent', color: 'text-emerald-400' };
+};
+
+
+const COUNTRIES = [
+  'India', 'United States', 'United Kingdom', 'Canada', 'Australia', 
+  'Germany', 'United Arab Emirates', 'Singapore', 'France', 'Netherlands'
+];
+
+export default function UserProfilePage({ currentUser }) {
+  const { username } = useParams();
+  const [profileUser, setProfileUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('about');
+
+  // Cropper State
+  const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [cropType, setCropType] = useState(null);
+  
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [showCoverModal, setShowCoverModal] = useState(false);
+  const avatarFileInputRef = useRef(null);
+  const coverFileInputRef = useRef(null);
+  const portfolioFileInputRef = useRef(null);
+  const certFileInputRef = useRef(null);
+
+  // Edit Modals
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPortfolioModal, setShowPortfolioModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showSocialModal, setShowSocialModal] = useState(false);
+
+  // Experience Modal (Matching Screenshot)
+  const [showExperienceModal, setShowExperienceModal] = useState(false);
+  const [expForm, setExpForm] = useState({
+    title: '',
+    company: '',
+    country: 'India',
+    city: '',
+    startMonth: 'January',
+    startYear: '2025',
+    isCurrent: false,
+    endMonth: 'December',
+    endYear: '2026',
+    description: ''
+  });
+
+  // Other Section Modals: 'education' | 'qualification' | 'certification'
+  const [modalType, setModalType] = useState(null);
+  const [showEduCollegeDropdown, setShowEduCollegeDropdown] = useState(false);
+  const [showDegreeDropdown, setShowDegreeDropdown] = useState(false);
+  const [sectionForm, setSectionForm] = useState({ 
+    title: '', institution: '', period: '', desc: '', grade: '', branch: '', certImg: '', certLink: '' 
+  });
+
+  // Social Links Form
+  const [socialForm, setSocialForm] = useState({
+    linkedin: '',
+    github: '',
+    instagram: '',
+    twitter: '',
+    youtube: '',
+    leetcode: ''
+  });
+
+  // Edit Form State
+  const [editForm, setEditForm] = useState({
+    tagline: '',
+    category: 'Graphic Design',
+    college: '',
+    hourlyRate: '499',
+    bio: '',
+    skills: [],
+    responseTimeExpectation: ''
+  });
+
+  const [collegeQuery, setCollegeQuery] = useState('');
+  const [showCollegeDropdown, setShowCollegeDropdown] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationModalType, setVerificationModalType] = useState('college_id');
+  const [idCardFile, setIdCardFile] = useState(null);
+  const [idCardPreview, setIdCardPreview] = useState('');
+  const [isSubmittingVerification, setIsSubmittingVerification] = useState(false);
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [skillInput, setSkillInput] = useState('');
+  const [showSkillSuggestions, setShowSkillSuggestions] = useState(false);
+
+  const [portfolioForm, setPortfolioForm] = useState({ title: '', category: 'Logo Design', img: '', link: '' });
+
+  const loadProfile = () => {
+    setLoading(true);
+    API.get(`/users/${username}`)
+      .then(res => {
+        setProfileUser(res.data);
+        if (res.data.profile) {
+          setEditForm({
+            tagline: res.data.profile.tagline || '',
+            category: res.data.profile.category || 'Graphic Design',
+            college: res.data.profile.college || '',
+            hourlyRate: String(res.data.profile.hourlyRate || 499),
+            bio: res.data.profile.bio || '',
+            skills: res.data.profile.skills || ['Student Talent'],
+            responseTimeExpectation: res.data.profile.responseTimeExpectation || ''
+          });
+          setCollegeQuery(res.data.profile.college || '');
+          if (res.data.profile.socialLinks) {
+            setSocialForm(res.data.profile.socialLinks);
+          }
+        }
+      })
+      .catch(err => console.log('Error loading profile:', err))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadProfile();
+  }, [username]);
+
+  // File Handlers for Cropper
+  const handleAvatarFileChosen = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result);
+      setCropType('avatar');
+      setShowAvatarModal(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCoverFileChosen = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result);
+      setCropType('cover');
+      setShowCoverModal(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCroppedUploadSave = async (croppedBase64) => {
+    try {
+      const uploadRes = await API.post('/upload', { base64Data: croppedBase64 });
+      const cloudinaryUrl = uploadRes.data.url;
+
+      if (cropType === 'avatar') {
+        await API.put('/users/profile', { avatarUrl: cloudinaryUrl });
+        alert('Profile picture cropped and saved to Cloudinary!');
+      } else {
+        await API.put('/users/profile', { coverUrl: cloudinaryUrl });
+        alert('Cover banner cropped and saved to Cloudinary!');
+      }
+
+      confetti({ particleCount: 120, spread: 80 });
+      setCropImageSrc(null);
+      setCropType(null);
+      loadProfile();
+    } catch (err) {
+      alert('Upload failed: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!window.confirm('Remove profile picture?')) return;
+    try {
+      await API.put('/users/profile', { avatarUrl: '' });
+      setShowAvatarModal(false);
+      loadProfile();
+    } catch (err) {
+      alert('Failed to remove avatar.');
+    }
+  };
+
+  const handleRemoveCover = async () => {
+    if (!window.confirm('Remove cover photo?')) return;
+    try {
+      await API.put('/users/profile', { coverUrl: '' });
+      setShowCoverModal(false);
+      loadProfile();
+    } catch (err) {
+      alert('Failed to remove cover.');
+    }
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    try {
+      await API.put('/users/profile', {
+        tagline: editForm.tagline,
+        category: editForm.category,
+        college: editForm.college || collegeQuery,
+        hourlyRate: Number(editForm.hourlyRate),
+        bio: editForm.bio,
+        skills: editForm.skills,
+        responseTimeExpectation: editForm.responseTimeExpectation
+      });
+      confetti({ particleCount: 100, spread: 70 });
+      setShowEditModal(false);
+      loadProfile();
+      alert('Profile updated successfully!');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to update profile.');
+    }
+  };
+
+  const handleAddSkill = (skill) => {
+    const trimmed = skill.trim();
+    if (trimmed && !editForm.skills.includes(trimmed)) {
+      setEditForm(prev => ({ ...prev, skills: [...prev.skills, trimmed] }));
+    }
+    setSkillInput('');
+    setShowSkillSuggestions(false);
+  };
+
+  const handleRemoveSkill = (skillToRemove) => {
+    setEditForm(prev => ({ ...prev, skills: prev.skills.filter(s => s !== skillToRemove) }));
+  };
+
+  // ─── SAVE EXACT EXPERIENCE MODAL (MATCHING SCREENSHOT) ───
+  const handleSaveExperience = async (e) => {
+    e.preventDefault();
+    if (!profileUser?.profile) return;
+
+    try {
+      const periodString = expForm.isCurrent 
+        ? `${expForm.startMonth} ${expForm.startYear} - Present`
+        : `${expForm.startMonth} ${expForm.startYear} - ${expForm.endMonth} ${expForm.endYear}`;
+
+      const locationString = expForm.city ? `${expForm.city}, ${expForm.country}` : expForm.country;
+
+      const newExpItem = {
+        id: Date.now(),
+        title: expForm.title,
+        company: expForm.company,
+        institution: `${expForm.company} • ${locationString}`,
+        period: periodString,
+        desc: expForm.description,
+        country: expForm.country,
+        city: expForm.city,
+        isCurrent: expForm.isCurrent
+      };
+
+      const currentList = Array.isArray(profileUser.profile.experienceList) ? profileUser.profile.experienceList : [];
+      const updatedList = [newExpItem, ...currentList];
+
+      await API.put('/users/profile', { experienceList: updatedList });
+
+      confetti({ particleCount: 120 });
+      setShowExperienceModal(false);
+      setExpForm({
+        title: '',
+        company: '',
+        country: 'India',
+        city: '',
+        startMonth: 'January',
+        startYear: '2025',
+        isCurrent: false,
+        endMonth: 'December',
+        endYear: '2026',
+        description: ''
+      });
+      loadProfile();
+      alert('Experience added to your profile!');
+    } catch (err) {
+      alert('Failed to save experience.');
+    }
+  };
+
+  // Save Other Section Item
+  const handleVerificationSubmit = async (e) => {
+    e.preventDefault();
+    if (!idCardFile && !idCardPreview) {
+      return alert(verificationModalType === 'college_id' ? 'Please select or upload your College Student ID card.' : 'Please upload your Government Identity ID document.');
+    }
+    setIsSubmittingVerification(true);
+    try {
+      let finalUrl = idCardPreview;
+      if (idCardFile) {
+        const formData = new FormData();
+        formData.append('file', idCardFile);
+        const uploadRes = await API.post('/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        finalUrl = uploadRes.data.url;
+      }
+
+      const payload = {
+        collegeName: profileUser.profile?.college || ''
+      };
+      if (verificationModalType === 'college_id') {
+        payload.idCardUrl = finalUrl;
+      } else {
+        payload.nationalIdUrl = finalUrl;
+      }
+
+      await API.post('/users/verification', payload);
+      alert('✅ Document submitted successfully! It is now pending Admin Review.');
+      setShowVerificationModal(false);
+      setIdCardFile(null);
+      setIdCardPreview('');
+      loadProfile();
+    } catch (err) {
+      alert('Failed to submit verification: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setIsSubmittingVerification(false);
+    }
+  };
+
+  const handleSaveSectionItem = async (e) => {
+    e.preventDefault();
+    if (!profileUser?.profile) return;
+
+    try {
+      const keyMap = {
+        'education': 'educationList',
+        'qualification': 'qualificationList',
+        'certification': 'certificationList'
+      };
+
+      const fieldKey = keyMap[modalType];
+      const currentList = Array.isArray(profileUser.profile[fieldKey]) ? profileUser.profile[fieldKey] : [];
+      const updatedList = [...currentList, { id: Date.now(), ...sectionForm }];
+
+      await API.put('/users/profile', { [fieldKey]: updatedList });
+
+      confetti({ particleCount: 100 });
+      setModalType(null);
+      setSectionForm({ title: '', institution: '', period: '', desc: '', grade: '', branch: '', certImg: '', certLink: '' });
+      loadProfile();
+    } catch (err) {
+      alert('Failed to save entry.');
+    }
+  };
+
+  // Save Social Links
+  const handleSaveSocialLinks = async (e) => {
+    e.preventDefault();
+    try {
+      await API.put('/users/profile', { socialLinks: socialForm });
+      confetti();
+      setShowSocialModal(false);
+      loadProfile();
+      alert('Social and portfolio profiles saved!');
+    } catch (err) {
+      alert('Failed to save social links.');
+    }
+  };
+
+  const handleDeleteSectionItem = async (sectionKey, itemId) => {
+    if (!window.confirm('Delete this entry?')) return;
+    try {
+      const currentList = Array.isArray(profileUser.profile[sectionKey]) ? profileUser.profile[sectionKey] : [];
+      const updatedList = currentList.filter(item => item.id !== itemId);
+
+      await API.put('/users/profile', { [sectionKey]: updatedList });
+      loadProfile();
+    } catch (err) {
+      alert('Failed to delete item.');
+    }
+  };
+
+  const handleAddPortfolio = async (e) => {
+    e.preventDefault();
+    try {
+      await API.post('/users/portfolio', portfolioForm);
+      confetti();
+      setShowPortfolioModal(false);
+      setPortfolioForm({ title: '', category: 'Logo Design', img: '', link: '' });
+      loadProfile();
+      alert('Portfolio item added to your profile!');
+    } catch (err) {
+      alert('Failed to add portfolio item.');
+    }
+  };
+
+  if (loading) {
+    return <div className="p-16 text-center text-sm text-slate-400 glass-panel rounded-3xl">Loading profile...</div>;
+  }
+
+  if (!profileUser) {
+    return (
+      <div className="p-16 text-center space-y-4 glass-panel rounded-3xl">
+        <User className="w-12 h-12 text-slate-600 mx-auto" />
+        <h3 className="text-xl font-black text-white">Student Profile Not Found</h3>
+        <Link to="/jobs" className="px-6 py-2.5 neon-airflow-btn text-white text-xs font-black rounded-xl inline-block">Return to Marketplace</Link>
+      </div>
+    );
+  }
+
+  const isOwner = currentUser && (currentUser.id === profileUser.id || currentUser.username === profileUser.username);
+  const portfolioList = Array.isArray(profileUser.profile?.portfolioItems) ? profileUser.profile.portfolioItems : [];
+  
+  const experienceList = Array.isArray(profileUser.profile?.experienceList) ? profileUser.profile.experienceList : [];
+  const educationList = Array.isArray(profileUser.profile?.educationList) ? profileUser.profile.educationList : [];
+  const qualificationList = Array.isArray(profileUser.profile?.qualificationList) ? profileUser.profile.qualificationList : [];
+  const certificationList = Array.isArray(profileUser.profile?.certificationList) ? profileUser.profile.certificationList : [];
+  const socialLinks = profileUser.profile?.socialLinks || {};
+
+  // Dynamic Performance & Work Analytics
+  const sellerOrders = Array.isArray(profileUser.ordersAsSeller) ? profileUser.ordersAsSeller : [];
+  const totalProjectsWorked = sellerOrders.length;
+  const successfulProjects = sellerOrders.filter(o => o.status === 'COMPLETED').length;
+  const inProgressProjects = sellerOrders.filter(o => ['IN_PROGRESS', 'DELIVERED', 'FUNDED_IN_ESCROW', 'REQUIREMENTS_SUBMITTED', 'REVISION_REQUESTED'].includes(o.status)).length;
+  const rejectedOrDisputedProjects = sellerOrders.filter(o => ['CANCELLED_REFUNDED', 'DISPUTED'].includes(o.status)).length;
+
+  const projectSuccessRate = totalProjectsWorked > 0 
+    ? Math.round((successfulProjects / (successfulProjects + rejectedOrDisputedProjects || 1)) * 100) 
+    : 100;
+
+  const totalEarnedAmount = sellerOrders
+    .filter(o => o.status === 'COMPLETED')
+    .reduce((sum, o) => sum + (o.sellerEarnings || (o.totalAmount * 0.94) || 0), 0);
+
+  const reviewsList = Array.isArray(profileUser.reviewsReceived) ? profileUser.reviewsReceived : [];
+  const reviewsCount = profileUser.totalReviews || 0;
+
+  const avgRating = profileUser.averageRating
+    ? Number(profileUser.averageRating).toFixed(1)
+    : null;
+
+  const communicationAvg = Number(profileUser.communicationAvg || 0).toFixed(1);
+  const qualityAvg = Number(profileUser.qualityAvg || 0).toFixed(1);
+  const timelinessAvg = Number(profileUser.timelinessAvg || 0).toFixed(1);
+
+  const ratingDistribution = [5,4,3,2,1].map(star => {
+    const count = reviewsList.filter(r => Number(r.overallRating) === star).length;
+    const percentage = reviewsList.length
+      ? Math.round((count / reviewsList.length) * 100)
+      : 0;
+
+    return { star, count, percentage };
+  });
+
+  const completedProjects = sellerOrders.filter(o => o.status === 'COMPLETED').length;
+  const cancelledProjects = sellerOrders.filter(o => ['CANCELLED_REFUNDED','DISPUTED'].includes(o.status)).length;
+
+  const completionRate =
+    completedProjects + cancelledProjects > 0
+      ? Math.round((completedProjects / (completedProjects + cancelledProjects)) * 100)
+      : 100;
+
+  let freelancerLevel = 'New Freelancer';
+
+  if (completedProjects >= 75 && Number(profileUser.averageRating || 0) >= 4.7) {
+    freelancerLevel = 'Elite Freelancer';
+  } else if (completedProjects >= 30 && Number(profileUser.averageRating || 0) >= 4.5) {
+    freelancerLevel = 'Gold Freelancer';
+  } else if (completedProjects >= 15 && Number(profileUser.averageRating || 0) >= 4.3) {
+    freelancerLevel = 'Silver Freelancer';
+  } else if (completedProjects >= 5 && Number(profileUser.averageRating || 0) >= 4.0) {
+    freelancerLevel = 'Bronze Freelancer';
+  }
+
+  const trustScore = Math.min(
+    100,
+    Math.round(
+      (Number(profileUser.averageRating || 0) * 15) +
+      Math.min(completedProjects, 40) +
+      (profileUser.verification?.status === 'APPROVED' ? 15 : 0)
+    )
+  );
+
+  const earnedBadges = [];
+
+  if (completedProjects >= 5)
+    earnedBadges.push({ icon: '🥉', label: 'Bronze Freelancer' });
+
+  if (completedProjects >= 15)
+    earnedBadges.push({ icon: '🥈', label: 'Silver Freelancer' });
+
+  if (completedProjects >= 30)
+    earnedBadges.push({ icon: '🥇', label: 'Gold Freelancer' });
+
+  if (completedProjects >= 75 && Number(profileUser.averageRating || 0) >= 4.7)
+    earnedBadges.push({ icon: '💎', label: 'Elite Freelancer' });
+
+  if (Number(profileUser.averageRating || 0) >= 4.8 && reviewsCount >= 10)
+    earnedBadges.push({ icon: '⭐', label: 'Top Rated' });
+
+  if (completionRate === 100 && completedProjects >= 5)
+    earnedBadges.push({ icon: '🎯', label: '100% Completion' });
+
+  if (profileUser.verification?.status === 'APPROVED')
+    earnedBadges.push({ icon: '✅', label: 'Verified Student' });
+
+  if ((profileUser.points || 0) >= 250)
+    earnedBadges.push({ icon: '🚀', label: 'Fast Rising' });
+
+  if ((profileUser.points || 0) >= 1000)
+    earnedBadges.push({ icon: '👑', label: 'Campus Legend' });
+
+  const profileStrengthItems = [
+    Boolean(profileUser.profile?.avatarUrl),
+    Boolean(profileUser.profile?.tagline?.trim()),
+    Boolean(profileUser.profile?.category?.trim()),
+    Boolean(profileUser.profile?.college?.trim()),
+    Boolean(profileUser.profile?.bio?.trim()),
+    Array.isArray(profileUser.profile?.skills) && profileUser.profile.skills.length > 0,
+    portfolioList.length > 0,
+    Boolean(profileUser.profile?.socialLinks && Object.keys(profileUser.profile.socialLinks).length > 0),
+    profileUser.verification?.status === 'APPROVED'
+  ];
+
+  const profileStrength = Math.round(
+    (profileStrengthItems.filter(Boolean).length / profileStrengthItems.length) * 100
+  );
+
+  const profileStrengthLabel =
+    profileStrength >= 90 ? 'Excellent' :
+    profileStrength >= 70 ? 'Strong' :
+    profileStrength >= 50 ? 'Getting there' :
+    'Needs attention';
+
+  const isMinorStudent = Boolean(profileUser?.isMinor || (profileUser?.age && profileUser.age < 18));
+  const activeInstitutionsList = isMinorStudent ? (typeof ALL_SCHOOLS_DATA !== 'undefined' ? ALL_SCHOOLS_DATA : []) : (typeof INDIAN_COLLEGES !== 'undefined' ? INDIAN_COLLEGES : []);
+  const activeProgramsList = isMinorStudent ? (typeof ALL_SCHOOL_PROGRAMS !== 'undefined' ? ALL_SCHOOL_PROGRAMS : []) : (typeof ALL_DEGREES_PROGRAMS !== 'undefined' ? ALL_DEGREES_PROGRAMS : []);
+
+  const filteredColleges = (typeof INDIAN_COLLEGES !== 'undefined' ? INDIAN_COLLEGES : []).filter(c => c.toLowerCase().includes((collegeQuery || '').toLowerCase()));
+  const filteredDegrees = activeProgramsList.filter(d => !(sectionForm.title || '').trim() || d.toLowerCase().includes((sectionForm.title || '').toLowerCase()));
+  const filteredEduColleges = activeInstitutionsList.filter(c => !(sectionForm.institution || '').trim() || c.toLowerCase().includes((sectionForm.institution || '').toLowerCase()));
+  const filteredCategories = COMPREHENSIVE_CATEGORIES.filter(cat => cat.toLowerCase().includes(categorySearchQuery.toLowerCase()));
+
+  return (
+    <div className="space-y-10 pb-24 w-full">
+      
+      {/* ─── CROPPER STUDIO MODAL ─── */}
+      {cropImageSrc && (
+        <ImageCropModal
+          imageSrc={cropImageSrc}
+          aspect={cropType === 'avatar' ? 1 : 16 / 6}
+          cropShape={cropType === 'avatar' ? 'round' : 'rect'}
+          title={cropType === 'avatar' ? 'Crop Profile Picture (1:1)' : 'Crop Cover Banner (16:6)'}
+          onCropComplete={handleCroppedUploadSave}
+          onClose={() => { setCropImageSrc(null); setCropType(null); }}
+        />
+      )}
+
+      {/* ─── 1. FULL-WIDTH COVER BANNER & HEADER ─── */}
+      <div className="rounded-3xl overflow-hidden glass-panel border border-slate-800 shadow-2xl w-full">
+        <div className="h-60 sm:h-72 md:h-80 bg-gradient-to-r from-indigo-950 via-purple-950 to-pink-950 relative overflow-hidden flex items-end justify-end p-6 group">
+          {profileUser.profile?.coverUrl && (
+            <img src={profileUser.profile.coverUrl} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
+          )}
+          
+          {isOwner && (
+            <div className="flex space-x-2 relative z-10">
+              <button 
+                onClick={() => setShowCoverModal(true)}
+                className="px-4 py-2.5 bg-slate-950/85 hover:bg-slate-900 text-white text-xs font-black rounded-xl backdrop-blur-md border border-slate-700 shadow-xl flex items-center space-x-2 transition"
+              >
+                <Camera className="w-4 h-4 text-pink-400" />
+                <span>{profileUser.profile?.coverUrl ? 'Change Cover Photo' : 'Upload Cover Photo'}</span>
+              </button>
+              {profileUser.profile?.coverUrl && (
+                <button 
+                  onClick={handleRemoveCover}
+                  className="p-2.5 bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white rounded-xl backdrop-blur-md border border-red-500/40 shadow-xl transition"
+                  title="Remove Cover Photo"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Profile Info Header */}
+        <div className="p-8 sm:p-12 relative">
+          <div className="flex flex-col lg:flex-row justify-between items-start gap-8">
+            <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-8">
+              
+              {/* Profile Avatar with Camera Icon */}
+              <div className="relative group shrink-0 -mt-20 sm:-mt-24">
+                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl overflow-hidden border-4 border-slate-900 bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-5xl shadow-2xl relative">
+                  {profileUser.profile?.avatarUrl ? (
+                    <img src={profileUser.profile.avatarUrl} alt={profileUser.fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    profileUser.fullName.charAt(0)
+                  )}
+                  <span className="absolute bottom-2 right-2 w-4 h-4 bg-emerald-500 rounded-full ring-2 ring-slate-950" title="Online" />
+                </div>
+
+                {isOwner && (
+                  <button 
+                    onClick={() => setShowAvatarModal(true)}
+                    className="absolute -bottom-1 -right-1 p-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-white shadow-2xl border-2 border-slate-900 transition transform hover:scale-110 flex items-center justify-center"
+                    title="Upload & Crop Profile Picture"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <h1 className="text-3xl sm:text-4xl font-black text-white flex items-center space-x-3">
+                  <span>{profileUser.fullName}</span>
+                  <span className="text-slate-400 text-base font-normal">@{profileUser.username}</span>
+                  {profileUser.verification?.status === "APPROVED" && <CheckCircle2 className="w-6 h-6 text-sky-400 shrink-0" title="Verified Student" />}
+                </h1>
+
+                <div className="flex items-center space-x-3 text-sm font-bold">
+                  <Star className={`w-4 h-4 ${avgRating ? 'fill-amber-400 text-amber-400' : 'text-slate-500'}`} />
+                  {avgRating ? (
+                    <span className="text-amber-400">{avgRating} ({reviewsCount} {reviewsCount === 1 ? 'review' : 'reviews'})</span>
+                  ) : (
+                    <span className="text-slate-400 font-semibold">New • No ratings yet (0 reviews)</span>
+                  )}
+                  <span className="text-slate-500 font-normal">• Age: {profileUser.age} yrs • India</span>
+                </div>
+
+                <div className="text-sm font-black uppercase text-indigo-400 tracking-wide pt-1">
+                  {profileUser.profile?.tagline || 'Student Creator • Ready to Work'}
+                </div>
+
+                {earnedBadges.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {earnedBadges.map((badge, idx) => (
+                      <div
+                        key={idx}
+                        className="px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-xs font-bold text-white flex items-center gap-1"
+                      >
+                        <span>{badge.icon}</span>
+                        <span>{badge.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="text-sm text-slate-300 pt-1">
+                  <span className="text-emerald-400 font-black text-lg">₹{profileUser.profile?.hourlyRate || 499}</span> per hour • Joined {new Date(profileUser.createdAt).toLocaleDateString()}
+                </div>
+
+                {isOwner && (
+                  <div className="mt-3 max-w-xl p-3 rounded-2xl bg-indigo-500/5 border border-indigo-500/15">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-black text-slate-300">Profile strength</span>
+                      <span className="text-xs font-black text-indigo-300">
+                        {profileStrength}% · {profileStrengthLabel}
+                      </span>
+                    </div>
+
+                    <div className="mt-2 h-2 rounded-full bg-slate-900 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
+                        style={{ width: `${profileStrength}%` }}
+                      />
+                    </div>
+
+                    {profileStrength < 100 && (
+                      <p className="text-xs text-slate-500 mt-2">
+                        Complete more profile details to build stronger client trust.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3">
+                  <div className="rounded-xl bg-slate-950/70 border border-slate-800 px-3 py-2">
+                    <div className="text-base font-black text-white">{completedProjects}</div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-slate-600">Completed</div>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-950/70 border border-slate-800 px-3 py-2">
+                    <div className="text-base font-black text-emerald-300">{completionRate}%</div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-slate-600">Completion</div>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-950/70 border border-slate-800 px-3 py-2">
+                    <div className="text-base font-black text-amber-300">{avgRating || 'New'}</div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-slate-600">Rating</div>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-950/70 border border-slate-800 px-3 py-2">
+                    <div className="text-base font-black text-pink-300">{profileUser.points || 50}</div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-slate-600">Reputation</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-3 w-full lg:w-auto">
+              {isOwner ? (
+                <>
+                  <button 
+                    onClick={() => setShowEditModal(true)}
+                    className="px-6 py-3.5 bg-slate-900 border border-slate-700 hover:border-indigo-500 text-white text-xs font-black rounded-2xl transition flex items-center space-x-2 shadow-lg"
+                  >
+                    <Edit3 className="w-4 h-4 text-indigo-400" />
+                    <span>Edit Profile</span>
+                  </button>
+                  <button 
+                    onClick={() => setShowPortfolioModal(true)}
+                    className="px-6 py-3.5 neon-airflow-btn text-white text-xs font-black rounded-2xl shadow-xl flex items-center space-x-1.5"
+                  >
+                    <ImagePlus className="w-4 h-4" />
+                    <span>Manage Portfolio</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => setShowInviteModal(true)}
+                    className="px-6 py-3.5 bg-slate-900 border border-slate-700 hover:border-white text-white text-xs font-black rounded-2xl transition shadow-lg"
+                  >
+                    Invite to Bid
+                  </button>
+                  <button 
+                    onClick={() => setShowInviteModal(true)}
+                    className="px-8 py-3.5 bg-gradient-to-r from-pink-600 to-rose-500 text-white text-xs font-black rounded-2xl shadow-xl shadow-pink-600/30 uppercase tracking-wider"
+                  >
+                    Hire Directly
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div className="flex space-x-8 border-b border-slate-800 pt-10 text-sm font-black overflow-x-auto">
+            {[
+              { id: 'about', label: 'About Me' },
+              { id: 'portfolio', label: `Portfolio Items (${portfolioList.length})` },
+              { id: 'experience', label: 'Education, Credentials & Social' },
+              { id: 'analytics', label: 'Performance & Analytics 📊' },
+              { id: 'reviews', label: `Client Reviews (${reviewsCount})` }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`pb-4 transition whitespace-nowrap ${activeTab === tab.id ? 'text-pink-400 border-b-2 border-pink-500' : 'text-slate-400 hover:text-white'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ─── 2. CONTENT BODY & SIDEBAR ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">
+        
+        {/* Left Column */}
+        <div className="lg:col-span-8 space-y-8">
+          
+          {/* TAB 1: ABOUT ME */}
+          {activeTab === 'about' && (
+            <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-slate-800 space-y-8">
+              <div className="space-y-3">
+                <h3 className="text-xl font-black text-white">About Me</h3>
+                <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">
+                  {profileUser.profile?.bio || 'Verified student freelancer ready to deliver quality work and build a strong portfolio.'}
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-6 border-t border-slate-800">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Primary Specialization</h4>
+                <span className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded-xl text-sm font-bold inline-block">
+                  {profileUser.profile?.category || 'Graphic Design'}
+                </span>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-slate-800">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">College / Institute</h4>
+                <span className="text-base font-bold text-white block">{profileUser.profile?.college || <span className="text-sm font-normal text-slate-500 italic">No college specified yet (Click 'Edit Profile' to choose your college)</span>}</span>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-slate-800">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Verified Skills & Tools</h4>
+                <div className="flex flex-wrap gap-2">
+                  {(profileUser.profile?.skills || ['Student Talent']).map((s, i) => (
+                    <span key={i} className="px-3.5 py-1.5 bg-slate-900 border border-slate-800 text-slate-300 rounded-xl text-xs font-bold">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: PORTFOLIO */}
+          {activeTab === 'portfolio' && (
+            <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-slate-800 space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-black text-white">Portfolio Items</h3>
+                {isOwner && (
+                  <button onClick={() => setShowPortfolioModal(true)} className="px-5 py-2.5 neon-airflow-btn text-white text-xs font-bold rounded-xl flex items-center space-x-1.5">
+                    <PlusCircle className="w-4 h-4" />
+                    <span>Add Project</span>
+                  </button>
+                )}
+              </div>
+
+              {portfolioList.length === 0 ? (
+                <div className="p-16 text-center bg-slate-950/40 border border-slate-800 rounded-3xl space-y-3">
+                  <p className="text-sm text-slate-400">No portfolio items have been added yet.</p>
+                  {isOwner && (
+                    <button onClick={() => setShowPortfolioModal(true)} className="text-indigo-400 font-bold text-sm hover:underline block mx-auto">
+                      + Click here to add projects and upload work proofs to Cloudinary
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {portfolioList.map(item => (
+                    <div key={item.id} className="relative h-64 rounded-3xl overflow-hidden border border-slate-800 group shadow-xl">
+                      <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <span className="text-base font-black text-white block">{item.title}</span>
+                        <span className="text-sm text-pink-400 font-bold">{item.category || 'Portfolio Project'}</span>
+
+                        {item.link && (
+                          <a
+                            href={item.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 mt-2 text-xs font-black text-white hover:text-indigo-300 transition"
+                          >
+                            View Project ↗
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─── TAB 3: 5 SECTIONS (EXACT FREELANCER EXPERIENCE MODAL) ─── */}
+          {activeTab === 'experience' && (
+            <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-slate-800 space-y-10">
+              
+              {/* 1. Experience Section (Opens Exact Modal) */}
+              <div className="space-y-3 pb-8 border-b border-slate-800">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-black text-white">Experience</h3>
+                  {isOwner && (
+                    <button 
+                      onClick={() => setShowExperienceModal(true)} 
+                      className="text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center space-x-1.5 transition"
+                    >
+                      <Plus className="w-4 h-4" /><span>Add experience</span>
+                    </button>
+                  )}
+                </div>
+                {experienceList.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">No experiences have been added.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {experienceList.map(item => (
+                      <div key={item.id} className="p-5 bg-slate-950/60 border border-slate-800 rounded-2xl flex justify-between items-start">
+                        <div>
+                          <div className="text-base font-bold text-white">{item.title}</div>
+                          <div className="text-xs text-indigo-400 font-semibold mt-0.5">{item.company || item.institution} • {item.period}</div>
+                          {item.desc && <p className="text-xs text-slate-300 mt-2 leading-relaxed whitespace-pre-line">{item.desc}</p>}
+                        </div>
+                        {isOwner && (
+                          <button onClick={() => handleDeleteSectionItem('experienceList', item.id)} className="text-slate-500 hover:text-red-400 p-1">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Education Section */}
+              <div className="space-y-3 pb-8 border-b border-slate-800">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-black text-white">Education & Degrees</h3>
+                  {isOwner && (
+                    <button onClick={() => setModalType('education')} className="text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center space-x-1.5 transition">
+                      <Plus className="w-4 h-4" /><span>Add education</span>
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <div className="p-5 bg-slate-950/60 border border-slate-800 rounded-2xl">
+                    <div className="text-base font-bold text-white">{profileUser.profile?.college || 'College Student'}</div>
+                    {profileUser.verification?.collegeIdStatus === 'APPROVED' ? (
+                      <span className="text-xs text-emerald-400 font-bold block mt-1">
+                        ✓ College ID verified
+                      </span>
+                    ) : profileUser.verification?.collegeIdStatus === 'PENDING' ? (
+                      <span className="text-xs text-amber-400 font-bold block mt-1">
+                        Verification under review
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-500 font-semibold block mt-1">
+                        College listed on profile
+                      </span>
+                    )}
+                  </div>
+                  {educationList.map(item => (
+                    <div key={item.id} className="p-5 bg-slate-950/60 border border-slate-800 rounded-2xl flex justify-between items-start">
+                      <div>
+                        <div className="text-base font-bold text-white">{item.title} ({item.branch || 'General'})</div>
+                        <div className="text-xs text-indigo-400 font-semibold">{item.institution} ({item.period})</div>
+                        {item.grade && <span className="text-xs text-emerald-400 font-bold block mt-1">Grade/CGPA: {item.grade}</span>}
+                      </div>
+                      {isOwner && (
+                        <button onClick={() => handleDeleteSectionItem('educationList', item.id)} className="text-slate-500 hover:text-red-400 p-1">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Qualifications Section */}
+              <div className="space-y-3 pb-8 border-b border-slate-800">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-black text-white">Qualifications</h3>
+                  {isOwner && (
+                    <button onClick={() => setModalType('qualification')} className="text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center space-x-1.5 transition">
+                      <Plus className="w-4 h-4" /><span>Add qualification</span>
+                    </button>
+                  )}
+                </div>
+                {qualificationList.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">No qualifications have been added.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {qualificationList.map(item => (
+                      <div key={item.id} className="p-5 bg-slate-950/60 border border-slate-800 rounded-2xl flex justify-between items-start">
+                        <div>
+                          <div className="text-base font-bold text-white">{item.title}</div>
+                          <div className="text-xs text-indigo-400 font-semibold">{item.institution} • {item.period}</div>
+                        </div>
+                        {isOwner && (
+                          <button onClick={() => handleDeleteSectionItem('qualificationList', item.id)} className="text-slate-500 hover:text-red-400 p-1">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Certifications Section */}
+              <div className="space-y-3 pb-8 border-b border-slate-800">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-black text-white">Certifications & Courses</h3>
+                  {isOwner && (
+                    <button onClick={() => setModalType('certification')} className="text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center space-x-1.5 transition">
+                      <Plus className="w-4 h-4" /><span>Add certification</span>
+                    </button>
+                  )}
+                </div>
+                {certificationList.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">No certifications have been added.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {certificationList.map(item => (
+                      <div key={item.id} className="p-5 bg-slate-950/60 border border-slate-800 rounded-2xl flex justify-between items-start">
+                        <div className="space-y-2">
+                          <div className="text-base font-bold text-white">{item.title}</div>
+                          <div className="text-xs text-indigo-400 font-semibold">{item.institution} ({item.period})</div>
+                          {item.certImg && (
+                            <a href={item.certImg} target="_blank" rel="noreferrer" className="inline-flex items-center space-x-1.5 text-xs text-pink-400 font-bold hover:underline pt-1">
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>View Verified Certificate</span>
+                            </a>
+                          )}
+                        </div>
+                        {isOwner && (
+                          <button onClick={() => handleDeleteSectionItem('certificationList', item.id)} className="text-slate-500 hover:text-red-400 p-1">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 5. Social Media & Online Profiles */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-xl font-black text-white">Online Profiles & Recognition</h3>
+                    <p className="text-xs text-slate-400">Showcase your GitHub repositories, LinkedIn, Instagram, X, LeetCode, and creative channels.</p>
+                  </div>
+                  {isOwner && (
+                    <button onClick={() => setShowSocialModal(true)} className="text-indigo-400 hover:text-indigo-300 text-xs font-bold flex items-center space-x-1.5 transition">
+                      <Edit3 className="w-4 h-4" /><span>Manage Links</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+                  {socialLinks.github && (
+                    <a href={socialLinks.github.startsWith('http') ? socialLinks.github : `https://${socialLinks.github}`} target="_blank" rel="noreferrer" className="p-3.5 bg-slate-950/80 border border-slate-800 hover:border-indigo-500 rounded-2xl flex items-center space-x-2.5 text-xs font-bold text-slate-200 transition group">
+                      <Globe className="w-4 h-4 text-white group-hover:text-indigo-400" />
+                      <span className="truncate">GitHub Repo</span>
+                    </a>
+                  )}
+
+                  {socialLinks.linkedin && (
+                    <a href={socialLinks.linkedin.startsWith('http') ? socialLinks.linkedin : `https://${socialLinks.linkedin}`} target="_blank" rel="noreferrer" className="p-3.5 bg-slate-950/80 border border-slate-800 hover:border-blue-500 rounded-2xl flex items-center space-x-2.5 text-xs font-bold text-slate-200 transition group">
+                      <Globe className="w-4 h-4 text-blue-400" />
+                      <span className="truncate">LinkedIn</span>
+                    </a>
+                  )}
+
+                  {socialLinks.instagram && (
+                    <a href={socialLinks.instagram.startsWith('http') ? socialLinks.instagram : `https://instagram.com/${socialLinks.instagram.replace('@', '')}`} target="_blank" rel="noreferrer" className="p-3.5 bg-slate-950/80 border border-slate-800 hover:border-pink-500 rounded-2xl flex items-center space-x-2.5 text-xs font-bold text-slate-200 transition group">
+                      <Globe className="w-4 h-4 text-pink-400" />
+                      <span className="truncate">Instagram</span>
+                    </a>
+                  )}
+
+                  {socialLinks.twitter && (
+                    <a href={socialLinks.twitter.startsWith('http') ? socialLinks.twitter : `https://x.com/${socialLinks.twitter.replace('@', '')}`} target="_blank" rel="noreferrer" className="p-3.5 bg-slate-950/80 border border-slate-800 hover:border-slate-400 rounded-2xl flex items-center space-x-2.5 text-xs font-bold text-slate-200 transition group">
+                      <Globe className="w-4 h-4 text-slate-300" />
+                      <span className="truncate">X (Twitter)</span>
+                    </a>
+                  )}
+
+                  {socialLinks.youtube && (
+                    <a href={socialLinks.youtube.startsWith('http') ? socialLinks.youtube : `https://${socialLinks.youtube}`} target="_blank" rel="noreferrer" className="p-3.5 bg-slate-950/80 border border-slate-800 hover:border-red-500 rounded-2xl flex items-center space-x-2.5 text-xs font-bold text-slate-200 transition group">
+                      <Globe className="w-4 h-4 text-red-400" />
+                      <span className="truncate">YouTube</span>
+                    </a>
+                  )}
+
+                  {socialLinks.leetcode && (
+                    <a href={socialLinks.leetcode.startsWith('http') ? socialLinks.leetcode : `https://leetcode.com/${socialLinks.leetcode}`} target="_blank" rel="noreferrer" className="p-3.5 bg-slate-950/80 border border-slate-800 hover:border-amber-500 rounded-2xl flex items-center space-x-2.5 text-xs font-bold text-slate-200 transition group">
+                      <Code className="w-4 h-4 text-amber-400" />
+                      <span className="truncate">LeetCode / Coding</span>
+                    </a>
+                  )}
+                </div>
+
+                {Object.keys(socialLinks).length === 0 && (
+                  <p className="text-xs text-slate-500 italic">No social media or coding profiles connected yet.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: REVIEWS */}
+                    {/* TAB 4: PERFORMANCE & ANALYTICS */}
+          {activeTab === 'analytics' && (
+            <div className="space-y-8">
+              {/* Top Overview KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-1 relative overflow-hidden">
+                  <div className="flex justify-between items-center text-indigo-400">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-400">Total Projects</span>
+                    <Briefcase className="w-4 h-4" />
+                  </div>
+                  <div className="text-3xl font-black text-white">{totalProjectsWorked}</div>
+                  <p className="text-[11px] text-indigo-400 font-bold">{inProgressProjects} active in progress</p>
+                </div>
+
+                <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-1 relative overflow-hidden">
+                  <div className="flex justify-between items-center text-emerald-400">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-400">Succeeded / Done</span>
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div className="text-3xl font-black text-emerald-400">{successfulProjects}</div>
+                  <p className="text-[11px] text-emerald-400 font-bold">{projectSuccessRate}% Success Rate</p>
+                </div>
+
+                <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-1 relative overflow-hidden">
+                  <div className="flex justify-between items-center text-red-400">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-400">Rejected / Disputed</span>
+                    <XCircle className="w-4 h-4" />
+                  </div>
+                  <div className="text-3xl font-black text-red-400">{rejectedOrDisputedProjects}</div>
+                  <p className="text-[11px] text-slate-400 font-bold">{rejectedOrDisputedProjects === 0 ? 'Zero rejections' : 'Requires review'}</p>
+                </div>
+
+                <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-1 relative overflow-hidden">
+                  <div className="flex justify-between items-center text-amber-400">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-400">Verified Earnings</span>
+                    <DollarSign className="w-4 h-4" />
+                  </div>
+                  <div className="text-3xl font-black text-amber-400">₹{totalEarnedAmount.toLocaleString()}</div>
+                  <p className="text-[11px] text-amber-300/80 font-bold">+{profileUser.points || 50} Reputation Pts</p>
+                </div>
+              </div>
+
+              {/* Performance Overview */}
+              <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-slate-800 space-y-6 shadow-2xl">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-4">
+                  <div>
+                    <h3 className="text-xl font-black text-white flex items-center space-x-2">
+                      <TrendingUp className="w-5 h-5 text-indigo-400" />
+                      <span>Performance Overview</span>
+                    </h3>
+                    <p className="text-sm text-slate-400 mt-1">
+                      A summary based on completed orders, client reviews, and current workload.
+                    </p>
+                  </div>
+
+                  <span className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs font-black text-indigo-300">
+                    Based on actual profile data
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                    <div className="text-xs font-black uppercase tracking-wider text-slate-500">Completed</div>
+                    <div className="text-2xl font-black text-white mt-2">{completedProjects}</div>
+                    <div className="text-xs text-slate-500 mt-1">projects finished</div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                    <div className="text-xs font-black uppercase tracking-wider text-slate-500">Completion</div>
+                    <div className="text-2xl font-black text-emerald-300 mt-2">{completionRate}%</div>
+                    <div className="text-xs text-slate-500 mt-1">successful outcomes</div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                    <div className="text-xs font-black uppercase tracking-wider text-slate-500">Rating</div>
+                    <div className="text-2xl font-black text-amber-300 mt-2">{avgRating || 'New'}</div>
+                    <div className="text-xs text-slate-500 mt-1">{reviewsCount} client reviews</div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                    <div className="text-xs font-black uppercase tracking-wider text-slate-500">Active</div>
+                    <div className="text-2xl font-black text-indigo-300 mt-2">{inProgressProjects}</div>
+                    <div className="text-xs text-slate-500 mt-1">projects in progress</div>
+                  </div>
+                </div>
+              </div>
+
+                {/* Outcome Distribution Breakdown Bars */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
+                  {/* Status Percentages */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-black uppercase text-slate-400">Order Delivery Distribution</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-emerald-400 flex items-center space-x-1.5"><Check className="w-3.5 h-3.5" /><span>Successful Deliveries</span></span>
+                        <span className="text-white">{successfulProjects} orders ({projectSuccessRate}%)</span>
+                      </div>
+                      <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500" style={{ width: `${projectSuccessRate}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-1">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-amber-400 flex items-center space-x-1.5"><Clock className="w-3.5 h-3.5" /><span>Active In-Progress</span></span>
+                        <span className="text-white">{inProgressProjects} orders</span>
+                      </div>
+                      <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500" style={{ width: `${totalProjectsWorked > 0 ? (inProgressProjects / totalProjectsWorked) * 100 : 0}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-1">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-red-400 flex items-center space-x-1.5"><XCircle className="w-3.5 h-3.5" /><span>Disputed / Cancelled</span></span>
+                        <span className="text-white">{rejectedOrDisputedProjects} orders</span>
+                      </div>
+                      <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${totalProjectsWorked > 0 ? (rejectedOrDisputedProjects / totalProjectsWorked) * 100 : 0}%` }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quality & Trust Scorecard */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-black uppercase text-slate-400">Quality & Reliability Scorecard</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-4 bg-slate-950 border border-slate-800/90 rounded-2xl text-center space-y-1">
+                        <Star className="w-5 h-5 text-amber-400 mx-auto fill-amber-400" />
+                        <div className="text-lg font-black text-white">{avgRating ? `${avgRating} ★` : 'New'}</div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Overall Rating</div>
+                      </div>
+
+                      <div className="p-4 bg-slate-950 border border-slate-800/90 rounded-2xl text-center space-y-1">
+                        <Award className="w-5 h-5 text-pink-400 mx-auto" />
+                        <div className="text-lg font-black text-white">{reviewsCount}</div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Total Reviews</div>
+                      </div>
+
+                      <div className="p-4 bg-slate-950 border border-slate-800/90 rounded-2xl text-center space-y-1">
+                        <Target className="w-5 h-5 text-indigo-400 mx-auto" />
+                        <div className="text-lg font-black text-white">{communicationAvg} ★</div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Communication</div>
+                      </div>
+
+                      <div className="p-4 bg-slate-950 border border-slate-800/90 rounded-2xl text-center space-y-1">
+                        <ShieldCheck className="w-5 h-5 text-emerald-400 mx-auto" />
+                        <div className="text-lg font-black text-white">{qualityAvg} ★</div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Quality</div>
+                      </div>
+
+                      <div className="p-4 bg-slate-950 border border-slate-800/90 rounded-2xl text-center space-y-1">
+                        <Target className="w-5 h-5 text-cyan-400 mx-auto" />
+                        <div className="text-lg font-black text-white">{timelinessAvg} ★</div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Timeliness</div>
+                      </div>
+
+                      <div className="p-4 bg-slate-950 border border-slate-800/90 rounded-2xl text-center space-y-1">
+                        <ShieldCheck className="w-5 h-5 text-emerald-400 mx-auto" />
+                        <div className="text-lg font-black text-white">{profileUser.points || 50} pts</div>
+                        <div className={`text-[10px] font-black ${getReputationLevel(profileUser.points || 50).color}`}>{getReputationLevel(profileUser.points || 50).title}</div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Reputation</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+          )}
+
+
+          {activeTab === 'reviews' && (
+            <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-slate-800 space-y-8">
+
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <h3 className="text-xl font-black text-white">
+                    Client Reviews ({reviewsCount})
+                  </h3>
+                  <p className="text-sm text-slate-400 mt-1">
+                    Verified reviews from completed marketplace orders
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-3xl font-black text-amber-400">
+                    {avgRating || '0.0'} ★
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Overall Rating
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl text-center">
+                  <div className="text-2xl font-black text-indigo-400">{communicationAvg}</div>
+                  <div className="text-xs text-slate-400 uppercase font-bold">Communication</div>
+                </div>
+
+                <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl text-center">
+                  <div className="text-2xl font-black text-emerald-400">{qualityAvg}</div>
+                  <div className="text-xs text-slate-400 uppercase font-bold">Quality</div>
+                </div>
+
+                <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl text-center">
+                  <div className="text-2xl font-black text-cyan-400">{timelinessAvg}</div>
+                  <div className="text-xs text-slate-400 uppercase font-bold">Timeliness</div>
+                </div>
+              </div>
+
+
+              <div className="p-5 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black text-white">Rating Distribution</h4>
+                  <span className="text-xs text-slate-400">{reviewsList.length} Reviews</span>
+                </div>
+
+                <div className="space-y-3">
+                  {ratingDistribution.map(({ star, count, percentage }) => (
+                    <div key={star}>
+                      <div className="flex justify-between text-xs font-semibold mb-1">
+                        <span className="text-amber-400">{star} ★</span>
+                        <span className="text-slate-300">{count} ({percentage}%)</span>
+                      </div>
+
+                      <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {reviewsList.length === 0 ? (
+                <p className="text-sm text-slate-500 py-6">
+                  No reviews yet. Completed orders will appear here automatically.
+                </p>
+              ) : (
+                reviewsList.map((r, i) => (
+                  <div
+                    key={i}
+                    className="p-5 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-bold text-white">
+                          {r.reviewer?.fullName}
+                        </div>
+
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-amber-400 font-bold">
+                            {r.overallRating || 0} ★
+                          </span>
+
+                          <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
+                            Verified Order
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-slate-500">
+                        {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="p-2 rounded-xl bg-slate-900">
+                        <div className="text-white font-bold">
+                          {r.communicationRating || 0} ★
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          Communication
+                        </div>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-slate-900">
+                        <div className="text-white font-bold">
+                          {r.qualityRating || 0} ★
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          Quality
+                        </div>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-slate-900">
+                        <div className="text-white font-bold">
+                          {r.timelinessRating || 0} ★
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          Timeliness
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-slate-300">
+                      {r.comment}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Right Sidebar: Real Verifications */}
+        <div className="lg:col-span-4 glass-panel p-8 rounded-3xl border border-slate-800 space-y-8 sticky top-28">
+          <div className="space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Verifications</h4>
+            <div className="space-y-3 text-sm text-slate-300">
+              {/* 1. College Student ID Verification */}
+              {profileUser.verification?.collegeIdStatus === 'APPROVED' ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-emerald-400 font-bold">
+                    <Check className="w-5 h-5" />
+                    <span>College Student ID</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-300 font-bold rounded-md border border-emerald-500/30">Verified</span>
+                </div>
+              ) : profileUser.verification?.collegeIdStatus === 'PENDING' && profileUser.verification?.idCardUrl ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-amber-400 font-bold">
+                    <Clock className="w-5 h-5 animate-pulse" />
+                    <span>College Student ID</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-300 font-bold rounded-md border border-amber-500/30">Under Review</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-slate-400">
+                    <ShieldAlert className="w-5 h-5 text-slate-500" />
+                    <span>College Student ID</span>
+                  </div>
+                  {isOwner && (
+                    <button 
+                      onClick={() => { setVerificationModalType('college_id'); setShowVerificationModal(true); }} 
+                      className="text-xs px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition shadow-md flex items-center space-x-1"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>Verify College ID</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* 2. Government Identity Verification */}
+              {profileUser.verification?.govtIdStatus === 'APPROVED' ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-emerald-400 font-bold">
+                    <Check className="w-5 h-5" />
+                    <span>Identity Verified</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-300 font-bold rounded-md border border-emerald-500/30">Verified</span>
+                </div>
+              ) : profileUser.verification?.govtIdStatus === 'PENDING' && profileUser.verification?.nationalIdUrl ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-amber-400 font-bold">
+                    <Clock className="w-5 h-5 animate-pulse" />
+                    <span>Identity Verified</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-300 font-bold rounded-md border border-amber-500/30">Under Review</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-slate-400">
+                    <ShieldAlert className="w-5 h-5 text-slate-500" />
+                    <span>Identity Verified</span>
+                  </div>
+                  {isOwner && (
+                    <button 
+                      onClick={() => { setVerificationModalType('govt_id'); setShowVerificationModal(true); }} 
+                      className="text-xs px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-lg transition shadow-md flex items-center space-x-1"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>Verify Govt ID</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* 3. Email Verified */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-emerald-400 font-bold">
+                  <Check className="w-5 h-5" />
+                  <span>Email Verified</span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-300 font-bold rounded-md border border-emerald-500/30">Verified</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Performance Metrics</h4>
+            <div className="space-y-3 text-sm font-bold text-slate-300">
+              <div className="flex justify-between items-center">
+                <span>Completion rate</span>
+                <span className={completionRate >= 90 ? 'text-emerald-400' : completionRate >= 70 ? 'text-amber-400' : 'text-red-400'}>
+                  {completionRate}%
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span>Completed projects</span>
+                <span className="text-white">{completedProjects}</span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span>Client rating</span>
+                <span className="text-amber-400">
+                  {avgRating ? `${avgRating} / 5` : 'New'}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span>Reputation points</span>
+                <span className="text-pink-400">{profileUser.points || 50} pts</span>
+              </div>
+            </div>
+          </div>
+
+          {isOwner ? (
+            <button onClick={() => setShowEditModal(true)} className="w-full py-4 neon-airflow-btn text-white text-xs font-black rounded-2xl shadow-xl uppercase tracking-wider">
+              Edit My Profile Details
+            </button>
+          ) : (
+            <button onClick={() => setShowInviteModal(true)} className="w-full py-4 neon-airflow-btn text-white text-xs font-black rounded-2xl shadow-xl uppercase tracking-wider">
+              Hire {profileUser.fullName}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ─── EXACT "ADD EXPERIENCE" MODAL (MATCHING SCREENSHOT) ─── */}
+      {showExperienceModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-slate-700 max-w-2xl w-full p-8 rounded-2xl shadow-2xl relative space-y-5 max-h-[92vh] overflow-y-auto">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center pb-2">
+              <h3 className="text-2xl font-bold text-white tracking-tight">Add experience</h3>
+              <button onClick={() => setShowExperienceModal(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveExperience} className="space-y-4">
+              
+              {/* Row 1: Title & Company */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-200 mb-1.5">Title</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={expForm.title} 
+                    onChange={e => setExpForm({...expForm, title: e.target.value})} 
+                    placeholder="Enter your position or title" 
+                    className="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-pink-500 placeholder-slate-500" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-200 mb-1.5">Company</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={expForm.company} 
+                    onChange={e => setExpForm({...expForm, company: e.target.value})} 
+                    placeholder="Enter company name" 
+                    className="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-pink-500 placeholder-slate-500" 
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Country & City */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-200 mb-1.5">Country</label>
+                  <select 
+                    value={expForm.country} 
+                    onChange={e => setExpForm({...expForm, country: e.target.value})}
+                    className="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-pink-500 cursor-pointer"
+                  >
+                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-200 mb-1.5">City</label>
+                  <input 
+                    type="text" 
+                    value={expForm.city} 
+                    onChange={e => setExpForm({...expForm, city: e.target.value})} 
+                    placeholder="Enter city" 
+                    className="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-pink-500 placeholder-slate-500" 
+                  />
+                </div>
+              </div>
+
+              {/* Row 3: Start Month & Start Year */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-200 mb-1.5">Start month</label>
+                  <select 
+                    value={expForm.startMonth} 
+                    onChange={e => setExpForm({...expForm, startMonth: e.target.value})}
+                    className="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-pink-500 cursor-pointer"
+                  >
+                    {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-200 mb-1.5">Start year</label>
+                  <select 
+                    value={expForm.startYear} 
+                    onChange={e => setExpForm({...expForm, startYear: e.target.value})}
+                    className="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-pink-500 cursor-pointer"
+                  >
+                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 4: Currently working here checkbox */}
+              <div className="pt-1">
+                <label className="flex items-center space-x-2 text-sm text-slate-300 font-medium cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={expForm.isCurrent} 
+                    onChange={e => setExpForm({...expForm, isCurrent: e.target.checked})} 
+                    className="w-4 h-4 rounded accent-pink-600 cursor-pointer" 
+                  />
+                  <span>I'm currently working here</span>
+                </label>
+              </div>
+
+              {/* Row 5: End Month & End Year (Hidden if currently working) */}
+              {!expForm.isCurrent && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-200 mb-1.5">End month</label>
+                    <select 
+                      value={expForm.endMonth} 
+                      onChange={e => setExpForm({...expForm, endMonth: e.target.value})}
+                      className="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-pink-500 cursor-pointer"
+                    >
+                      {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-200 mb-1.5">End year</label>
+                    <select 
+                      value={expForm.endYear} 
+                      onChange={e => setExpForm({...expForm, endYear: e.target.value})}
+                      className="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-pink-500 cursor-pointer"
+                    >
+                      {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Row 6: Work Description */}
+              <div>
+                <label className="block text-sm font-bold text-slate-200 mb-1.5">Work description</label>
+                <textarea 
+                  rows="4" 
+                  value={expForm.description} 
+                  onChange={e => setExpForm({...expForm, description: e.target.value})} 
+                  placeholder="Describe your work experience" 
+                  className="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-pink-500 placeholder-slate-500 resize-y" 
+                />
+              </div>
+
+              {/* Save Button (Bottom Right) */}
+              <div className="flex justify-end pt-2">
+                <button 
+                  type="submit" 
+                  className="px-8 py-3 bg-[#e11d48] hover:bg-[#be123c] text-white font-bold text-sm rounded-lg shadow-lg shadow-pink-600/30 transition transform hover:-translate-y-0.5"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* ─── MODAL: STUDENT ID VERIFICATION ─── */}
+      {showVerificationModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="neon-border-box max-w-lg w-full p-8 shadow-2xl relative">
+            <button 
+              onClick={() => { setShowVerificationModal(false); setIdCardFile(null); setIdCardPreview(''); }} 
+              className="absolute top-5 right-5 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-2xl font-black text-white mb-2 flex items-center space-x-2">
+              <ShieldCheck className="w-7 h-7 text-indigo-400" />
+              <span>{verificationModalType === 'college_id' ? 'Verify College Student ID' : 'Verify Government Identity (Govt ID)'}</span>
+            </h3>
+            <p className="text-xs text-slate-400 mb-6">
+              {verificationModalType === 'college_id' ? 'Upload a clear photo of your student identity card to earn your Verified College Student badge.' : 'Upload a clear photo of your Government Photo ID (e.g. Passport, Driving License, Voter ID) to earn your Verified Identity badge.'}
+            </p>
+
+            <form onSubmit={handleVerificationSubmit} className="space-y-5">
+              {verificationModalType === 'college_id' ? (
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">College / University</label>
+                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-sm font-bold text-indigo-300">
+                    {profileUser.profile?.college || 'College / University not set'}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">Government ID Document Type</label>
+                  <select className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-sm font-bold text-white outline-none">
+                    <option value="PASSPORT">Passport (International / National)</option>
+                    <option value="DRIVING_LICENSE">Driving License (State / National)</option>
+                    <option value="VOTER_ID">Voter ID Card (Election Commission)</option>
+                    <option value="NATIONAL_ID">National / Government Photo ID Card</option>
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">
+                  {verificationModalType === 'college_id' ? 'College Student ID Card Photo' : 'Government Identity ID Document Photo'}
+                </label>
+                <div className="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-2xl p-6 text-center cursor-pointer transition bg-slate-950/60" onClick={() => document.getElementById('studentIdFileInput').click()}>
+                  <input 
+                    id="studentIdFileInput" 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setIdCardFile(file);
+                        setIdCardPreview(URL.createObjectURL(file));
+                      }
+                    }} 
+                    className="hidden" 
+                  />
+                  {idCardPreview ? (
+                    <div className="space-y-3">
+                      <img src={idCardPreview} alt="ID Document Preview" className="max-h-48 mx-auto rounded-xl border border-slate-700 shadow-md object-contain" />
+                      <p className="text-xs text-indigo-400 font-bold">Click to change document photo</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Upload className="w-10 h-10 text-slate-500 mx-auto" />
+                      <p className="text-sm font-bold text-white">
+                        {verificationModalType === 'college_id' ? 'Click to upload Student ID Card' : 'Click to upload Government Photo ID'}
+                      </p>
+                      <p className="text-xs text-slate-500">Supports JPG, PNG, WEBP (Max 10MB)</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={isSubmittingVerification} 
+                className="w-full py-4 neon-airflow-btn text-white text-xs font-black rounded-2xl uppercase tracking-wider disabled:opacity-50 flex items-center justify-center space-x-2"
+              >
+                {isSubmittingVerification ? <span>Uploading & Submitting...</span> : <span>Submit for Admin Approval</span>}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: OTHER SECTIONS (Education, Qualification, Certification) ─── */}
+      {modalType && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="neon-border-box max-w-md w-full p-8 shadow-2xl relative">
+            <button onClick={() => { setModalType(null); setShowEduCollegeDropdown(false); setShowDegreeDropdown(false); }} className="absolute top-5 right-5 text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            <h3 className="text-xl font-black text-white mb-4 uppercase">
+              Add {modalType === 'certification' ? 'Certification / Course' : modalType}
+            </h3>
+
+            <form onSubmit={handleSaveSectionItem} className="space-y-4">
+              <div className="relative z-30">
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">
+                  {modalType === 'education' ? (isMinorStudent ? 'Class / Grade / Program (e.g. 12th MPC, 10th SSC)' : 'Degree / Program (e.g. B.Tech, B.Des, BCA)') : 
+                   modalType === 'certification' ? 'Course / Certificate Name' :
+                   'Title / Role / Qualification'}
+                </label>
+                <div className="relative">
+                  <input 
+                    required 
+                    type="text" 
+                    value={sectionForm.title} 
+                    onChange={e => {
+                      setSectionForm({...sectionForm, title: e.target.value});
+                      if (modalType === 'education') { setShowDegreeDropdown(true); setShowEduCollegeDropdown(false); }
+                    }} 
+                    onFocus={() => {
+                      if (modalType === 'education') { setShowDegreeDropdown(true); setShowEduCollegeDropdown(false); }
+                    }}
+                    placeholder={modalType === 'education' ? (isMinorStudent ? "Search or select class (e.g. 12th MPC, 11th Science, 10th SSC, Diploma...)" : "Search or select degree (e.g. B.Tech CSE, BCA, B.Des, 12th, B.Sc...)") : "e.g. Meta React Developer / UI UX Design"} 
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white outline-none focus:border-indigo-500 transition" 
+                  />
+                  {sectionForm.title && modalType === 'education' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSectionForm({ ...sectionForm, title: '' });
+                        setShowDegreeDropdown(true);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {showDegreeDropdown && modalType === 'education' && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-52 overflow-y-auto bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl p-2 space-y-1">
+                    {sectionForm.title && sectionForm.title.trim() && (
+                      <div 
+                        onClick={() => setShowDegreeDropdown(false)} 
+                        className="p-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 rounded-lg text-xs text-indigo-200 cursor-pointer font-bold transition flex items-center space-x-2 border border-indigo-500/30"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span>Use Custom: "{sectionForm.title}"</span>
+                      </div>
+                    )}
+                    {filteredDegrees.slice(0, 100).map((deg, idx) => (
+                      <div 
+                        key={idx} 
+                        onClick={() => { 
+                          setSectionForm({ ...sectionForm, title: deg }); 
+                          setShowDegreeDropdown(false); 
+                        }} 
+                        className="p-2.5 hover:bg-indigo-600/20 rounded-lg text-xs text-slate-200 hover:text-white cursor-pointer transition flex items-center space-x-2"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span className="truncate">{deg}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* College / Institution Searchable Dropdown */}
+              <div className="relative z-20">
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">
+                  {modalType === 'education' ? (isMinorStudent ? 'School / Junior College Name' : 'College / University Name') : 
+                   modalType === 'certification' ? 'Issuing Platform (Coursera, Udemy, NPTEL)' :
+                   'Company / Organization'}
+                </label>
+                <div className="relative">
+                  <input 
+                    required 
+                    type="text" 
+                    value={sectionForm.institution} 
+                    onChange={e => {
+                      setSectionForm({ ...sectionForm, institution: e.target.value });
+                      if (modalType === 'education') { setShowEduCollegeDropdown(true); setShowDegreeDropdown(false); }
+                    }} 
+                    onFocus={() => {
+                      if (modalType === 'education') { setShowEduCollegeDropdown(true); setShowDegreeDropdown(false); }
+                    }}
+                    placeholder={modalType === 'education' ? (isMinorStudent ? "Search your school / Jr college (e.g. KV, Narayana, DPS, Chaitanya, State Board...)" : "Search your college (e.g. IIT, Mohan Babu University, JNTU, DU...)") : "e.g. Coursera / Meta / Google"} 
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white outline-none focus:border-indigo-500 transition" 
+                  />
+                  {sectionForm.institution && modalType === 'education' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSectionForm({ ...sectionForm, institution: '' });
+                        setShowEduCollegeDropdown(true);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {showEduCollegeDropdown && modalType === 'education' && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-52 overflow-y-auto bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl p-2 space-y-1">
+                    {sectionForm.institution.trim() && (
+                      <div 
+                        onClick={() => setShowEduCollegeDropdown(false)} 
+                        className="p-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 rounded-lg text-xs text-indigo-200 cursor-pointer font-bold transition flex items-center space-x-2 border border-indigo-500/30"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span>Use Custom: "{sectionForm.institution}"</span>
+                      </div>
+                    )}
+                    {filteredEduColleges.slice(0, 150).map((col, idx) => (
+                      <div 
+                        key={idx} 
+                        onClick={() => { 
+                          setSectionForm({ ...sectionForm, institution: col }); 
+                          setShowEduCollegeDropdown(false); 
+                        }} 
+                        className="p-2.5 hover:bg-indigo-600/20 rounded-lg text-xs text-slate-200 hover:text-white cursor-pointer transition flex items-center space-x-2"
+                      >
+                        <GraduationCap className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                        <span className="truncate">{col}</span>
+                      </div>
+                    ))}
+                    {filteredEduColleges.length === 0 && !sectionForm.institution.trim() && (
+                      <div className="p-3 text-center text-xs text-slate-500">
+                        Type to search through colleges...
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {modalType === 'education' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">{isMinorStudent ? "Stream / Board" : "Branch / Stream"}</label>
+                    <input type="text" value={sectionForm.branch} onChange={e => setSectionForm({...sectionForm, branch: e.target.value})} placeholder={isMinorStudent ? "e.g. CBSE / ICSE / State Board / MPC / Commerce" : "e.g. AI / CSE / Design"} className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">{isMinorStudent ? "Percentage / Grade / GPA" : "CGPA / Grade"}</label>
+                    <input type="text" value={sectionForm.grade} onChange={e => setSectionForm({...sectionForm, grade: e.target.value})} placeholder={isMinorStudent ? "e.g. 92% or 9.6 GPA or Grade A1" : "e.g. 8.9 CGPA"} className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">Time Period / Year</label>
+                <input required type="text" value={sectionForm.period} onChange={e => setSectionForm({...sectionForm, period: e.target.value})} placeholder="e.g. 2024 - 2028 or Completed 2025" className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+              </div>
+
+              {modalType === 'certification' && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-black text-slate-400 uppercase">Upload Certificate Image (Cloudinary)</label>
+                  <input type="file" ref={certFileInputRef} onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    try {
+                      const res = await API.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                      setSectionForm(prev => ({ ...prev, certImg: res.data.url }));
+                      alert('Certificate proof uploaded!');
+                    } catch { alert('Upload failed'); }
+                  }} accept="image/*" className="hidden" />
+                  <div className="flex space-x-2">
+                    <button type="button" onClick={() => certFileInputRef.current?.click()} className="px-4 py-2 bg-slate-900 border border-slate-700 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5">
+                      <Upload className="w-4 h-4" />
+                      <span>Upload Proof</span>
+                    </button>
+                    <input type="url" value={sectionForm.certImg} onChange={e => setSectionForm({...sectionForm, certImg: e.target.value})} placeholder="Or paste certificate image URL" className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+                  </div>
+                </div>
+              )}
+
+              <button type="submit" className="w-full py-4 neon-airflow-btn text-white text-xs font-black rounded-2xl uppercase tracking-wider">
+                Save to Profile
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: SOCIAL & DEVELOPER PROFILES ─── */}
+      {showSocialModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="neon-border-box max-w-lg w-full p-8 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            <button onClick={() => setShowSocialModal(false)} className="absolute top-5 right-5 text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            <h3 className="text-2xl font-black text-white mb-2">Connect Your Profiles</h3>
+            <p className="text-xs text-slate-400 mb-6">Add links to your developer repos, design portfolios, and social accounts.</p>
+
+            <form onSubmit={handleSaveSocialLinks} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 flex items-center space-x-1.5"><Globe className="w-4 h-4 text-white" /><span>GitHub Repository URL</span></label>
+                <input type="text" value={socialForm.github} onChange={e => setSocialForm({...socialForm, github: e.target.value})} placeholder="https://github.com/username" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 flex items-center space-x-1.5"><Globe className="w-4 h-4 text-blue-400" /><span>LinkedIn Profile URL</span></label>
+                <input type="text" value={socialForm.linkedin} onChange={e => setSocialForm({...socialForm, linkedin: e.target.value})} placeholder="https://linkedin.com/in/username" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 flex items-center space-x-1.5"><Globe className="w-4 h-4 text-pink-400" /><span>Instagram Profile / Handle</span></label>
+                <input type="text" value={socialForm.instagram} onChange={e => setSocialForm({...socialForm, instagram: e.target.value})} placeholder="https://instagram.com/username or @handle" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 flex items-center space-x-1.5"><Globe className="w-4 h-4 text-slate-300" /><span>X (Twitter) Profile URL</span></label>
+                <input type="text" value={socialForm.twitter} onChange={e => setSocialForm({...socialForm, twitter: e.target.value})} placeholder="https://x.com/username" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 flex items-center space-x-1.5"><Globe className="w-4 h-4 text-red-400" /><span>YouTube Channel / Portfolio Video</span></label>
+                <input type="text" value={socialForm.youtube} onChange={e => setSocialForm({...socialForm, youtube: e.target.value})} placeholder="https://youtube.com/@channel" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1 flex items-center space-x-1.5"><Code className="w-4 h-4 text-amber-400" /><span>LeetCode / CodeChef Profile</span></label>
+                <input type="text" value={socialForm.leetcode} onChange={e => setSocialForm({...socialForm, leetcode: e.target.value})} placeholder="https://leetcode.com/username" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+              </div>
+
+              <button type="submit" className="w-full py-4 neon-airflow-btn text-white text-xs font-black rounded-2xl uppercase tracking-wider mt-2">
+                Save Social Profiles
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Avatar Modal */}
+      {showAvatarModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="neon-border-box max-w-md w-full p-8 shadow-2xl relative space-y-6">
+            <button onClick={() => setShowAvatarModal(false)} className="absolute top-5 right-5 text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            <div className="space-y-1">
+              <h3 className="text-xl font-black text-white flex items-center space-x-2"><Camera className="w-5 h-5 text-indigo-400" /><span>Upload Profile Picture</span></h3>
+              <p className="text-xs text-slate-400">Choose any photo to open the 1:1 crop tool.</p>
+            </div>
+            <input type="file" ref={avatarFileInputRef} onChange={handleAvatarFileChosen} accept="image/*" className="hidden" />
+            <div className="space-y-3">
+              <button onClick={() => avatarFileInputRef.current?.click()} className="w-full py-4 neon-airflow-btn text-white text-xs font-black uppercase tracking-wider rounded-2xl shadow-xl flex items-center justify-center space-x-2">
+                <Upload className="w-4 h-4" /><span>Choose Photo to Crop</span>
+              </button>
+              {profileUser.profile?.avatarUrl && (
+                <button onClick={handleRemoveAvatar} className="w-full py-3 bg-red-500/15 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/40 text-xs font-black uppercase rounded-2xl transition flex items-center justify-center space-x-2">
+                  <Trash2 className="w-4 h-4" /><span>Remove Picture</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cover Modal */}
+      {showCoverModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="neon-border-box max-w-md w-full p-8 shadow-2xl relative space-y-6">
+            <button onClick={() => setShowCoverModal(false)} className="absolute top-5 right-5 text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            <div className="space-y-1">
+              <h3 className="text-xl font-black text-white flex items-center space-x-2"><Camera className="w-5 h-5 text-pink-400" /><span>Upload Cover Banner</span></h3>
+              <p className="text-xs text-slate-400">Choose a banner image to open the 16:6 crop tool.</p>
+            </div>
+            <input type="file" ref={coverFileInputRef} onChange={handleCoverFileChosen} accept="image/*" className="hidden" />
+            <div className="space-y-3">
+              <button onClick={() => coverFileInputRef.current?.click()} className="w-full py-4 bg-gradient-to-r from-pink-600 to-rose-500 text-white text-xs font-black uppercase tracking-wider rounded-2xl shadow-xl flex items-center justify-center space-x-2">
+                <Upload className="w-4 h-4" /><span>Choose Banner to Crop</span>
+              </button>
+              {profileUser.profile?.coverUrl && (
+                <button onClick={handleRemoveCover} className="w-full py-3 bg-red-500/15 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/40 text-xs font-black uppercase rounded-2xl transition flex items-center justify-center space-x-2">
+                  <Trash2 className="w-4 h-4" /><span>Remove Cover</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="neon-border-box max-w-xl w-full p-8 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            <button onClick={() => setShowEditModal(false)} className="absolute top-5 right-5 text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            <h3 className="text-2xl font-black text-white mb-2">Edit Your Profile</h3>
+            <p className="text-xs text-slate-400 mb-6">Select from all Indian universities, 50+ categories, and thousands of smart skill tags.</p>
+
+            <form onSubmit={handleSaveProfile} className="space-y-5">
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">Tagline / Headline</label>
+                <input required type="text" value={editForm.tagline} onChange={e => setEditForm({...editForm, tagline: e.target.value})} placeholder="e.g. Minimalist Logo Designer • IIT Madras" className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">Primary Category / Field</label>
+                <input type="text" value={categorySearchQuery} onChange={e => setCategorySearchQuery(e.target.value)} placeholder="Filter category list..." className="w-full px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white mb-2 outline-none" />
+                <select value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white font-bold">
+                  {filteredCategories.map(cat => (
+                    <option key={cat} value={cat.split(' (')[0]}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">Hourly Rate (₹ INR)</label>
+                <input required type="number" value={editForm.hourlyRate} onChange={e => setEditForm({...editForm, hourlyRate: e.target.value})} className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white font-bold" />
+              </div>
+
+              <div className="relative">
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">College / University Name</label>
+                <input required type="text" value={collegeQuery} onChange={e => { setCollegeQuery(e.target.value); setEditForm({...editForm, college: e.target.value}); setShowCollegeDropdown(true); }} onFocus={() => setShowCollegeDropdown(true)} placeholder="Search your college (e.g. Mohan Babu University, IIT, JNTU, DU...)" className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white outline-none focus:border-indigo-500" />
+                {showCollegeDropdown && (
+                  <div className="absolute top-20 left-0 right-0 z-50 max-h-52 overflow-y-auto bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 space-y-1">
+                    {collegeQuery.trim() && (
+                      <div onClick={() => { setEditForm({...editForm, college: collegeQuery}); setShowCollegeDropdown(false); }} className="p-2.5 bg-indigo-600/30 hover:bg-indigo-600/50 rounded-lg text-xs text-indigo-200 cursor-pointer font-bold transition flex items-center space-x-2 border border-indigo-500/40">
+                        <CheckCircle className="w-3.5 h-3.5 text-indigo-400" /><span>Use Custom: "{collegeQuery}"</span>
+                      </div>
+                    )}
+                    {filteredColleges.slice(0, 15).map((col, idx) => (
+                      <div key={idx} onClick={() => { setCollegeQuery(col); setEditForm({...editForm, college: col}); setShowCollegeDropdown(false); }} className="p-2.5 hover:bg-indigo-600/20 rounded-lg text-xs text-slate-200 cursor-pointer transition flex items-center space-x-2">
+                        <GraduationCap className="w-3.5 h-3.5 text-indigo-400 shrink-0" /><span>{col}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">Response Time Expectation</label>
+                <input
+                  type="text"
+                  maxLength={120}
+                  value={editForm.responseTimeExpectation}
+                  onChange={e => setEditForm({
+                    ...editForm,
+                    responseTimeExpectation: e.target.value
+                  })}
+                  placeholder="e.g. Usually replies within 24 hours"
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white outline-none focus:border-indigo-500"
+                />
+                <p className="mt-1.5 text-[11px] leading-5 text-slate-500">
+                  Seller-declared expectation shown to buyers. Do not state a guaranteed response time.
+                </p>
+              </div>
+
+              <div className="relative">
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">Skills & Tools</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {editForm.skills.map((s, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-indigo-600/30 border border-indigo-500/40 text-indigo-200 text-xs font-bold rounded-xl flex items-center space-x-1.5">
+                      <span>{s}</span><button type="button" onClick={() => handleRemoveSkill(s)} className="text-slate-400 hover:text-white">✕</button>
+                    </span>
+                  ))}
+                </div>
+                <input type="text" value={skillInput} onChange={e => { setSkillInput(e.target.value); setShowSkillSuggestions(true); }} onKeyDown={e => { if ((e.key === 'Enter' || e.key === ',') && skillInput.trim()) { e.preventDefault(); handleAddSkill(skillInput); } }} placeholder="Type a skill (e.g. React, Python, Figma, Excel, Video Editing)..." className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white outline-none focus:border-indigo-500" />
+                {showSkillSuggestions && skillInput.trim() && (
+                  <div className="absolute top-28 left-0 right-0 z-50 max-h-40 overflow-y-auto bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 flex flex-wrap gap-1.5">
+                    <span onClick={() => handleAddSkill(skillInput)} className="px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg cursor-pointer transition shadow-md">+ Add "{skillInput}"</span>
+                    {filteredSkills.slice(0, 10).map((skill, idx) => (
+                      <span key={idx} onClick={() => handleAddSkill(skill)} className="px-3 py-1 bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white text-xs font-bold rounded-lg cursor-pointer transition">+ {skill}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase mb-1.5">About Me / Bio</label>
+                <textarea rows="4" value={editForm.bio} onChange={e => setEditForm({...editForm, bio: e.target.value})} placeholder="Describe your student skills..." className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+              </div>
+
+              <button type="submit" className="w-full py-4 neon-airflow-btn text-white text-xs font-black rounded-2xl uppercase tracking-wider">Save Changes to PostgreSQL</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Portfolio Modal */}
+      {showPortfolioModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="neon-border-box max-w-md w-full p-8 shadow-2xl relative">
+            <button onClick={() => setShowPortfolioModal(false)} className="absolute top-5 right-5 text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            <h3 className="text-xl font-black text-white mb-4">Add Portfolio Project</h3>
+            <form onSubmit={handleAddPortfolio} className="space-y-4">
+              <input required type="text" value={portfolioForm.title} onChange={e => setPortfolioForm({...portfolioForm, title: e.target.value})} placeholder="Project Title" className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+              <input type="text" value={portfolioForm.category} onChange={e => setPortfolioForm({...portfolioForm, category: e.target.value})} placeholder="Category (e.g. Logo Design)" className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+              <input required type="url" value={portfolioForm.img} onChange={e => setPortfolioForm({...portfolioForm, img: e.target.value})} placeholder="Image Preview URL" className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white" />
+              <button type="submit" className="w-full py-4 neon-airflow-btn text-white text-xs font-black rounded-2xl uppercase tracking-wider">Add to Portfolio</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Direct Hire Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="neon-border-box max-w-md w-full p-8 shadow-2xl relative">
+            <button onClick={() => setShowInviteModal(false)} className="absolute top-5 right-5 text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            <h3 className="text-xl font-black text-white">Hire {profileUser.fullName}</h3>
+            <form onSubmit={(e) => { e.preventDefault(); confetti(); setShowInviteModal(false); alert('Direct Hire Offer sent!'); }} className="space-y-4">
+              <input required type="text" placeholder="Project Title" className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-sm text-white" />
+              <input required type="number" placeholder="Budget in ₹ INR" className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-sm text-white font-bold" />
+              <textarea required rows="3" placeholder="Project deliverables..." className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-sm text-white" />
+              <button type="submit" className="w-full py-4 neon-airflow-btn text-white text-xs font-black rounded-2xl uppercase tracking-wider">Send Project Offer</button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
