@@ -1,4 +1,10 @@
 const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not configured.');
+}
 const prisma = require('../config/db');
 
 exports.requireAuth = async (req, res, next) => {
@@ -14,7 +20,7 @@ exports.requireAuth = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid token format.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    const decoded = jwt.verify(token, JWT_SECRET);
     // SECURITY UPGRADE: Prevent database crashing by only fetching essential auth data
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -64,7 +70,7 @@ exports.optionalAuth = async (req, res, next) => {
       return next();
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
