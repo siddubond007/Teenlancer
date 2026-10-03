@@ -55,7 +55,6 @@ exports.register = async (req, res) => {
       return res.status(409).json({ error: 'This email is already registered. Please sign in instead.' });
     }
 
-    const isOwnerAdmin = cleanEmail === 'siddusiddharth80193@gmail.com';
     const userCleanName = (username || `${firstName.toLowerCase()}${Math.floor(100 + Math.random() * 900)}`).replace(/\s+/g, '');
 
     const existingUsername = await prisma.user.findFirst({
@@ -82,12 +81,12 @@ exports.register = async (req, res) => {
     const normalizedRole = String(role || 'STUDENT_FREELANCER').trim().toUpperCase();
     const allowedPublicRoles = new Set(['STUDENT_FREELANCER', 'CLIENT']);
 
-    if (!isOwnerAdmin && !allowedPublicRoles.has(normalizedRole)) {
+    if (!allowedPublicRoles.has(normalizedRole)) {
       return res.status(403).json({ error: 'Invalid account role. Public registration supports Student or Client accounts only.' });
     }
 
     // Indian Contract Act Sec 11 Safeguard
-    const requestedRole = isOwnerAdmin ? 'ADMIN' : normalizedRole;
+    const requestedRole = normalizedRole;
     if (isMinor && requestedRole === 'CLIENT') {
       return res.status(403).json({ error: 'Legal Capacity Error: Users under 18 cannot legally enter into employment contracts or act as a Client.' });
     }
@@ -102,24 +101,24 @@ exports.register = async (req, res) => {
         middleName: middleName || null,
         lastName,
         fullName,
-        role: isOwnerAdmin ? 'ADMIN' : (isMinor ? 'STUDENT_FREELANCER' : normalizedRole),
+        role: isMinor ? 'STUDENT_FREELANCER' : normalizedRole,
         isMinor,
         age: parsedAge,
         dob: dob ? new Date(dob) : null,
         profile: {
           create: {
-            tagline: isOwnerAdmin ? 'Super Administrator & Founder' : (isMinor ? 'Young Student Creator (Minor Verified)' : 'Student Creator & Freelancer'),
-            bio: isOwnerAdmin ? 'Platform Administrator for SkillLaunch.' : 'Student Fresher ready to deliver quality work and build a verified portfolio.',
-            college: isOwnerAdmin ? 'Mohan Babu University (MBU) - Tirupati' : '',
-            category: isOwnerAdmin ? 'Platform Operations' : 'General Freelancing',
-            hourlyRate: isOwnerAdmin ? 999 : 350,
+            tagline: isMinor ? 'Young Student Creator (Minor Verified)' : 'Student Creator & Freelancer',
+            bio: isMinor ? 'Student Creator ready to build a verified portfolio.' : 'Student Fresher ready to deliver quality work and build a verified portfolio.',
+            college: '',
+            category: 'General Freelancing',
+            hourlyRate: 350,
             skills: ['Student Talent', 'Fast Learner'],
-            onboardingCompleted: isOwnerAdmin,
-            onboardingStatus: isOwnerAdmin ? 'COMPLETED' : 'PENDING',
+            onboardingCompleted: false,
+            onboardingStatus: 'PENDING',
             onboardingData: {}
           }
         },
-        wallet: { create: { isParentAccount: isMinor, availableBalance: isOwnerAdmin ? 5000 : 0 } }
+        wallet: { create: { isParentAccount: isMinor, availableBalance: 0 } }
       },
       include: { profile: true, wallet: true }
     });
@@ -193,16 +192,6 @@ exports.login = async (req, res) => {
 
       return res.status(400).json({ error: 'Incorrect password. Please try again.' });
     }
-
-    // Auto-promote Owner Email to ADMIN on Login
-    if (user.email.toLowerCase() === 'siddusiddharth80193@gmail.com' && user.role !== 'ADMIN') {
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: { role: 'ADMIN', isSuspended: false },
-        include: { profile: true, wallet: true, verification: true }
-      });
-    }
-
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     if (user.role === 'ADMIN') {
