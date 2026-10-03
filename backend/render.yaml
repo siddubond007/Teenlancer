@@ -12,3 +12,9 @@ services:
         generateValue: true
       - key: DATABASE_URL
         sync: false
+      - key: ADMIN_MASTER_KEY
+        sync: false
+      - key: ADMIN_BOOTSTRAP_PASSWORD
+        sync: false
+      - key: SEED_DEFAULT_PASSWORD
+        sync: false

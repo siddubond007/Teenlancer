@@ -2,7 +2,13 @@ const bcrypt = require('bcryptjs');
 const prisma = require('./src/config/db');
 
 async function main() {
-  const adminPassHash = await bcrypt.hash('VenkiSiddu@007always', 10);
+  const adminPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+
+  if (!adminPassword) {
+    throw new Error('ADMIN_BOOTSTRAP_PASSWORD is not configured.');
+  }
+
+  const adminPassHash = await bcrypt.hash(adminPassword, 10);
 
   const updated = await prisma.user.updateMany({
     where: {
