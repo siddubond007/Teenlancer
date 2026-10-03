@@ -133,24 +133,19 @@ exports.getUserProfile = async (req, res) => {
           { email: userId }
         ]
       },
-      include: {
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        role: true,
+        points: true,
+        createdAt: true,
         profile: true,
         gigs: { include: { packages: true } },
         reviewsReceived: {
-            where: { isVisible: true },
-            include: {
-              reviewer: { select: { fullName: true } }
-            }
-          },
-        verification: true,
-        ordersAsSeller: {
-          select: {
-            id: true,
-            status: true,
-            totalAmount: true,
-            sellerEarnings: true,
-            createdAt: true,
-            deadline: true
+          where: { isVisible: true },
+          include: {
+            reviewer: { select: { fullName: true } }
           }
         }
       }
@@ -159,10 +154,6 @@ exports.getUserProfile = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User profile not found.' });
     }
-
-    delete user.passwordHash;
-    delete user.verification;
-    delete user.ordersAsSeller;
 
     user.profile = sanitizePublicProfile(user.profile);
 
