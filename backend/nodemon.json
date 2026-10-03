@@ -1,0 +1,7 @@
+{
+  "ignore": [
+    "uploads_temp/**",
+    "../uploads_temp/**",
+    "**/uploads_temp/**"
+  ]
+}

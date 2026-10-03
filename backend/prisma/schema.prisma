@@ -1,0 +1,687 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT_FREELANCER
+  CLIENT
+  ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EducationType {
+  COLLEGE
+  SCHOOL_OR_DIPLOMA
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  FUNDED_IN_ESCROW
+  REQUIREMENTS_SUBMITTED
+  IN_PROGRESS
+  DELIVERED
+  REVISION_REQUESTED
+  IN_REVIEW
+  COMPLETED
+  DISPUTED
+  CANCELLED_REFUNDED
+}
+
+enum PayoutStatus {
+  REQUESTED
+  APPROVED_PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+enum BidStatus {
+  PENDING
+  SHORTLISTED
+  REJECTED
+  HIRED
+}
+
+model User {
+  id                String    @id @default(uuid())
+  username          String?   @unique
+  email             String    @unique
+  passwordHash      String
+  firstName         String?
+  middleName        String?
+  lastName          String?
+  fullName          String
+  phone             String?
+  role              Role      @default(STUDENT_FREELANCER)
+  isMinor           Boolean   @default(false)
+  age               Int       @default(20)
+  dob               DateTime?
+  points            Int       @default(0)
+  strikesCount      Int       @default(0)
+  isSuspended       Boolean   @default(false)
+  suspendedUntil    DateTime?
+  isBanned          Boolean   @default(false)
+  bannedAt          DateTime?
+  freeBidsRemaining Int       @default(15)
+
+  averageRating    Float @default(0)
+  communicationAvg Float @default(0)
+  qualityAvg       Float @default(0)
+  timelinessAvg    Float @default(0)
+  totalReviews     Int   @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile                  Profile?
+  verification             VerificationRequest?
+  wallet                   Wallet?
+  gigs                     Gig[]
+  customOffersAsBuyer      GigCustomOffer[]      @relation("CustomOfferBuyer")
+  customOffersAsSeller     GigCustomOffer[]      @relation("CustomOfferSeller")
+  jobsPosted               Job[]                 @relation("ClientJobs")
+  bidsPlaced               Bid[]                 @relation("StudentBids")
+  ordersAsClient           Order[]               @relation("ClientOrders")
+  ordersAsSeller           Order[]               @relation("SellerOrders")
+  reviewsWritten           Review[]              @relation("ReviewsWritten")
+  reviewsReceived          Review[]              @relation("ReviewsReceived")
+  messagesSent             Message[]             @relation("Sender")
+  payoutRequests           PayoutRequest[]
+  moderationLogs           ModerationLog[]
+  notifications            Notification[]
+  disputesOpened           Dispute[]             @relation("DisputesOpened")
+  investigationActions     InvestigationAction[]
+  parentConsentDeclaration Boolean               @default(false)
+  razorpayAccountId        String?
+  strikeLogs               StrikeLog[]
+  activityEvents           OrderActivityEvent[]
+  gigAnalyticsEvents       GigAnalyticsEvent[]
+  gigFavorites             GigFavorite[]
+  gigRevisions             GigRevision[]
+  isDeleted                Boolean               @default(false)
+  deletedAt                DateTime?
+}
+
+model Profile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tagline          String?  @default("Student Creator • Ready to Work")
+  bio              String?  @default("Student Fresher ready to deliver quality work and build a verified portfolio.")
+  avatarUrl        String?
+  coverUrl         String?
+  college          String?  @default("College / University")
+  category         String?  @default("Graphic Design")
+  hourlyRate       Float?   @default(499)
+  githubUrl        String?
+  youtubeUrl       String?
+  drivePortfolio   String?
+  resumeUrl        String?
+  resumeFileName   String?
+  sampleFiles      String[]
+  skills           String[] @default(["Student Talent", "Fast Learner"])
+  badges           String[] @default(["Verified Student"])
+  canUseTieredGigs Boolean  @default(false)
+  responseTimeExpectation String?
+  onboardingCompleted Boolean  @default(true)
+  onboardingStatus    String   @default("COMPLETED")
+  onboardingData Json? @default("{}")
+
+  // 5 Student Profile Sections
+  portfolioItems    Json? @default("[]")
+  experienceList    Json? @default("[]")
+  educationList     Json? @default("[]")
+  qualificationList Json? @default("[]")
+  certificationList Json? @default("[]")
+  socialLinks       Json? @default("{}")
+}
+
+model VerificationRequest {
+  id                     String             @id @default(uuid())
+  userId                 String             @unique
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  educationType          EducationType
+  collegeName            String?
+  collegeEmail           String?
+  isCollegeEmailVerified Boolean            @default(false)
+  idCardUrl              String?
+  collegeIdStatus        VerificationStatus @default(PENDING)
+  collegeRejectionReason String?
+  certificateUrl         String?
+  nationalIdUrl          String?
+  govtIdStatus           VerificationStatus @default(PENDING)
+  govtRejectionReason    String?
+  parentConsentUrl       String?
+  parentName             String?
+  parentPhone            String?
+  status                 VerificationStatus @default(PENDING)
+  rejectionReason        String?
+  reviewedAt             DateTime?
+  createdAt              DateTime           @default(now())
+}
+
+model Gig {
+  id           String   @id @default(uuid())
+  sellerId     String
+  seller       User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  title        String
+  category     String
+  description  String
+  coverImage   String
+  isTiered     Boolean  @default(false)
+  status                String   @default("PUBLISHED")
+  draftData             Json?
+  draftVersion          Int      @default(0)
+  moderationStatus      String   @default("NOT_REVIEWED")
+  moderationReasonCode  String?
+  moderationFindings    Json?
+  moderatedById         String?
+  moderatedAt           DateTime?
+
+  pendingEditData          Json?
+  pendingEditVersion       Int      @default(0)
+  pendingEditStatus        String?
+  pendingEditReasonCode    String?
+  pendingEditFindings      Json?
+  pendingEditModeratedById String?
+  pendingEditModeratedAt   DateTime?
+  pendingEditUpdatedAt     DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  packages       GigPackage[]
+  extras          GigExtra[]
+  customOffers   GigCustomOffer[]
+  orders         Order[]
+  analyticsEvents GigAnalyticsEvent[]
+  favorites      GigFavorite[]
+  revisions      GigRevision[]
+  isDeleted      Boolean      @default(false)
+  deletedAt      DateTime?
+  categoryId     String?
+  categoryRef    Category?    @relation(fields: [categoryId], references: [id])
+  subcategoryId  String?
+  subcategoryRef Subcategory? @relation(fields: [subcategoryId], references: [id])
+  skills         Skill[]
+
+  @@index([sellerId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+}
+
+model GigRevision {
+  id         String   @id @default(uuid())
+  gigId      String
+  gig        Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  version    Int
+  changeType String
+  snapshot   Json
+  createdAt  DateTime @default(now())
+
+  @@unique([gigId, version])
+  @@index([gigId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model GigAnalyticsEvent {
+  id            String   @id @default(uuid())
+  gigId         String
+  actorId       String?
+  type          String
+  eventId       String   @unique
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  gig           Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  actor         User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([gigId, type, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model GigFavorite {
+  id        String   @id @default(uuid())
+  gigId     String
+  userId    String
+  createdAt DateTime @default(now())
+
+  gig       Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gigId, userId])
+  @@index([userId, createdAt])
+}
+
+model GigPackage {
+  id             String   @id @default(uuid())
+  gigId          String
+  gig            Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  tierName       String
+  price          Float
+  deliveryDays   Int
+  revisions      Int
+  description    String
+  scope          Json?
+  features       Json?
+  orders         Order[]
+
+  @@index([gigId])
+}
+
+model GigExtra {
+  id        String   @id @default(uuid())
+  gigId     String
+  gig       Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  title     String
+  price     Float
+  scope     Json?
+
+  @@index([gigId])
+}
+
+enum GigCustomOfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+model GigCustomOffer {
+  id              String              @id @default(uuid())
+  gigId           String
+  gig             Gig                 @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  buyerId         String
+  buyer           User                @relation("CustomOfferBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  sellerId        String
+  seller          User                @relation("CustomOfferSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  requestedWork   String
+  proposedPrice   Float
+  deliveryDays    Int
+  status          GigCustomOfferStatus @default(PENDING)
+  orderId         String?             @unique
+  order           Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([gigId, status, createdAt])
+  @@index([buyerId, status, createdAt])
+  @@index([sellerId, status, createdAt])
+}
+
+model Job {
+  id                  String    @id @default(uuid())
+  clientId            String
+  client              User      @relation("ClientJobs", fields: [clientId], references: [id], onDelete: Cascade)
+  title               String    @default("Untitled Project")
+  category            String    @default("Web Development")
+  subcategory         String?
+  projectType         String?   @default("ONE_TIME")
+  description         String    @default("")
+  deliverables        String[]  @default([])
+  requirements        String?   @default("")
+  skills              String[]  @default([])
+  experienceLevel     String?   @default("INTERMEDIATE")
+  budgetType          String?   @default("RANGE")
+  fixedBudget         Float?
+  minimumBudget       Float?
+  maximumBudget       Float?
+  budget              Float     @default(0)
+  currency            String    @default("INR")
+  startPreference     String?   @default("ASAP")
+  startDate           DateTime?
+  deadlineType        String?   @default("1_MONTH")
+  deadlineDate        DateTime?
+  timeline            String?   @default("1_MONTH")
+  reviewWindow        Int       @default(5)
+  attachmentUrls      String[]  @default([])
+  externalLinks       String[]  @default([])
+  referenceLinks      String[]  @default([])
+  visibility          String?   @default("PUBLIC")
+  preferredLocation   String?   @default("ANYWHERE_INDIA")
+  preferredState      String?
+  preferredCity       String?
+  locationPreferences String?
+  preferredLanguages  String[]  @default(["English"])
+  languagePreferences String?
+  screeningQuestions  String[]  @default([])
+  ndaRequired         Boolean   @default(false)
+  currentStep         Int       @default(1)
+  status              String    @default("published")
+  isOpen              Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now()) @updatedAt
+
+  bids           Bid[]
+  orders         Order[]
+  isDeleted      Boolean      @default(false)
+  deletedAt      DateTime?
+  Category       Category?    @relation(fields: [categoryId], references: [id])
+  categoryId     String?
+  Subcategory    Subcategory? @relation(fields: [subcategoryId], references: [id])
+  subcategoryId  String?
+  taxonomySkills Skill[]      @relation("JobTaxonomySkills")
+
+  @@index([status, isOpen])
+  @@index([category])
+  @@index([clientId])
+}
+
+model Bid {
+  id             String    @id @default(uuid())
+  jobId          String
+  job            Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        User      @relation("StudentBids", fields: [studentId], references: [id], onDelete: Cascade)
+  proposedAmount Float
+  deliveryDays   Int
+  coverLetter    String
+  status         BidStatus @default(PENDING)
+  createdAt      DateTime  @default(now())
+
+  @@unique([jobId, studentId])
+}
+
+model Order {
+  id                String      @id @default(uuid())
+  clientId          String
+  client            User        @relation("ClientOrders", fields: [clientId], references: [id])
+  sellerId          String
+  seller            User        @relation("SellerOrders", fields: [sellerId], references: [id])
+  gigId             String?
+  gig               Gig?        @relation(fields: [gigId], references: [id])
+  jobId             String?
+  job               Job?        @relation(fields: [jobId], references: [id])
+  totalAmount       Float
+  platformFee       Float
+  sellerEarnings    Float
+  status            OrderStatus @default(PENDING_PAYMENT)
+  deadline          DateTime
+  requirements      String?
+  autoApproveAt     DateTime?
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  transfer          Transfer?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  deliverables  Deliverable[]
+  messages      Message[]
+  reviews       Review[]
+  dispute       Dispute?
+  activityEvents OrderActivityEvent[]
+  GigPackage   GigPackage?   @relation(fields: [gigPackageId], references: [id])
+  gigPackageId String?
+  customOffer  GigCustomOffer?
+
+  @@index([status])
+  @@index([jobId])
+  @@index([gigId, status])
+}
+
+model Deliverable {
+  id              String   @id @default(uuid())
+  orderId         String
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fileUrls        String[]
+  driveLinks      String[]
+  message         String
+  version         Int      @default(1)
+  reviewStatus    String   @default("PENDING_REVIEW")
+  revisionReason  String?
+  reviewedAt      DateTime?
+  reviewedById    String?
+  submittedAt     DateTime @default(now())
+
+  @@index([orderId])
+  @@index([orderId, version])
+  @@index([reviewStatus])
+  @@unique([orderId, version])
+}
+
+model OrderActivityEvent {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  type      String
+  message   String
+  source    String   @default("SYSTEM")
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt])
+  @@index([actorId])
+  @@index([type])
+}
+
+model Wallet {
+  id                String  @id @default(uuid())
+  userId            String  @unique
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pendingBalance    Float   @default(0.0)
+  availableBalance  Float   @default(0.0)
+  upiId             String?
+  bankAccountNumber String?
+  bankIfsc          String?
+  isParentAccount   Boolean @default(false)
+}
+
+model PayoutRequest {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Float
+  method      String
+  destination String
+  status      PayoutStatus @default(REQUESTED)
+  createdAt   DateTime     @default(now())
+  processedAt DateTime?
+
+  @@index([userId])
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  orderId     String?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  senderId    String
+  sender      User     @relation("Sender", fields: [senderId], references: [id])
+  recipientId String
+  content     String
+  fileUrl     String?
+  isBlocked   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([senderId])
+  @@index([recipientId])
+}
+
+model ModerationLog {
+  id            String   @id @default(uuid())
+  senderId      String
+  sender        User     @relation(fields: [senderId], references: [id])
+  flaggedText   String
+  violationType String
+  confidence    Float
+  createdAt     DateTime @default(now())
+}
+
+model Review {
+  id      String @id @default(uuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  reviewerId String
+  reviewer   User   @relation("ReviewsWritten", fields: [reviewerId], references: [id])
+
+  revieweeId String
+  reviewee   User   @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+
+  overallRating       Int
+  communicationRating Int
+  qualityRating       Int
+  timelinessRating    Int
+
+  comment String
+
+  isVisible Boolean @default(true)
+  isFlagged Boolean @default(false)
+
+  moderatedBy      String?
+  moderatedAt      DateTime?
+  moderationReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orderId, reviewerId])
+  @@index([reviewerId])
+  @@index([revieweeId])
+}
+
+model Dispute {
+  id      String @id @default(uuid())
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  openedById String
+  openedBy   User   @relation("DisputesOpened", fields: [openedById], references: [id])
+
+  reason   String
+  evidence String?
+
+  sellerReason   String?
+  sellerEvidence String?
+
+  adminDecision String?
+  status        String  @default("OPEN")
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   String?
+  title     String
+  message   String
+  type      String   @default("SYSTEM")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([orderId])
+}
+
+model InvestigationAction {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  adminId    String
+  actionType String
+  note       String?
+
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  adminId    String
+  targetId   String?
+  actionType String
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([actionType])
+  @@index([createdAt])
+}
+
+model AdminLoginLog {
+  id          String   @id @default(uuid())
+  adminId     String?
+  email       String
+  ipAddress   String?
+  userAgent   String?
+  loginStatus String
+  createdAt   DateTime @default(now())
+
+  @@index([adminId])
+  @@index([email])
+  @@index([loginStatus])
+  @@index([createdAt])
+}
+
+model Category {
+  id            String        @id @default(uuid())
+  name          String        @unique
+  slug          String        @unique
+  isRestricted  Boolean       @default(false)
+  subcategories Subcategory[]
+  gigs          Gig[]
+  jobs          Job[]
+}
+
+model Subcategory {
+  id         String   @id @default(uuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name       String
+  slug       String   @unique
+  skills     Skill[]
+  gigs       Gig[]
+  jobs       Job[]
+}
+
+model Skill {
+  id            String      @id @default(uuid())
+  subcategoryId String
+  subcategory   Subcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  name          String
+  slug          String      @unique
+  gigs          Gig[]
+  jobs          Job[]       @relation("JobTaxonomySkills")
+}
+
+model Transfer {
+  id                 String   @id @default(uuid())
+  orderId            String   @unique
+  order              Order    @relation(fields: [orderId], references: [id])
+  razorpayTransferId String?  @unique
+  amount             Float
+  onHold             Boolean  @default(true)
+  status             String   @default("PENDING")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model WebhookLog {
+  id          String   @id @default(uuid())
+  eventId     String   @unique
+  eventType   String
+  processedAt DateTime @default(now())
+}
+
+model StrikeLog {
+  id       String   @id @default(uuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId  String?
+  reason   String
+  issuedAt DateTime @default(now())
+}
