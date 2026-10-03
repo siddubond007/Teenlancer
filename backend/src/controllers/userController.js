@@ -322,7 +322,12 @@ exports.submitVerification = async (req, res) => {
       update: updateData
     });
 
-    res.status(201).json({ message: 'Verification document submitted successfully for review.', verification });
+    res.status(201).json({
+      message: 'Verification document submitted successfully for review.',
+      status: verification.status,
+      collegeIdStatus: verification.collegeIdStatus,
+      govtIdStatus: verification.govtIdStatus
+    });
   } catch (err) {
     console.error('Submit verification error:', err);
     res.status(500).json({ error: err.message });
