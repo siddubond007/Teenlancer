@@ -28,9 +28,37 @@ const storage = multer.diskStorage({
   }
 });
 
+const allowedImageMimeTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp'
+]);
+
+const allowedImageExtensions = new Set([
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp'
+]);
+
+const isAllowedImageFile = (file) => {
+  const extension = path.extname(file?.originalname || '').toLowerCase();
+  return (
+    allowedImageMimeTypes.has(file?.mimetype) &&
+    allowedImageExtensions.has(extension)
+  );
+};
+
 const upload = multer({
   storage,
-  limits: { fileSize: 25 * 1024 * 1024 } // 25MB max
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max
+  fileFilter: (req, file, cb) => {
+    if (isAllowedImageFile(file)) {
+      return cb(null, true);
+    }
+
+    return cb(new Error('Only JPG, PNG, or WebP image files are supported.'));
+  }
 });
 
 const resumeUpload = multer({
@@ -132,11 +160,20 @@ router.post('/', requireAuth, upload.single('file'), async (req, res) => {
     const userCloudinaryFolder = `skilllaunch_users/${userFolderSlug}`;
     console.log(`📁 Streaming upload for ${req.user?.email} -> Cloudinary folder: [${userCloudinaryFolder}]`);
 
-    // 2. If base64 data was sent in JSON body (e.g. Cropped avatars or cover banners)
+    // 2. If base64 image data was sent in JSON body (e.g. cropped avatars or cover banners)
     if (req.body && req.body.base64Data) {
-      const uploadRes = await cloudinary.uploader.upload(req.body.base64Data, {
+      const base64Data = String(req.body.base64Data);
+      const imageDataPattern = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+
+      if (!imageDataPattern.test(base64Data)) {
+        return res.status(400).json({
+          error: 'Only JPG, PNG, or WebP image uploads are supported.'
+        });
+      }
+
+      const uploadRes = await cloudinary.uploader.upload(base64Data, {
         folder: userCloudinaryFolder,
-        resource_type: 'auto',
+        resource_type: 'image',
         agent: cloudinaryAgent
       });
       console.log(`✅ Saved to Cloudinary: ${uploadRes.secure_url}`);
@@ -154,9 +191,23 @@ router.post('/', requireAuth, upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file provided for upload.' });
     }
 
+    if (!isAllowedImageFile(req.file)) {
+      try {
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      } catch (cleanupErr) {
+        console.warn('Rejected upload cleanup warning:', cleanupErr);
+      }
+
+      return res.status(400).json({
+        error: 'Only JPG, PNG, or WebP image files are supported.'
+      });
+    }
+
     const uploadRes = await cloudinary.uploader.upload(req.file.path, {
       folder: userCloudinaryFolder,
-      resource_type: 'auto',
+      resource_type: 'image',
       agent: cloudinaryAgent
     });
 
