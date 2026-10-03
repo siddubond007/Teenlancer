@@ -1,15 +1,15 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is not configured.');
 }
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
