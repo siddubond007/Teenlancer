@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360">
+<defs><linearGradient id="t" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffdf9"/><stop offset=".55" stop-color="#e8dfd4"/><stop offset="1" stop-color="#b29f8b"/></linearGradient><linearGradient id="l" x1="1" y1="0" x2="0" y2="1"><stop stop-color="#eee5db"/><stop offset="1" stop-color="#aa9988"/></linearGradient><linearGradient id="r" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f7eee5"/><stop offset="1" stop-color="#9b8b7b"/></linearGradient><radialGradient id="s"><stop stop-color="#57514a" stop-opacity=".34"/><stop offset="1" stop-color="#57514a" stop-opacity="0"/></radialGradient></defs>
+<ellipse cx="240" cy="319" rx="158" ry="23" fill="url(#s)"/>
+<polygon points="88 196 171 150 254 178 171 226" fill="url(#t)"/><path d="m88 196 83 30v80l-83-36Z" fill="url(#l)"/><path d="m171 226 83-48v83l-83 45Z" fill="url(#r)"/>
+<polygon points="171 111 246 70 321 98 246 140" fill="url(#t)"/><path d="m171 111 75 29v87l-75-31Z" fill="url(#l)"/><path d="m246 140 75-42v84l-75 45Z" fill="url(#r)"/>
+<polygon points="246 190 307 155 370 178 307 216" fill="url(#t)"/><path d="m246 190 61 26v62l-61-27Z" fill="url(#l)"/><path d="m307 216 63-38v63l-63 37Z" fill="url(#r)"/>
+<path d="m190 92 67 25" stroke="#fffdf9" stroke-width="7" opacity=".20" stroke-linecap="round"/>
+</svg>
