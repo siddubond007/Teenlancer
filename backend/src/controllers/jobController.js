@@ -759,9 +759,16 @@ exports.acceptBid = async (req, res) => {
 
     const Razorpay = require('razorpay');
 
+    const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+    const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!razorpayKeyId || !razorpayKeySecret) {
+      throw new Error('Razorpay API credentials are not configured.');
+    }
+
     const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET
+      key_id: razorpayKeyId,
+      key_secret: razorpayKeySecret
     });
 
     const seller = await prisma.user.findUnique({
@@ -779,7 +786,16 @@ exports.acceptBid = async (req, res) => {
     }
 
     const linkedAccountId =
-      seller.razorpayAccountId || process.env.DEV_LINKED_ACCOUNT_ID;
+      seller.razorpayAccountId ||
+      (process.env.NODE_ENV !== 'production'
+        ? process.env.DEV_LINKED_ACCOUNT_ID
+        : null);
+
+    if (!linkedAccountId) {
+      throw new Error(
+        'PAYMENT_ACCOUNT_NOT_CONFIGURED: Freelancer payment account is not configured.'
+      );
+    }
 
     const transferPayload = linkedAccountId
       ? [{
