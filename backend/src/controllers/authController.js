@@ -108,7 +108,7 @@ exports.register = async (req, res) => {
         profile: {
           create: {
             tagline: isMinor ? 'Young Student Creator (Minor Verified)' : 'Student Creator & Freelancer',
-            bio: isMinor ? 'Student Creator ready to build a verified portfolio.' : 'Student Fresher ready to deliver quality work and build a verified portfolio.',
+            bio: 'Student Fresher ready to deliver quality work and build a verified portfolio.',
             college: '',
             category: 'General Freelancing',
             hourlyRate: 350,
