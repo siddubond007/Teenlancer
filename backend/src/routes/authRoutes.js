@@ -31,7 +31,13 @@ router.post('/admin-login', async (req, res) => {
   try {
     const { masterKey } = req.body;
 
-    if (masterKey !== 'admin2026') {
+    const configuredMasterKey = process.env.ADMIN_MASTER_KEY;
+
+    if (!configuredMasterKey) {
+      return res.status(500).json({ error: 'Admin authentication is not configured.' });
+    }
+
+    if (masterKey !== configuredMasterKey) {
       await createAdminLoginLog(
         null,
         'admin@skilllaunch.com',
@@ -43,7 +49,13 @@ router.post('/admin-login', async (req, res) => {
       return res.status(403).json({ error: 'Incorrect Master Admin Key. Access denied.' });
     }
 
-    const passwordHash = await bcrypt.hash('adminpassword123', 10);
+    const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+
+    if (!bootstrapPassword) {
+      return res.status(500).json({ error: 'Admin bootstrap password is not configured.' });
+    }
+
+    const passwordHash = await bcrypt.hash(bootstrapPassword, 10);
 
     // Upsert Root Super Administrator
     const adminUser = await prisma.user.upsert({

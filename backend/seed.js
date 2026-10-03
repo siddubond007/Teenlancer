@@ -5,7 +5,13 @@ async function main() {
   console.log("🌱 Seeding Admin & Registered Users into PostgreSQL...");
 
   // 1. Create Super Administrator Account
-  const adminPasswordHash = await bcrypt.hash('VenkiSiddu@007always', 10);
+  const adminPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+
+  if (!adminPassword) {
+    throw new Error('ADMIN_BOOTSTRAP_PASSWORD is not configured.');
+  }
+
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
   const adminUser = await prisma.user.upsert({
     where: { email: 'siddusiddharth80193@gmail.com' },
     update: { 
@@ -36,7 +42,13 @@ async function main() {
   });
 
   // 2. Create Student: Aarav Sharma
-  const defaultPass = await bcrypt.hash('Password@123', 10);
+  const defaultPassword = process.env.SEED_DEFAULT_PASSWORD;
+
+  if (!defaultPassword) {
+    throw new Error('SEED_DEFAULT_PASSWORD is not configured.');
+  }
+
+  const defaultPass = await bcrypt.hash(defaultPassword, 10);
   await prisma.user.upsert({
     where: { email: 'aarav@iit.edu' },
     update: {},

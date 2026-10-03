@@ -4,7 +4,13 @@ const prisma = require('./src/config/db');
 async function main() {
   console.log("🌱 Seeding Local PostgreSQL Database...");
 
-  const adminPassHash = await bcrypt.hash('VenkiSiddu@007always', 10);
+  const adminPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+
+  if (!adminPassword) {
+    throw new Error('ADMIN_BOOTSTRAP_PASSWORD is not configured.');
+  }
+
+  const adminPassHash = await bcrypt.hash(adminPassword, 10);
   const admin = await prisma.user.upsert({
     where: { email: 'siddusiddharth80193@gmail.com' },
     update: { passwordHash: adminPassHash, role: 'ADMIN', isSuspended: false },
@@ -30,7 +36,13 @@ async function main() {
     }
   });
 
-  const studentPass = await bcrypt.hash('Password@123', 10);
+  const defaultPassword = process.env.SEED_DEFAULT_PASSWORD;
+
+  if (!defaultPassword) {
+    throw new Error('SEED_DEFAULT_PASSWORD is not configured.');
+  }
+
+  const studentPass = await bcrypt.hash(defaultPassword, 10);
   await prisma.user.upsert({
     where: { email: 'student@gmail.com' },
     update: { passwordHash: studentPass },
