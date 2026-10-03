@@ -61,8 +61,6 @@ exports.getFreelancers = async (req, res) => {
         id: true,
         username: true,
         fullName: true,
-        email: true,
-        age: true,
         points: true,
         createdAt: true,
         profile: true,
