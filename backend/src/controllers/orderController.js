@@ -46,8 +46,19 @@ exports.createOrder = async (req, res) => {
     const seller = await prisma.user.findUnique({ where: { id: sellerId } });
     if (!seller) return res.status(404).json({ error: 'Freelancer not found' });
     
-    // Fallback account logic for development. In production, fail if not linked.
-    const linkedAccountId = seller.razorpayAccountId || process.env.DEV_LINKED_ACCOUNT_ID;
+    // Development may use an explicitly configured fallback account.
+    // Production must use the seller's own verified Razorpay linked account.
+    const linkedAccountId =
+      seller.razorpayAccountId ||
+      (process.env.NODE_ENV !== 'production'
+        ? process.env.DEV_LINKED_ACCOUNT_ID
+        : null);
+
+    if (!linkedAccountId) {
+      return res.status(409).json({
+        error: 'Freelancer payment account is not configured. Please complete Razorpay account setup before creating an order.'
+      });
+    }
 
     // 3. Construct Compliant Escrow Transfers Array (on_hold: true)
     let transfers = [];
@@ -198,8 +209,19 @@ exports.createGigOrder = async (req, res) => {
       return res.status(404).json({ error: 'Freelancer account not found.' });
     }
 
+    // Development may use an explicitly configured fallback account.
+    // Production must use the seller's own verified Razorpay linked account.
     const linkedAccountId =
-      seller.razorpayAccountId || process.env.DEV_LINKED_ACCOUNT_ID;
+      seller.razorpayAccountId ||
+      (process.env.NODE_ENV !== 'production'
+        ? process.env.DEV_LINKED_ACCOUNT_ID
+        : null);
+
+    if (!linkedAccountId) {
+      return res.status(409).json({
+        error: 'Freelancer payment account is not configured. Please complete Razorpay account setup before creating an order.'
+      });
+    }
 
     const transfers = linkedAccountId
       ? [{
