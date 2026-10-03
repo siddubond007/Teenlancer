@@ -1,4 +1,10 @@
 const express = require('express');
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not configured.');
+}
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
@@ -153,7 +159,7 @@ io.use(async (socket, next) => {
 
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || 'secret'
+      JWT_SECRET
     );
 
     const user = await prisma.user.findUnique({
