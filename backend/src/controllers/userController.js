@@ -166,27 +166,8 @@ exports.updateProfile = async (req, res) => {
     const { 
       tagline, bio, college, category, hourlyRate, skills, avatarUrl, coverUrl,
       experienceList, educationList, qualificationList, certificationList, socialLinks,
-      responseTimeExpectation, githubUrl, youtubeUrl, drivePortfolio,
-      onboardingCompleted, onboardingStatus, onboardingData
+      responseTimeExpectation, githubUrl, youtubeUrl, drivePortfolio
     } = req.body;
-
-    const allowedOnboardingStatuses = new Set([
-      'NOT_STARTED',
-      'PENDING',
-      'IN_PROGRESS',
-      'SKIPPED',
-      'COMPLETED'
-    ]);
-
-    let normalizedOnboardingStatus;
-    if (onboardingStatus !== undefined) {
-      normalizedOnboardingStatus = String(onboardingStatus).trim().toUpperCase();
-      if (!allowedOnboardingStatuses.has(normalizedOnboardingStatus)) {
-        return res.status(400).json({
-          error: 'Invalid onboarding status.'
-        });
-      }
-    }
 
     const updatedProfile = await prisma.profile.upsert({
       where: { userId: req.user.id },
@@ -211,14 +192,10 @@ exports.updateProfile = async (req, res) => {
         responseTimeExpectation: typeof responseTimeExpectation === 'string'
           ? responseTimeExpectation.trim().slice(0, 120) || null
           : null,
-        onboardingCompleted: normalizedOnboardingStatus !== undefined
-          ? normalizedOnboardingStatus === 'COMPLETED'
-          : (onboardingCompleted !== undefined
-              ? (onboardingCompleted === true || onboardingCompleted === 'true')
-              : true),
-        onboardingStatus: normalizedOnboardingStatus
-          || (onboardingCompleted === false || onboardingCompleted === 'false' ? 'PENDING' : 'COMPLETED'),
-        onboardingData: onboardingData !== undefined ? onboardingData : {}
+        // Onboarding state is server-controlled and is initialized safely for new profiles.
+        onboardingCompleted: false,
+        onboardingStatus: 'PENDING',
+        onboardingData: {}
       },
       update: {
         tagline,
@@ -242,15 +219,8 @@ exports.updateProfile = async (req, res) => {
               ? responseTimeExpectation.trim().slice(0, 120) || null
               : null)
           : undefined,
-        onboardingCompleted: normalizedOnboardingStatus !== undefined
-          ? normalizedOnboardingStatus === 'COMPLETED'
-          : (onboardingCompleted !== undefined
-              ? (onboardingCompleted === true || onboardingCompleted === 'true')
-              : undefined),
-        onboardingStatus: normalizedOnboardingStatus !== undefined
-          ? normalizedOnboardingStatus
-          : undefined,
-        onboardingData: onboardingData !== undefined ? onboardingData : undefined
+        // Do not accept onboarding completion/status/data from the generic profile editor.
+        // Trusted onboarding endpoints can update these fields explicitly.
       }
     });
 
