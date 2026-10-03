@@ -81,7 +81,7 @@ router.post('/admin-login', async (req, res) => {
       include: { profile: true, wallet: true }
     });
 
-    const token = jwt.sign({ userId: adminUser.id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+    const token = jwt.sign({ userId: adminUser.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     await prisma.adminLoginLog.create({
       data: {
