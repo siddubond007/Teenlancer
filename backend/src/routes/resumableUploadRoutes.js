@@ -119,8 +119,8 @@ router.post('/:uploadId/chunk', requireAuth, (req, res) => {
     const totalChunks = Number(req.headers['x-total-chunks']);
     const rawContentLength = req.headers['content-length'];
 
-    if (!uploadId) {
-      return res.status(400).json({ error: 'uploadId is required.' });
+    if (!isValidUploadId(uploadId)) {
+      return res.status(400).json({ error: 'Valid uploadId is required.' });
     }
 
     if (!Number.isInteger(chunkIndex) || chunkIndex < 0) {
@@ -131,14 +131,18 @@ router.post('/:uploadId/chunk', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'Valid x-total-chunks header is required.' });
     }
 
-    const dir = path.join(getUserRoot(req.user.id), uploadId);
-    const metadataPath = path.join(dir, 'metadata.json');
+    const dir = getExistingUploadDir(req.user.id, uploadId);
 
-    if (!fs.existsSync(metadataPath)) {
+    if (!dir) {
       return res.status(404).json({ error: 'Upload session not found.' });
     }
 
+    const metadataPath = path.join(dir, 'metadata.json');
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+
+    if (!isOwnedUploadSession(metadata, req.user.id, uploadId)) {
+      return res.status(404).json({ error: 'Upload session not found.' });
+    }
 
     if (metadata.totalChunks !== totalChunks) {
       return res.status(400).json({ error: 'Chunk count does not match upload session.' });
