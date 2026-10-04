@@ -3,9 +3,33 @@ const prisma = require('../config/db');
 exports.createPayoutRequest = async (req, res) => {
   try {
     const { amount, upiId } = req.body;
-    const withdrawAmount = Number(amount);
 
-    if (withdrawAmount < 100) return res.status(400).json({ error: 'Minimum withdrawal is ₹100.' });
+    const rawAmount =
+      typeof amount === 'number'
+        ? amount
+        : typeof amount === 'string' && amount.trim() !== ''
+          ? Number(amount)
+          : NaN;
+
+    if (!Number.isFinite(rawAmount) || rawAmount < 100) {
+      return res.status(400).json({ error: 'Withdrawal amount must be a valid number of at least ₹100.' });
+    }
+
+    const cents = Math.round(rawAmount * 100);
+    if (Math.abs(rawAmount * 100 - cents) > 1e-9) {
+      return res.status(400).json({ error: 'Withdrawal amount can have at most 2 decimal places.' });
+    }
+
+    const withdrawAmount = cents / 100;
+
+    const normalizedUpiId = typeof upiId === 'string' ? upiId.trim() : '';
+    if (
+      normalizedUpiId.length < 3 ||
+      normalizedUpiId.length > 100 ||
+      !/^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+$/.test(normalizedUpiId)
+    ) {
+      return res.status(400).json({ error: 'A valid UPI ID is required.' });
+    }
 
     const payout = await prisma.$transaction(async (tx) => {
       // 1. Acquire pessimistic lock on the user's wallet
