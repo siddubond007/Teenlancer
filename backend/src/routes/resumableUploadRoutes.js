@@ -24,13 +24,37 @@ const getUserRoot = (userId) => {
   return dir;
 };
 
+const isValidUploadId = (uploadId) => (
+  typeof uploadId === 'string' &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uploadId)
+);
+
 const uploadDir = (userId, uploadId) => {
+  if (!isValidUploadId(uploadId)) {
+    throw new Error('INVALID_UPLOAD_ID');
+  }
+
   const dir = path.join(getUserRoot(userId), uploadId);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
   return dir;
 };
+
+const getExistingUploadDir = (userId, uploadId) => {
+  if (!isValidUploadId(uploadId)) {
+    return null;
+  }
+
+  const dir = path.join(getUserRoot(userId), uploadId);
+  return fs.existsSync(dir) ? dir : null;
+};
+
+const isOwnedUploadSession = (metadata, userId, uploadId) => (
+  metadata &&
+  metadata.uploadId === uploadId &&
+  metadata.userId === userId
+);
 
 router.post('/init', requireAuth, (req, res) => {
   try {
@@ -227,14 +251,24 @@ router.post('/:uploadId/chunk', requireAuth, (req, res) => {
 
 router.get('/:uploadId/status', requireAuth, (req, res) => {
   try {
-    const dir = path.join(getUserRoot(req.user.id), req.params.uploadId);
-    const metadataPath = path.join(dir, 'metadata.json');
+    const uploadId = String(req.params.uploadId || '').trim();
 
-    if (!fs.existsSync(metadataPath)) {
+    if (!isValidUploadId(uploadId)) {
+      return res.status(400).json({ error: 'Valid uploadId is required.' });
+    }
+
+    const dir = getExistingUploadDir(req.user.id, uploadId);
+
+    if (!dir) {
       return res.status(404).json({ error: 'Upload session not found.' });
     }
 
+    const metadataPath = path.join(dir, 'metadata.json');
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+
+    if (!isOwnedUploadSession(metadata, req.user.id, uploadId)) {
+      return res.status(404).json({ error: 'Upload session not found.' });
+    }
     const uploadedChunks = [];
 
     for (let index = 0; index < metadata.totalChunks; index += 1) {
@@ -263,18 +297,22 @@ router.post('/:uploadId/complete', requireAuth, async (req, res) => {
   try {
     const uploadId = String(req.params.uploadId || '').trim();
 
-    if (!uploadId) {
-      return res.status(400).json({ error: 'uploadId is required.' });
+    if (!isValidUploadId(uploadId)) {
+      return res.status(400).json({ error: 'Valid uploadId is required.' });
     }
 
-    const dir = path.join(getUserRoot(req.user.id), uploadId);
-    const metadataPath = path.join(dir, 'metadata.json');
+    const dir = getExistingUploadDir(req.user.id, uploadId);
 
-    if (!fs.existsSync(metadataPath)) {
+    if (!dir) {
       return res.status(404).json({ error: 'Upload session not found.' });
     }
 
+    const metadataPath = path.join(dir, 'metadata.json');
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+
+    if (!isOwnedUploadSession(metadata, req.user.id, uploadId)) {
+      return res.status(404).json({ error: 'Upload session not found.' });
+    }
 
     const missingChunks = [];
 
