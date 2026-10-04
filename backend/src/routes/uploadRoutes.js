@@ -28,36 +28,50 @@ const storage = multer.diskStorage({
   }
 });
 
-const allowedImageMimeTypes = new Set([
+const allowedMediaMimeTypes = new Set([
   'image/jpeg',
   'image/png',
-  'image/webp'
+  'image/webp',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime'
 ]);
 
-const allowedImageExtensions = new Set([
+const allowedMediaExtensions = new Set([
   '.jpg',
   '.jpeg',
   '.png',
-  '.webp'
+  '.webp',
+  '.mp4',
+  '.webm',
+  '.mov'
 ]);
 
-const isAllowedImageFile = (file) => {
+const isAllowedMediaFile = (file) => {
   const extension = path.extname(file?.originalname || '').toLowerCase();
   return (
-    allowedImageMimeTypes.has(file?.mimetype) &&
-    allowedImageExtensions.has(extension)
+    allowedMediaMimeTypes.has(file?.mimetype) &&
+    allowedMediaExtensions.has(extension)
   );
 };
+
+const isImageFile = (file) => (
+  ['image/jpeg', 'image/png', 'image/webp'].includes(file?.mimetype)
+);
+
+const isVideoFile = (file) => (
+  ['video/mp4', 'video/webm', 'video/quicktime'].includes(file?.mimetype)
+);
 
 const upload = multer({
   storage,
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max
   fileFilter: (req, file, cb) => {
-    if (isAllowedImageFile(file)) {
+    if (isAllowedMediaFile(file)) {
       return cb(null, true);
     }
 
-    return cb(new Error('Only JPG, PNG, or WebP image files are supported.'));
+    return cb(new Error('Only JPG, PNG, WebP, MP4, WebM, or MOV media files are supported.'));
   }
 });
 
@@ -191,7 +205,7 @@ router.post('/', requireAuth, upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file provided for upload.' });
     }
 
-    if (!isAllowedImageFile(req.file)) {
+    if (!isAllowedMediaFile(req.file)) {
       try {
         if (fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
@@ -201,13 +215,13 @@ router.post('/', requireAuth, upload.single('file'), async (req, res) => {
       }
 
       return res.status(400).json({
-        error: 'Only JPG, PNG, or WebP image files are supported.'
+        error: 'Only JPG, PNG, WebP, MP4, or MOV media files are supported.'
       });
     }
 
     const uploadRes = await cloudinary.uploader.upload(req.file.path, {
       folder: userCloudinaryFolder,
-      resource_type: 'image',
+      resource_type: isVideoFile(req.file) ? 'video' : 'image',
       agent: cloudinaryAgent
     });
 
