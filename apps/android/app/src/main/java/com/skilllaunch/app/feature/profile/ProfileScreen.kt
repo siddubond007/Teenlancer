@@ -252,6 +252,7 @@ private fun ProfileContent(
             }
 
             val profile = uiState.profileUser?.profile
+            val isStudent = user.role?.uppercase() == "STUDENT_FREELANCER"
 
             if (profile?.onboardingStatus == "SKIPPED" ||
                 profile?.onboardingStatus == "PENDING" ||
@@ -318,7 +319,8 @@ private fun ProfileContent(
                         )
                     }
 
-                    profile?.onboardingData?.academicStatus?.takeIf { it.isNotBlank() }?.let {
+                    if (isStudent) {
+                        profile?.onboardingData?.academicStatus?.takeIf { it.isNotBlank() }?.let {
                         Text(
                             text = "Journey: $it",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -326,7 +328,8 @@ private fun ProfileContent(
                         )
                     }
 
-                    profile?.onboardingData?.graduationYear?.let {
+                    if (isStudent) {
+                        profile?.onboardingData?.graduationYear?.let {
                         Text(
                             text = "Graduation: $it",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -334,7 +337,8 @@ private fun ProfileContent(
                         )
                     }
 
-                    profile?.onboardingData?.availability?.takeIf { it.isNotBlank() }?.let {
+                    if (isStudent) {
+                        profile?.onboardingData?.availability?.takeIf { it.isNotBlank() }?.let {
                         Text(
                             text = "Availability: $it",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -342,6 +346,8 @@ private fun ProfileContent(
                         )
                     }
 
+                    }
+                    
                     val selectedSkills = profile?.skills.orEmpty().filter { it.isNotBlank() }
                     if (selectedSkills.isNotEmpty()) {
                         Text(
@@ -373,49 +379,51 @@ private fun ProfileContent(
                         }
                     }
 
-                    val proofLinks = listOfNotNull(
-                        profile?.githubUrl?.takeIf { it.isNotBlank() }?.let { "GitHub • $it" },
-                        profile?.youtubeUrl?.takeIf { it.isNotBlank() }?.let { "YouTube / Vimeo • $it" },
-                        profile?.drivePortfolio?.takeIf { it.isNotBlank() }?.let { "Portfolio • $it" }
-                    )
-                    if (proofLinks.isNotEmpty()) {
-                        Text(
-                            text = "Proof of work",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold
+                    if (isStudent) {
+                        val proofLinks = listOfNotNull(
+                            profile?.githubUrl?.takeIf { it.isNotBlank() }?.let { "GitHub • $it" },
+                            profile?.youtubeUrl?.takeIf { it.isNotBlank() }?.let { "YouTube / Vimeo • $it" },
+                            profile?.drivePortfolio?.takeIf { it.isNotBlank() }?.let { "Portfolio • $it" }
                         )
-                        proofLinks.forEach { link ->
+                        if (proofLinks.isNotEmpty()) {
                             Text(
-                                text = link,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodySmall
+                                text = "Proof of work",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
                             )
-                        }
-                    }
-
-                    profile?.resumeUrl?.takeIf { it.isNotBlank() }?.let { resumeUrl ->
-                        val uriHandler = LocalUriHandler.current
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            proofLinks.forEach { link ->
                                 Text(
-                                    text = "📄 Resume",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = profile.resumeFileName?.ifBlank { "Resume attached" } ?: "Resume attached",
+                                    text = link,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
-                            TextButton(
-                                onClick = { uriHandler.openUri(resumeUrl) }
+                        }
+
+                        profile?.resumeUrl?.takeIf { it.isNotBlank() }?.let { resumeUrl ->
+                            val uriHandler = LocalUriHandler.current
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Open")
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "📄 Resume",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = profile.resumeFileName?.ifBlank { "Resume attached" } ?: "Resume attached",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                TextButton(
+                                    onClick = { uriHandler.openUri(resumeUrl) }
+                                ) {
+                                    Text("Open")
+                                }
                             }
                         }
                     }
@@ -436,12 +444,15 @@ private fun ProfileContent(
                 minLines = 4
             )
 
-            OutlinedProfileField(
-                value = uiState.form.college,
-                onValueChange = onCollegeChange,
-                label = "🎓 College",
-                singleLine = true
-            )
+            if (isStudent) {
+                OutlinedProfileField(
+                    value = uiState.form.college,
+                    onValueChange = onCollegeChange,
+                    label = "🎓 College",
+                    singleLine = true
+                )
+
+            }
 
             OutlinedProfileField(
                 value = uiState.form.category,
@@ -450,12 +461,15 @@ private fun ProfileContent(
                 singleLine = true
             )
 
-            OutlinedProfileField(
-                value = uiState.form.hourlyRate,
-                onValueChange = onHourlyRateChange,
-                label = "💰 Hourly rate",
-                singleLine = true
-            )
+            if (isStudent) {
+                OutlinedProfileField(
+                    value = uiState.form.hourlyRate,
+                    onValueChange = onHourlyRateChange,
+                    label = "💰 Hourly rate",
+                    singleLine = true
+                )
+
+            }
 
             OutlinedProfileField(
                 value = uiState.form.skills,
