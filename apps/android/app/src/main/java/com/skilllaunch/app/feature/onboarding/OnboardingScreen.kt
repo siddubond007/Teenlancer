@@ -1154,7 +1154,7 @@ private fun ClientTypeCard(
     modifier: Modifier,
     onClick: () -> Unit
 ) {
-    val accent = if (darkTheme) Color(0xFF9A8CFF) else Color(0xFFD6B632)
+    val accent = Color(0xFFD6B632)
     val checkColor = if (darkTheme) Color(0xFF63D985) else Color(0xFFD6B632)
     val shape = RoundedCornerShape(18.dp)
 
