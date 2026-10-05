@@ -22,4 +22,9 @@ interface UserApi {
     suspend fun updateProfile(
         @Body request: ProfileUpdateRequest
     ): ProfileUpdateResponse
+
+    @PUT("users/profile/onboarding")
+    suspend fun updateOnboarding(
+        @Body request: ProfileUpdateRequest
+    ): ProfileUpdateResponse
 }
