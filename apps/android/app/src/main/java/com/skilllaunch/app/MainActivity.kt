@@ -308,7 +308,8 @@ private fun SkillLaunchRoot(
                     darkTheme = darkTheme,
                     onToggleTheme = onToggleTheme,
                     onLogin = authViewModel::login,
-                    onCreateAccount = { showSignup.value = true }
+                    onCreateAccount = { showSignup.value = true },
+                    onRetrySessionRestore = authViewModel::retrySessionRestore
                 )
             }
         }
