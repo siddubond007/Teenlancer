@@ -80,7 +80,6 @@ import androidx.compose.ui.res.painterResource
 
 import com.skilllaunch.app.data.model.auth.AuthUser
 import com.skilllaunch.app.data.model.profile.OnboardingData
-import com.skilllaunch.app.data.model.profile.OnboardingData
 import com.skilllaunch.app.data.model.profile.OnboardingUpdateRequest
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
 import com.skilllaunch.app.feature.auth.AuthBackground
