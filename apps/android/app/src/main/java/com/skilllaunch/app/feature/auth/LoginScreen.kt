@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +40,8 @@ fun LoginScreen(
     darkTheme: Boolean,
     onToggleTheme: () -> Unit,
     onLogin: (String, String) -> Unit,
-    onCreateAccount: () -> Unit
+    onCreateAccount: () -> Unit,
+    onRetrySessionRestore: () -> Unit
 ) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -158,6 +160,35 @@ fun LoginScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.SemiBold
                             )
+                        }
+                    }
+
+                    state.sessionRestoreError?.takeIf { it.isNotBlank() }?.let { message ->
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp),
+                            shape = RoundedCornerShape(15.dp),
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.82f)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 13.dp, vertical = 11.dp)
+                            ) {
+                                Text(
+                                    text = message,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                TextButton(
+                                    onClick = onRetrySessionRestore,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                ) {
+                                    Text("Retry session check")
+                                }
+                            }
                         }
                     }
 
