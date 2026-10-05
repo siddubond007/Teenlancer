@@ -250,6 +250,40 @@ exports.login = async (req, res) => {
         error: 'Your account has been banned from the platform.'
       });
     }
+
+    if (user.isSuspended) {
+      if (user.role === 'ADMIN') {
+        await createAdminLoginLog(
+          user.id,
+          user.email,
+          req.ip,
+          req.headers['user-agent'],
+          'FAILED_SUSPENDED'
+        );
+      }
+
+      return res.status(403).json({
+        error: 'Your account has been permanently suspended.'
+      });
+    }
+
+    if (user.suspendedUntil && new Date(user.suspendedUntil) > new Date()) {
+      if (user.role === 'ADMIN') {
+        await createAdminLoginLog(
+          user.id,
+          user.email,
+          req.ip,
+          req.headers['user-agent'],
+          'FAILED_SUSPENDED'
+        );
+      }
+
+      return res.status(403).json({
+        error: 'Account suspended due to platform violations until ' +
+          new Date(user.suspendedUntil).toLocaleString()
+      });
+    }
+
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     if (user.role === 'ADMIN') {
