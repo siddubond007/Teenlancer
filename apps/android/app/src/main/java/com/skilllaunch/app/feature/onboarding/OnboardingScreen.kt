@@ -1838,7 +1838,7 @@ private fun validateAndSave(
     setError("")
 
     scope.launch {
-        repository.updateProfile(request)
+        repository.updateOnboarding(request)
             .onSuccess {
                 setSaving(false)
                 onFinished()
@@ -1940,7 +1940,7 @@ private fun skipOnboarding(
     setError("")
 
     scope.launch {
-        repository.updateProfile(request)
+        repository.updateOnboarding(request)
             .onSuccess {
                 setSaving(false)
                 onFinished()
