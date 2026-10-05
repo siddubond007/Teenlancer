@@ -327,6 +327,7 @@ private fun ProfileContent(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
+                    }
 
                     if (isStudent) {
                         profile?.onboardingData?.graduationYear?.let {
@@ -335,6 +336,7 @@ private fun ProfileContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )
+                    }
                     }
 
                     if (isStudent) {
