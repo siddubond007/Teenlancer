@@ -405,7 +405,33 @@ exports.getGigs = async (req, res) => {
           orderBy: { id: 'asc' }
         },
         seller: {
-          select: { id: true, fullName: true, age: true, profile: true }
+          select: {
+            id: true,
+            username: true,
+            fullName: true,
+            points: true,
+            createdAt: true,
+            averageRating: true,
+            totalReviews: true,
+            profile: {
+              select: {
+                avatarUrl: true,
+                tagline: true,
+                bio: true,
+                college: true,
+                category: true,
+                hourlyRate: true,
+                skills: true,
+                badges: true,
+                responseTimeExpectation: true
+              }
+            },
+            verification: {
+              select: {
+                status: true
+              }
+            }
+          }
         }
       },
       orderBy: { createdAt: 'desc' }
