@@ -76,7 +76,7 @@ export default function RegisterPage({ onLoginSuccess }) {
   // Recalculate Age from Date Selectors
   const updateDob = (day, month, year) => {
     const birthDate = new Date(`${year}-${month}-${day}`);
-    const today = new Date('2026-08-20');
+    const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
