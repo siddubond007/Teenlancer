@@ -20,7 +20,37 @@ android {
     }
 
     buildTypes {
+        debug {
+            val apiBaseUrl = providers.environmentVariable("SKILLLAUNCH_API_BASE_URL")
+                .orElse("http://10.0.2.2:5000/api/")
+                .get()
+
+            buildConfigField(
+                "String",
+                "API_BASE_URL",
+                "\"${apiBaseUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+            )
+        }
+
         release {
+            val apiBaseUrl = providers.environmentVariable("SKILLLAUNCH_API_BASE_URL")
+                .orNull
+                ?: throw GradleException(
+                    "SKILLLAUNCH_API_BASE_URL must be set for release builds."
+                )
+
+            if (!apiBaseUrl.startsWith("https://")) {
+                throw GradleException(
+                    "Release API URL must use HTTPS: SKILLLAUNCH_API_BASE_URL"
+                )
+            }
+
+            buildConfigField(
+                "String",
+                "API_BASE_URL",
+                "\"${apiBaseUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+            )
+
             optimization {
                 enable = false
             }
