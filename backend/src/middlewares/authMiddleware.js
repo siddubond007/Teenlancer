@@ -80,7 +80,8 @@ exports.optionalAuth = async (req, res, next) => {
         id: true,
         role: true,
         isSuspended: true,
-        suspendedUntil: true
+        suspendedUntil: true,
+        isBanned: true
       }
     });
 
