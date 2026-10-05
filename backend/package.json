@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "worker": "node src/workers/escrowReleaseWorker.js"
+    "worker": "node src/workers/escrowReleaseWorker.js",
+    "test": "node --test test"
   },
   "keywords": [],
   "author": "",
