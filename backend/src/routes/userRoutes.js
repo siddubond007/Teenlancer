@@ -7,6 +7,7 @@ router.get('/freelancers', userController.getFreelancers);
 router.post('/verification', requireAuth, userController.submitVerification);
 router.get('/profile/me', requireAuth, userController.getMyProfile);
 router.put('/profile', requireAuth, userController.updateProfile);
+router.put('/profile/onboarding', requireAuth, userController.updateOnboarding);
 router.post('/portfolio', requireAuth, userController.addPortfolioItem);
 router.get('/:userId', userController.getUserProfile);
 
