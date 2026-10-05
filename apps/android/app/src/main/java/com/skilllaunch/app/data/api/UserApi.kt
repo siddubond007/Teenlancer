@@ -1,5 +1,6 @@
 ﻿package com.skilllaunch.app.data.api
 
+import com.skilllaunch.app.data.model.profile.OnboardingUpdateRequest
 import com.skilllaunch.app.data.model.profile.ProfileUpdateRequest
 import com.skilllaunch.app.data.model.profile.ProfileUpdateResponse
 import com.skilllaunch.app.data.model.profile.ProfileUser
@@ -25,6 +26,6 @@ interface UserApi {
 
     @PUT("users/profile/onboarding")
     suspend fun updateOnboarding(
-        @Body request: ProfileUpdateRequest
+        @Body request: OnboardingUpdateRequest
     ): ProfileUpdateResponse
 }

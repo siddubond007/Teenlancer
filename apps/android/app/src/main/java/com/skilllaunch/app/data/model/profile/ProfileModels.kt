@@ -48,7 +48,19 @@ data class ProfileUpdateRequest(
     val youtubeUrl: String? = null,
     val drivePortfolio: String? = null,
     val resumeUrl: String? = null,
-    val resumeFileName: String? = null,
+    val resumeFileName: String? = null
+)
+
+data class OnboardingUpdateRequest(
+    val tagline: String? = null,
+    val bio: String? = null,
+    val category: String? = null,
+    val skills: List<String>? = null,
+    val avatarUrl: String? = null,
+    val responseTimeExpectation: String? = null,
+    val githubUrl: String? = null,
+    val youtubeUrl: String? = null,
+    val drivePortfolio: String? = null,
     val onboardingCompleted: Boolean? = null,
     val onboardingStatus: String? = null,
     val onboardingData: OnboardingData? = null

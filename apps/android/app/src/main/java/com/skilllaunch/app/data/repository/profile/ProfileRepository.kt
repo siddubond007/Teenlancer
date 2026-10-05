@@ -1,6 +1,7 @@
 ﻿package com.skilllaunch.app.data.repository.profile
 
 import com.skilllaunch.app.data.api.UserApi
+import com.skilllaunch.app.data.model.profile.OnboardingUpdateRequest
 import com.skilllaunch.app.data.model.profile.ProfileUpdateRequest
 import com.skilllaunch.app.data.model.profile.ProfileUpdateResponse
 import com.skilllaunch.app.data.model.profile.ProfileUser
@@ -128,7 +129,7 @@ class ProfileRepository(
     }
 
     suspend fun updateOnboarding(
-        request: ProfileUpdateRequest
+        request: OnboardingUpdateRequest
     ): Result<ProfileUpdateResponse> {
         return runCatching {
             userApi.updateOnboarding(request)

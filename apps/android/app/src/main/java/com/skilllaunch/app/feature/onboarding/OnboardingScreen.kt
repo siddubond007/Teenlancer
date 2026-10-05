@@ -80,7 +80,8 @@ import androidx.compose.ui.res.painterResource
 
 import com.skilllaunch.app.data.model.auth.AuthUser
 import com.skilllaunch.app.data.model.profile.OnboardingData
-import com.skilllaunch.app.data.model.profile.ProfileUpdateRequest
+import com.skilllaunch.app.data.model.profile.OnboardingData
+import com.skilllaunch.app.data.model.profile.OnboardingUpdateRequest
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
 import com.skilllaunch.app.feature.auth.AuthBackground
 import com.skilllaunch.app.feature.auth.AuthField
@@ -1815,7 +1816,7 @@ private fun validateAndSave(
         companyOrProjectName = companyOrProjectName.trim().ifBlank { null }
     )
 
-    val request = ProfileUpdateRequest(
+    val request = OnboardingUpdateRequest(
         tagline = if (isStudent) tagline.trim().ifBlank { null } else companyOrProjectName.trim().ifBlank { null },
         bio = if (isStudent) bio.trim().ifBlank { null } else tagline.trim().ifBlank { null },
         category = if (isStudent) {
@@ -1906,7 +1907,7 @@ private fun skipOnboarding(
         companyOrProjectName = companyOrProjectName.trim().ifBlank { null }
     )
 
-    val request = ProfileUpdateRequest(
+    val request = OnboardingUpdateRequest(
         tagline = if (user.role == "STUDENT_FREELANCER") {
             tagline.trim().ifBlank { null }
         } else {
