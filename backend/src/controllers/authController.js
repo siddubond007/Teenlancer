@@ -8,6 +8,42 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is not configured.');
 }
 
+const MIN_REGISTRATION_AGE = 16;
+
+function parseDateOfBirthAndAge(dobString) {
+  if (typeof dobString !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dobString)) {
+    return null;
+  }
+
+  const [year, month, day] = dobString.split('-').map(Number);
+  const dobDate = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    dobDate.getUTCFullYear() !== year ||
+    dobDate.getUTCMonth() !== month - 1 ||
+    dobDate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  const today = new Date();
+  let age = today.getUTCFullYear() - year;
+
+  const birthdayPassed =
+    today.getUTCMonth() > month - 1 ||
+    (today.getUTCMonth() === month - 1 && today.getUTCDate() >= day);
+
+  if (!birthdayPassed) {
+    age -= 1;
+  }
+
+  if (dobDate > today || age < 0 || age > 120) {
+    return null;
+  }
+
+  return { dobDate, age };
+}
+
 async function createAdminLoginLog(adminId, email, ipAddress, userAgent, loginStatus) {
   try {
     await prisma.adminLoginLog.create({
@@ -27,7 +63,7 @@ async function createAdminLoginLog(adminId, email, ipAddress, userAgent, loginSt
 
 exports.register = async (req, res) => {
   try {
-    const { email, password, firstName, middleName, lastName, username, role, age, dob } = req.body;
+    const { email, password, firstName, middleName, lastName, username, role, dob } = req.body;
 
     if (!email || !password || !firstName || !lastName) {
       return res.status(400).json({ error: 'Please provide first name, last name, email, and password.' });
@@ -64,13 +100,19 @@ exports.register = async (req, res) => {
       return res.status(409).json({ error: 'This username is already taken. Please choose a different username.' });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const hasAge = age !== undefined && age !== null && String(age).trim() !== '';
-    const parsedAge = hasAge ? Number(String(age).trim()) : 18;
+    const parsedDob = parseDateOfBirthAndAge(dob);
 
-    if (hasAge && (!Number.isInteger(parsedAge) || parsedAge < 1 || parsedAge > 120)) {
+    if (!parsedDob) {
       return res.status(400).json({
-        error: 'Please provide a valid age between 1 and 120.'
+        error: 'Please provide a valid date of birth in YYYY-MM-DD format.'
+      });
+    }
+
+    const { dobDate, age: parsedAge } = parsedDob;
+
+    if (parsedAge < MIN_REGISTRATION_AGE) {
+      return res.status(403).json({
+        error: 'You must be at least 16 years old to register on SkillLaunch.'
       });
     }
 
@@ -104,7 +146,7 @@ exports.register = async (req, res) => {
         role: isMinor ? 'STUDENT_FREELANCER' : normalizedRole,
         isMinor,
         age: parsedAge,
-        dob: dob ? new Date(dob) : null,
+        dob: dobDate,
         profile: {
           create: {
             tagline: isMinor ? 'Young Student Creator (Minor Verified)' : 'Student Creator & Freelancer',
