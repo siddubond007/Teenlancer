@@ -234,6 +234,22 @@ exports.login = async (req, res) => {
 
       return res.status(400).json({ error: 'Incorrect password. Please try again.' });
     }
+
+    if (user.isBanned) {
+      if (user.role === 'ADMIN') {
+        await createAdminLoginLog(
+          user.id,
+          user.email,
+          req.ip,
+          req.headers['user-agent'],
+          'FAILED_BANNED'
+        );
+      }
+
+      return res.status(403).json({
+        error: 'Your account has been banned from the platform.'
+      });
+    }
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     if (user.role === 'ADMIN') {
