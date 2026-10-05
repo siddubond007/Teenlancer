@@ -60,12 +60,18 @@ android {
     }
 }
 
-tasks.named("preReleaseBuild") {
-    doFirst {
+tasks.register("validateReleaseApiBaseUrl") {
+    doLast {
         val apiBaseUrl = System.getenv("SKILLLAUNCH_API_BASE_URL")
         require(!apiBaseUrl.isNullOrBlank() && apiBaseUrl.startsWith("https://")) {
             "SKILLLAUNCH_API_BASE_URL must be set to an HTTPS URL for release builds."
         }
+    }
+}
+
+tasks.configureEach {
+    if (name == "assembleRelease" || name == "bundleRelease") {
+        dependsOn("validateReleaseApiBaseUrl")
     }
 }
 
