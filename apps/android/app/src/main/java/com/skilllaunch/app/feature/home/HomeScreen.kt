@@ -436,7 +436,7 @@ private fun WorkspaceStateCard(
 private fun WhyChooseSection(
     isClient: Boolean
 ) {
-    var selectedTab by remember { mutableIntStateOf(if (isClient) 0 else 1) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     val tabTitles = listOf(
         "Why clients choose us",
