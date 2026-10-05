@@ -13,7 +13,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
 
-    private const val DEVELOPMENT_BASE_URL = "http://127.0.0.1:5000/api/"
+    private val BASE_URL: String = BuildConfig.API_BASE_URL
 
     fun authApi(sessionStore: SessionStore): AuthApi {
         return createRetrofit(sessionStore)
@@ -50,7 +50,7 @@ object ApiClient {
             .build()
 
         return Retrofit.Builder()
-            .baseUrl(DEVELOPMENT_BASE_URL)
+            .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
