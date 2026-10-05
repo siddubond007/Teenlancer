@@ -127,6 +127,18 @@ class ProfileRepository(
         }
     }
 
+    suspend fun updateOnboarding(
+        request: ProfileUpdateRequest
+    ): Result<ProfileUpdateResponse> {
+        return runCatching {
+            userApi.updateOnboarding(request)
+        }.recoverCatching { error ->
+            throw Exception(
+                apiErrorMessage(error, "Unable to save your onboarding right now")
+            )
+        }
+    }
+
     private fun apiErrorMessage(error: Throwable, fallback: String): String {
         if (error !is HttpException) {
             return error.message ?: fallback
