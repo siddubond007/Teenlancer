@@ -277,7 +277,11 @@ private fun ProfileContent(
                                 fontWeight = FontWeight.ExtraBold
                             )
                             Text(
-                                text = "Your profile can be discovered more accurately when you finish your focus, skills, availability and intro.",
+                                text = if (isStudent) {
+                                    "Your profile can be discovered more accurately when you finish your focus, skills, availability and intro."
+                                } else {
+                                    "Complete your client setup so SkillLaunch can tailor your hiring experience."
+                                },
                                 modifier = Modifier.padding(top = 4.dp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall
