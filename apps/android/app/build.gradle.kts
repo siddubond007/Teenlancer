@@ -24,6 +24,7 @@ android {
             val apiBaseUrl = providers.environmentVariable("SKILLLAUNCH_API_BASE_URL")
                 .orElse("http://10.0.2.2:5000/api/")
                 .get()
+                .trimEnd('/') + "/"
 
             buildConfigField(
                 "String",
@@ -36,6 +37,7 @@ android {
             val apiBaseUrl = providers.environmentVariable("SKILLLAUNCH_API_BASE_URL")
                 .orElse("https://configure-skilllaunch-api.invalid/api/")
                 .get()
+                .trimEnd('/') + "/"
 
             buildConfigField(
                 "String",
