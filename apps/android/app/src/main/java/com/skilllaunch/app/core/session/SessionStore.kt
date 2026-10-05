@@ -32,6 +32,9 @@ private val Context.skillLaunchSecureDataStore by preferencesDataStore(
 class SessionStore(
     private val context: Context
 ) {
+    @Volatile
+    private var cachedAccessToken: String? = null
+
     private companion object {
         const val KEYSTORE_PROVIDER = "AndroidKeyStore"
         const val KEY_ALIAS = "skilllaunch_access_token"
@@ -58,9 +61,14 @@ class SessionStore(
                 }
             }
 
+    fun getCachedAccessToken(): String? = cachedAccessToken
+
     suspend fun getAccessToken(): String? {
+        cachedAccessToken?.let { return it }
+
         val secureToken = accessToken.first()
         if (secureToken != null) {
+            cachedAccessToken = secureToken
             return secureToken
         }
 
@@ -93,12 +101,14 @@ class SessionStore(
         context.skillLaunchSecureDataStore.edit { preferences ->
             preferences[ACCESS_TOKEN] = encryptToken(token)
         }
+        cachedAccessToken = token
     }
 
     suspend fun clearSession() {
         context.skillLaunchSecureDataStore.edit { preferences ->
             preferences.remove(ACCESS_TOKEN)
         }
+        cachedAccessToken = null
     }
 
     suspend fun getOnboardingStep(
