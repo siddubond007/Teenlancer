@@ -230,6 +230,209 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
+exports.updateOnboarding = async (req, res) => {
+  try {
+    const {
+      tagline,
+      bio,
+      category,
+      skills,
+      avatarUrl,
+      responseTimeExpectation,
+      githubUrl,
+      youtubeUrl,
+      drivePortfolio,
+      onboardingCompleted,
+      onboardingStatus,
+      onboardingData
+    } = req.body || {};
+
+    const role = req.user.role;
+    if (role !== 'STUDENT_FREELANCER' && role !== 'CLIENT') {
+      return res.status(403).json({
+        error: 'This account type does not use onboarding.'
+      });
+    }
+
+    const normalizedStatus = String(onboardingStatus || '').trim().toUpperCase();
+    if (!['COMPLETED', 'SKIPPED'].includes(normalizedStatus)) {
+      return res.status(400).json({
+        error: 'onboardingStatus must be COMPLETED or SKIPPED.'
+      });
+    }
+
+    if (onboardingCompleted !== (normalizedStatus === 'COMPLETED')) {
+      return res.status(400).json({
+        error: 'onboardingCompleted does not match onboardingStatus.'
+      });
+    }
+
+    if (
+      !onboardingData ||
+      typeof onboardingData !== 'object' ||
+      Array.isArray(onboardingData)
+    ) {
+      return res.status(400).json({
+        error: 'onboardingData must be a JSON object.'
+      });
+    }
+
+    const cleanString = (value, maxLength) => {
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      return trimmed ? trimmed.slice(0, maxLength) : null;
+    };
+
+    const cleanUrl = (value, maxLength) => {
+      const trimmed = cleanString(value, maxLength);
+      if (!trimmed) return null;
+
+      try {
+        const parsed = new URL(trimmed);
+        if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname) {
+          throw new Error('invalid protocol');
+        }
+        return trimmed;
+      } catch {
+        return null;
+      }
+    };
+
+    const cleanStringList = (value, maxItems, maxLength) =>
+      Array.isArray(value)
+        ? [...new Set(
+            value
+              .map((item) => cleanString(item, maxLength))
+              .filter(Boolean)
+          )].slice(0, maxItems)
+        : [];
+
+    const safeData = {
+      version: Number.isInteger(Number(onboardingData.version))
+        ? Number(onboardingData.version)
+        : 1,
+      role,
+      primaryDomain: cleanString(onboardingData.primaryDomain, 120),
+      selectedSkills: cleanStringList(onboardingData.selectedSkills, 6, 80),
+      githubUrl: cleanUrl(onboardingData.githubUrl, 250),
+      youtubeUrl: cleanUrl(onboardingData.youtubeUrl, 250),
+      portfolioUrl: cleanUrl(onboardingData.portfolioUrl, 250),
+      academicStatus: cleanString(onboardingData.academicStatus, 80),
+      graduationMonth:
+        Number.isInteger(Number(onboardingData.graduationMonth)) &&
+        Number(onboardingData.graduationMonth) >= 1 &&
+        Number(onboardingData.graduationMonth) <= 12
+          ? Number(onboardingData.graduationMonth)
+          : null,
+      graduationYear:
+        Number.isInteger(Number(onboardingData.graduationYear)) &&
+        Number(onboardingData.graduationYear) >= 2000 &&
+        Number(onboardingData.graduationYear) <= 2100
+          ? Number(onboardingData.graduationYear)
+          : null,
+      availability: cleanString(onboardingData.availability, 80),
+      clientType: cleanString(onboardingData.clientType, 100),
+      hiringCategories: cleanStringList(onboardingData.hiringCategories, 6, 80),
+      hiringIntent: cleanString(onboardingData.hiringIntent, 120),
+      projectScope: cleanString(onboardingData.projectScope, 120),
+      companyOrProjectName: cleanString(onboardingData.companyOrProjectName, 120),
+      budgetPhilosophy: cleanString(onboardingData.budgetPhilosophy, 120)
+    };
+
+    if (normalizedStatus === 'COMPLETED' && role === 'STUDENT_FREELANCER') {
+      if (!safeData.primaryDomain || safeData.selectedSkills.length === 0) {
+        return res.status(422).json({
+          error: 'Complete your focus and primary skills before finishing onboarding.'
+        });
+      }
+
+      if (!safeData.academicStatus || !safeData.availability) {
+        return res.status(422).json({
+          error: 'Complete your academic status and availability before finishing onboarding.'
+        });
+      }
+
+      if (!cleanString(tagline, 160)) {
+        return res.status(422).json({
+          error: 'Add a professional headline before finishing onboarding.'
+        });
+      }
+    }
+
+    if (normalizedStatus === 'COMPLETED' && role === 'CLIENT') {
+      const clientTypes = new Set([
+        'Solo Founder / Individual',
+        'Early-stage Startup',
+        'Small Business',
+        'Company',
+        'Academic / Research',
+        'Non-profit / Organization'
+      ]);
+
+      if (!clientTypes.has(safeData.clientType || '')) {
+        return res.status(422).json({
+          error: 'Choose a valid client type before finishing onboarding.'
+        });
+      }
+
+      if (
+        safeData.hiringCategories.length === 0 ||
+        !safeData.hiringIntent ||
+        !safeData.projectScope ||
+        !safeData.budgetPhilosophy ||
+        !safeData.companyOrProjectName
+      ) {
+        return res.status(422).json({
+          error: 'Complete your hiring preferences and company/project name before finishing onboarding.'
+        });
+      }
+    }
+
+    const updatedProfile = await prisma.profile.upsert({
+      where: { userId: req.user.id },
+      create: {
+        userId: req.user.id,
+        tagline: cleanString(tagline, 160) || '',
+        bio: cleanString(bio, 2000) || '',
+        category: cleanString(category, 120) || 'Graphic Design',
+        skills: cleanStringList(skills, 20, 80),
+        avatarUrl: cleanString(avatarUrl, 500),
+        githubUrl: cleanUrl(githubUrl, 250),
+        youtubeUrl: cleanUrl(youtubeUrl, 250),
+        drivePortfolio: cleanUrl(drivePortfolio, 250),
+        responseTimeExpectation: cleanString(responseTimeExpectation, 120),
+        onboardingCompleted: normalizedStatus === 'COMPLETED',
+        onboardingStatus: normalizedStatus,
+        onboardingData: safeData
+      },
+      update: {
+        tagline: cleanString(tagline, 160) || undefined,
+        bio: cleanString(bio, 2000) || undefined,
+        category: cleanString(category, 120) || undefined,
+        skills: Array.isArray(skills) ? cleanStringList(skills, 20, 80) : undefined,
+        avatarUrl: cleanString(avatarUrl, 500) || undefined,
+        githubUrl: cleanUrl(githubUrl, 250) || undefined,
+        youtubeUrl: cleanUrl(youtubeUrl, 250) || undefined,
+        drivePortfolio: cleanUrl(drivePortfolio, 250) || undefined,
+        responseTimeExpectation: cleanString(responseTimeExpectation, 120) || undefined,
+        onboardingCompleted: normalizedStatus === 'COMPLETED',
+        onboardingStatus: normalizedStatus,
+        onboardingData: safeData
+      }
+    });
+
+    return res.json({
+      message: 'Onboarding state saved successfully.',
+      profile: updatedProfile
+    });
+  } catch (err) {
+    console.error('Update onboarding error:', err);
+    return res.status(500).json({
+      error: 'Unable to save onboarding state.'
+    });
+  }
+};
+
 exports.addPortfolioItem = async (req, res) => {
   try {
     const { title, category, img, link } = req.body;
