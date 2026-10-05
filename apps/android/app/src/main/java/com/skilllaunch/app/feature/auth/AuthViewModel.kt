@@ -10,13 +10,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 data class AuthUiState(
     val isCheckingSession: Boolean = true,
     val isLoading: Boolean = false,
     val isAuthenticated: Boolean = false,
     val user: AuthUser? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val sessionRestoreError: String? = null
 )
 
 class AuthViewModel(
@@ -44,7 +46,8 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
-                errorMessage = null
+                errorMessage = null,
+                sessionRestoreError = null
             )
 
             repository.login(cleanEmail, password)
@@ -52,13 +55,15 @@ class AuthViewModel(
                     _uiState.value = AuthUiState(
                         isCheckingSession = false,
                         isAuthenticated = true,
-                        user = user
+                        user = user,
+                        sessionRestoreError = null
                     )
                 }
                 .onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
                         isCheckingSession = false,
                         isLoading = false,
+                        sessionRestoreError = null,
                         errorMessage = exception.message
                             ?: "Unable to sign in. Please check your credentials."
                     )
@@ -78,11 +83,11 @@ class AuthViewModel(
         dob: String?
     ) {
         if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || password.isBlank() || dob.isNullOrBlank()) {
-            _uiState.value = _uiState.value.copy(errorMessage = "Please complete all required fields."); return
+            _uiState.value = _uiState.value.copy(errorMessage = "Please complete all required fields.", sessionRestoreError = null); return
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, sessionRestoreError = null)
             repository.register(
                 firstName = firstName,
                 middleName = middleName,
@@ -95,16 +100,16 @@ class AuthViewModel(
                 dob = dob
             )
                 .onSuccess { user ->
-                    _uiState.value = AuthUiState(isCheckingSession = false, isAuthenticated = true, user = user)
+                    _uiState.value = AuthUiState(isCheckingSession = false, isAuthenticated = true, user = user, sessionRestoreError = null)
                 }
                 .onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(isCheckingSession = false, isLoading = false, errorMessage = exception.message ?: "Unable to create your account. Please try again.")
+                    _uiState.value = _uiState.value.copy(isCheckingSession = false, isLoading = false, sessionRestoreError = null, errorMessage = exception.message ?: "Unable to create your account. Please try again.")
                 }
         }
     }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(errorMessage = null)
+        _uiState.value = _uiState.value.copy(errorMessage = null, sessionRestoreError = null)
     }
 
     fun logout() {
@@ -115,6 +120,10 @@ class AuthViewModel(
                 isAuthenticated = false
             )
         }
+    }
+
+    fun retrySessionRestore() {
+        restoreSession()
     }
 
     private fun restoreSession() {
@@ -136,11 +145,18 @@ class AuthViewModel(
                         user = user
                     )
                 }
-                .onFailure {
-                    repository.logout()
-                    _uiState.value = AuthUiState(
-                        isCheckingSession = false
-                    )
+                .onFailure { exception ->
+                    if (exception is HttpException && exception.code() in 401..403) {
+                        repository.logout()
+                        _uiState.value = AuthUiState(
+                            isCheckingSession = false
+                        )
+                    } else {
+                        _uiState.value = AuthUiState(
+                            isCheckingSession = false,
+                            sessionRestoreError = "We couldn't verify your saved session. Check your connection and retry."
+                        )
+                    }
                 }
         }
     }
