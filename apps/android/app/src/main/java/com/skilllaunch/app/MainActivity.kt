@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -103,6 +104,8 @@ private fun SkillLaunchRoot(
     var onboardingStep by rememberSaveable { mutableIntStateOf(1) }
     var onboardingStepOwnerId by rememberSaveable { mutableStateOf<String?>(null) }
     var profileRefreshVersion by rememberSaveable { mutableIntStateOf(0) }
+    var profileResolutionRetryKey by rememberSaveable { mutableIntStateOf(0) }
+    var profileResolutionFailed by rememberSaveable { mutableStateOf(false) }
 
     val onboardingScope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -171,16 +174,18 @@ private fun SkillLaunchRoot(
         }
     }
 
-    LaunchedEffect(state.isAuthenticated, state.user?.id) {
+    LaunchedEffect(state.isAuthenticated, state.user?.id, profileResolutionRetryKey) {
         val userId = state.user?.id
 
         if (!state.isAuthenticated || userId.isNullOrBlank()) {
             showOnboarding = false
             onboardingResolvedForUser = false
+            profileResolutionFailed = false
             return@LaunchedEffect
         }
 
         onboardingResolvedForUser = false
+        profileResolutionFailed = false
 
         val role = state.user?.role
         val canUseOnboarding =
@@ -211,11 +216,14 @@ private fun SkillLaunchRoot(
                     }
                 }
 
+                profileResolutionFailed = false
                 onboardingResolvedForUser = true
             }
             .onFailure {
+                // Do not treat an unknown profile state as "no onboarding required".
                 showOnboarding = false
-                onboardingResolvedForUser = true
+                profileResolutionFailed = true
+                onboardingResolvedForUser = false
             }
     }
 
@@ -227,6 +235,15 @@ private fun SkillLaunchRoot(
             !splashMinimumElapsed || state.isCheckingSession -> SkillLaunchSplashScreen(
                 darkTheme = darkTheme
             )
+
+            state.isAuthenticated && state.user != null && profileResolutionFailed -> {
+                ProfileResolutionErrorScreen(
+                    onRetry = {
+                        profileResolutionFailed = false
+                        profileResolutionRetryKey += 1
+                    }
+                )
+            }
 
             state.isAuthenticated && state.user != null && !onboardingResolvedForUser -> {
                 SkillLaunchSplashScreen(
@@ -312,5 +329,38 @@ private fun SessionCheckingScreen() {
             text = "Checking your SkillLaunch session…",
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+
+@Composable
+private fun ProfileResolutionErrorScreen(
+    onRetry: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "We couldn’t verify your profile.",
+            style = MaterialTheme.typography.headlineSmall
+        )
+
+        Text(
+            text = "Your onboarding status could not be checked. Please retry before continuing to SkillLaunch.",
+            modifier = Modifier.padding(top = 10.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        Button(
+            onClick = onRetry,
+            modifier = Modifier.padding(top = 20.dp)
+        ) {
+            Text("Retry")
+        }
     }
 }
