@@ -1,7 +1,13 @@
 package com.skilllaunch.app.feature.home
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +32,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -225,6 +234,10 @@ fun HomeScreen(
                     firstName = firstName
                 )
 
+                WhyChooseSection(
+                    isClient = isClient
+                )
+
                 Surface(
                     onClick = { onOpenDestination(AppDestination.Explore) },
                     modifier = Modifier.fillMaxWidth(),
@@ -414,6 +427,166 @@ private fun WorkspaceStateCard(
                 modifier = Modifier.padding(top = 8.dp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun WhyChooseSection(
+    isClient: Boolean
+) {
+    var selectedTab by remember { mutableIntStateOf(if (isClient) 0 else 1) }
+
+    val tabTitles = listOf(
+        "Why clients choose us",
+        "Why skilled students need us"
+    )
+
+    val clientReasons = listOf(
+        "Access motivated student talent for real project needs.",
+        "Choose skills and services that fit your scope and budget.",
+        "Keep hiring focused with a simple marketplace experience."
+    )
+
+    val studentReasons = listOf(
+        "Turn practical skills into real opportunities and portfolio growth.",
+        "Showcase focused services without needing years of professional experience.",
+        "Build credibility through completed work, feedback and a growing profile."
+    )
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(11.dp)
+    ) {
+        Text(
+            text = "Why SkillLaunch",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+            )
+        ) {
+            Row(
+                modifier = Modifier.padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                tabTitles.forEachIndexed { index, title ->
+                    val selected = selectedTab == index
+
+                    Surface(
+                        onClick = { selectedTab = index },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.13f)
+                        } else {
+                            Color.Transparent
+                        }
+                    ) {
+                        Text(
+                            text = title,
+                            modifier = Modifier.padding(
+                                horizontal = 10.dp,
+                                vertical = 10.dp
+                            ),
+                            color = if (selected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (selected) {
+                                FontWeight.Bold
+                            } else {
+                                FontWeight.Medium
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        AnimatedContent(
+            targetState = selectedTab,
+            transitionSpec = {
+                slideInVertically(
+                    initialOffsetY = { it / 5 }
+                ) + fadeIn(
+                    animationSpec = tween(260)
+                ) togetherWith slideOutVertically(
+                    targetOffsetY = { -it / 5 }
+                ) + fadeOut(
+                    animationSpec = tween(180)
+                )
+            },
+            label = "why_choose_content"
+        ) { tab ->
+            val reasons = if (tab == 0) clientReasons else studentReasons
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                reasons.forEachIndexed { index, reason ->
+                    WhyChooseCard(
+                        index = index,
+                        text = reason
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WhyChooseCard(
+    index: Int,
+    text: String
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(17.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(
+                horizontal = 14.dp,
+                vertical = 13.dp
+            ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(30.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "${index + 1}",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Text(
+                text = text,
+                modifier = Modifier.padding(start = 11.dp),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
