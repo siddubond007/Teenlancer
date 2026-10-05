@@ -8,41 +8,9 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is not configured.');
 }
 
+const { parseDateOfBirthAndAge } = require('../utils/authValidation');
+
 const MIN_REGISTRATION_AGE = 16;
-
-function parseDateOfBirthAndAge(dobString) {
-  if (typeof dobString !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dobString)) {
-    return null;
-  }
-
-  const [year, month, day] = dobString.split('-').map(Number);
-  const dobDate = new Date(Date.UTC(year, month - 1, day));
-
-  if (
-    dobDate.getUTCFullYear() !== year ||
-    dobDate.getUTCMonth() !== month - 1 ||
-    dobDate.getUTCDate() !== day
-  ) {
-    return null;
-  }
-
-  const today = new Date();
-  let age = today.getUTCFullYear() - year;
-
-  const birthdayPassed =
-    today.getUTCMonth() > month - 1 ||
-    (today.getUTCMonth() === month - 1 && today.getUTCDate() >= day);
-
-  if (!birthdayPassed) {
-    age -= 1;
-  }
-
-  if (dobDate > today || age < 0 || age > 120) {
-    return null;
-  }
-
-  return { dobDate, age };
-}
 
 async function createAdminLoginLog(adminId, email, ipAddress, userAgent, loginStatus) {
   try {
