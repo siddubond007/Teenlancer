@@ -13,6 +13,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.PersonOutline
+import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +40,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.ui.NavDisplay
 import com.skilllaunch.app.data.model.auth.AuthUser
 import com.skilllaunch.app.data.repository.gig.GigRepository
+import com.skilllaunch.app.data.repository.home.HomeRepository
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
 import com.skilllaunch.app.feature.gig.GigDiscoveryScreen
 import com.skilllaunch.app.feature.home.HomeScreen
@@ -60,6 +67,7 @@ fun AuthenticatedAppShell(
     user: AuthUser,
     profileRepository: ProfileRepository,
     gigRepository: GigRepository,
+    homeRepository: HomeRepository,
     onLogout: () -> Unit,
     onOpenOnboarding: () -> Unit,
     profileRefreshVersion: Int = 0,
@@ -100,34 +108,48 @@ fun AuthenticatedAppShell(
             }
         },
         bottomBar = {
+            val studentRole = user.role?.uppercase() == "STUDENT_FREELANCER"
+            val activeColor = if (studentRole) {
+                androidx.compose.ui.graphics.Color(0xFF047857)
+            } else {
+                androidx.compose.ui.graphics.Color(0xFF4338CA)
+            }
+
             NavigationBar(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .border(
-                        BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
-                        ),
-                        RoundedCornerShape(24.dp)
-                    ),
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                modifier = Modifier.fillMaxWidth(),
+                containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 tonalElevation = 0.dp
             ) {
                 shellDestinations.forEach { destination ->
+                    val selected = current == destination
+
                     NavigationBarItem(
-                        selected = current == destination,
+                        selected = selected,
                         onClick = { openDestination(destination) },
                         icon = {
-                            Text(
-                                text = destinationGlyph(destination),
-                                style = MaterialTheme.typography.titleMedium
+                            androidx.compose.material3.Icon(
+                                imageVector = destinationIcon(destination),
+                                contentDescription = destinationTitle(destination)
                             )
                         },
                         label = {
-                            Text(destinationTitle(destination))
-                        }
+                            Text(
+                                destinationTitle(destination),
+                                fontWeight = if (selected) {
+                                    androidx.compose.ui.text.font.FontWeight.Bold
+                                } else {
+                                    androidx.compose.ui.text.font.FontWeight.Medium
+                                }
+                            )
+                        },
+                        colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                            selectedIconColor = activeColor,
+                            selectedTextColor = activeColor,
+                            indicatorColor = activeColor.copy(alpha = 0.10f),
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
                 }
             }
@@ -153,7 +175,9 @@ fun AuthenticatedAppShell(
                     AppDestination.Home -> NavEntry(key) {
                         HomeScreen(
                             user = user,
+                            homeRepository = homeRepository,
                             onOpenDestination = ::openDestination,
+                            onLogout = onLogout,
                             darkTheme = themeState.value,
                             onToggleTheme = onToggleTheme
                         )
@@ -235,10 +259,10 @@ private fun destinationTitle(destination: AppDestination): String = when (destin
     AppDestination.Profile -> "Profile"
 }
 
-private fun destinationGlyph(destination: AppDestination): String = when (destination) {
-    AppDestination.Home -> "⌂"
-    AppDestination.Explore -> "⌕"
-    AppDestination.Orders -> "□"
-    AppDestination.Chat -> "◌"
-    AppDestination.Profile -> "○"
+private fun destinationIcon(destination: AppDestination): androidx.compose.ui.graphics.vector.ImageVector = when (destination) {
+    AppDestination.Home -> Icons.Outlined.Home
+    AppDestination.Explore -> Icons.Outlined.Explore
+    AppDestination.Orders -> Icons.Outlined.ReceiptLong
+    AppDestination.Chat -> Icons.Outlined.ChatBubbleOutline
+    AppDestination.Profile -> Icons.Outlined.PersonOutline
 }
