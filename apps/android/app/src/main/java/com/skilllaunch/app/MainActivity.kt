@@ -39,6 +39,7 @@ import com.skilllaunch.app.core.network.ApiClient
 import com.skilllaunch.app.core.session.SessionStore
 import com.skilllaunch.app.data.repository.auth.AuthRepository
 import com.skilllaunch.app.data.repository.gig.GigRepository
+import com.skilllaunch.app.data.repository.home.HomeRepository
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
 import com.skilllaunch.app.feature.auth.AuthViewModel
 import com.skilllaunch.app.feature.auth.LoginScreen
@@ -133,6 +134,10 @@ private fun SkillLaunchRoot(
         ApiClient.gigApi(sessionStore)
     }
 
+    val homeApi = remember(sessionStore) {
+        ApiClient.homeApi(sessionStore)
+    }
+
     val uploadApi = remember(sessionStore) {
         ApiClient.uploadApi(sessionStore)
     }
@@ -154,6 +159,12 @@ private fun SkillLaunchRoot(
     val gigRepository = remember(gigApi) {
         GigRepository(
             gigApi = gigApi
+        )
+    }
+
+    val homeRepository = remember(homeApi) {
+        HomeRepository(
+            homeApi = homeApi
         )
     }
 
@@ -278,6 +289,7 @@ private fun SkillLaunchRoot(
                     user = state.user!!,
                     profileRepository = profileRepository,
                     gigRepository = gigRepository,
+                    homeRepository = homeRepository,
                     onLogout = authViewModel::logout,
                     onOpenOnboarding = {
                         val role = state.user?.role
