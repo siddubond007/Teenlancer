@@ -20,7 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.Briefcase
+import androidx.compose.material.icons.outlined.BusinessCenter
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Image
@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -54,8 +55,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.SubcomposeAsyncImage
-import coil.compose.SubcomposeAsyncImageContent
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import com.skilllaunch.app.core.common.collectAsStateWithLifecycleCompat
 import com.skilllaunch.app.core.navigation.AppDestination
 import com.skilllaunch.app.data.model.auth.AuthUser
@@ -68,6 +69,7 @@ import java.util.Locale
 private val StudentAccent = Color(0xFF047857)
 private val ClientAccent = Color(0xFF4338CA)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     user: AuthUser,
@@ -538,7 +540,7 @@ private fun ClientHome(modifier: Modifier) {
                 "Start a project",
                 "What do you need done?",
                 "Share your goal and get matched with verified student talent.",
-                Icons.Outlined.Briefcase
+                Icons.Outlined.BusinessCenter
             )
         }
         item { ClientBriefCard(ClientAccent) }
@@ -778,6 +780,56 @@ private fun HomeIntro(
 private fun HomeLoading(modifier: Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun HomeBlocked(
+    modifier: Modifier,
+    onLogout: () -> Unit
+) {
+    Box(
+        modifier = modifier.fillMaxSize().padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier,
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.error.copy(alpha = 0.22f)
+            )
+        ) {
+            Column(
+                Modifier.padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    Icons.Outlined.Shield,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(34.dp)
+                )
+                Text(
+                    "Account access restricted",
+                    Modifier.padding(top = 10.dp),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    "Your account cannot access the marketplace Home while it is suspended or banned.",
+                    Modifier.padding(top = 8.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                AssistChip(
+                    onClick = onLogout,
+                    label = { Text("Sign out") },
+                    Modifier.padding(top = 16.dp)
+                )
+            }
+        }
     }
 }
 
