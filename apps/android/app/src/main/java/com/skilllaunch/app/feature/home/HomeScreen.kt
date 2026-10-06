@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Briefcase
 import androidx.compose.material.icons.outlined.Check
@@ -277,7 +278,8 @@ private fun StudentHome(
                 StudentAccent,
                 "Your launch plan",
                 "Let’s get you ready to earn",
-                "Build trust with clients and unlock your first opportunity."
+                "Build trust with clients and unlock your first opportunity.",
+                Icons.Outlined.AutoAwesome
             )
         }
         item { StudentJourneyCard(state, StudentAccent, onOpenProfile) }
@@ -346,20 +348,20 @@ private fun StudentJourneyCard(
                     fontWeight = FontWeight.ExtraBold
                 )
                 Spacer(Modifier.weight(1f))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    Modifier.width(80.dp).height(8.dp).clip(RoundedCornerShape(50)),
+                    color = accent,
+                    trackColor = accent.copy(alpha = 0.10f)
+                )
+                Spacer(Modifier.width(8.dp))
                 Text(
                     (progress * 100).toInt().toString() + "%",
-                    color = accent,
-                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold
                 )
             }
-
-            LinearProgressIndicator(
-                progress = { progress },
-                Modifier.fillMaxWidth().padding(top = 10.dp).height(8.dp).clip(RoundedCornerShape(50)),
-                color = accent,
-                trackColor = accent.copy(alpha = 0.10f)
-            )
 
             Column(Modifier.padding(top = 20.dp)) {
                 steps.forEachIndexed { index, step ->
@@ -431,15 +433,47 @@ private fun JourneyStep(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (!step.complete && step.title == "Upload proof of work") {
+                        Surface(
+                            onClick = onOpenProfile,
+                            modifier = Modifier.padding(top = 10.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = accent
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp),
+                                    tint = Color.White
+                                )
+                                Text(
+                                    "Add portfolio item",
+                                    Modifier.padding(start = 7.dp),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
                 if (!step.complete) {
-                    AssistChip(
-                        onClick = onOpenProfile,
-                        label = { Text("Update") },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.ArrowForward, null, Modifier.size(14.dp))
-                        }
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = Color(0xFFFFFBEB),
+                        contentColor = Color(0xFFB45309)
+                    ) {
+                        Text(
+                            "Pending",
+                            Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -503,10 +537,12 @@ private fun ClientHome(modifier: Modifier) {
                 ClientAccent,
                 "Start a project",
                 "What do you need done?",
-                "Share your goal and get matched with verified student talent."
+                "Share your goal and get matched with verified student talent.",
+                Icons.Outlined.Briefcase
             )
         }
         item { ClientBriefCard(ClientAccent) }
+        item { ClientSupportCard(ClientAccent) }
     }
 }
 
@@ -651,16 +687,70 @@ private fun SafetyPoint(text: String, accent: Color) {
     }
 }
 
+
+
+@Composable
+private fun ClientSupportCard(accent: Color) {
+    Surface(
+        Modifier.fillMaxWidth(),
+        RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
+    ) {
+        Row(
+            Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                Modifier.size(40.dp),
+                RoundedCornerShape(12.dp),
+                color = Color(0xFFFFFBEB)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Outlined.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = Color(0xFFB45309)
+                    )
+                }
+            }
+            Column(
+                Modifier.padding(start = 12.dp).weight(1f)
+            ) {
+                Text(
+                    "Built for first-time hiring",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    "Clear milestones and support at every step.",
+                    Modifier.padding(top = 3.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Icon(
+                Icons.Outlined.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(19.dp)
+            )
+        }
+    }
+}
+
 @Composable
 private fun HomeIntro(
     accent: Color,
     eyebrow: String,
     title: String,
-    description: String
+    description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
 ) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.Storefront, null, Modifier.size(17.dp), tint = accent)
+            Icon(icon, null, Modifier.size(17.dp), tint = accent)
             Text(
                 eyebrow.uppercase(Locale.US),
                 Modifier.padding(start = 7.dp),
