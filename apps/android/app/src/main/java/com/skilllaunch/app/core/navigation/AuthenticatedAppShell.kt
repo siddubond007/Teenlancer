@@ -6,12 +6,13 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,11 +24,10 @@ import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
@@ -116,42 +116,71 @@ fun AuthenticatedAppShell(
                 androidx.compose.ui.graphics.Color(0xFF4338CA)
             }
 
-            NavigationBar(
-                modifier = Modifier.fillMaxWidth(),
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface,
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(72.dp),
+                color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 0.dp
             ) {
-                shellDestinations.forEach { destination ->
-                    val selected = current == destination
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    shellDestinations.forEach { destination ->
+                        val selected = current == destination
 
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = { openDestination(destination) },
-                        icon = {
-                            androidx.compose.material3.Icon(
-                                imageVector = destinationIcon(destination),
-                                contentDescription = destinationTitle(destination)
-                            )
-                        },
-                        label = {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxSize()
+                                .clickable { openDestination(destination) },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .height(28.dp)
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (selected) activeColor.copy(alpha = 0.10f)
+                                        else MaterialTheme.colorScheme.surface
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = destinationIcon(destination),
+                                    contentDescription = destinationTitle(destination),
+                                    modifier = Modifier.size(21.dp),
+                                    tint = if (selected) {
+                                        activeColor
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                            }
+
                             Text(
-                                destinationTitle(destination),
+                                text = destinationTitle(destination),
+                                style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (selected) {
                                     androidx.compose.ui.text.font.FontWeight.Bold
                                 } else {
                                     androidx.compose.ui.text.font.FontWeight.Medium
-                                }
+                                },
+                                color = if (selected) {
+                                    activeColor
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier.padding(top = 2.dp)
                             )
-                        },
-                        colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                            selectedIconColor = activeColor,
-                            selectedTextColor = activeColor,
-                            indicatorColor = activeColor.copy(alpha = 0.10f),
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
+                        }
+                    }
                 }
             }
         }
