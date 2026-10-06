@@ -149,7 +149,7 @@ private fun HomeTopBar(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp),
+            .height(64.dp),
         color = MaterialTheme.colorScheme.surface
     ) {
         Row(
@@ -160,7 +160,7 @@ private fun HomeTopBar(
         ) {
             Surface(
                 onClick = onOpenProfile,
-                modifier = Modifier.size(44.dp).clip(CircleShape),
+                modifier = Modifier.size(40.dp).clip(CircleShape),
                 shape = CircleShape,
                 color = accent
             ) {
@@ -203,11 +203,11 @@ private fun HomeTopBar(
             Spacer(Modifier.width(6.dp))
 
             Box(
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(36.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Surface(
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(36.dp),
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
                 ) {
@@ -218,7 +218,7 @@ private fun HomeTopBar(
                         Icon(
                             Icons.Outlined.NotificationsNone,
                             contentDescription = "Notifications",
-                            modifier = Modifier.size(21.dp)
+                            modifier = Modifier.size(19.dp)
                         )
                     }
                 }
@@ -261,7 +261,7 @@ private fun FinancialPill(state: HomeState, accent: Color) {
             } else {
                 "₹" + formatMoney(state.financialSummary)
             },
-            Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
             color = accent,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.ExtraBold
@@ -347,7 +347,7 @@ private fun StudentJourneyCard(
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
     ) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     completed.toString() + " of " + steps.size.toString() + " complete",
@@ -370,7 +370,7 @@ private fun StudentJourneyCard(
                 )
             }
 
-            Column(Modifier.padding(top = 16.dp)) {
+            Column(Modifier.padding(top = 13.dp)) {
                 steps.forEachIndexed { index, step ->
                     JourneyStep(
                         step = step,
@@ -413,7 +413,7 @@ private fun JourneyStep(
             }
             if (!last) {
                 HorizontalDivider(
-                    Modifier.height(28.dp).width(2.dp),
+                    Modifier.height(24.dp).width(2.dp),
                     color = if (step.complete) accent.copy(alpha = 0.28f)
                     else MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)
                 )
@@ -423,7 +423,7 @@ private fun JourneyStep(
         Spacer(Modifier.width(14.dp))
 
         Column(
-            Modifier.weight(1f).padding(bottom = if (last) 0.dp else 10.dp)
+            Modifier.weight(1f).padding(bottom = if (last) 0.dp else 8.dp)
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
@@ -491,14 +491,14 @@ private fun JourneyStep(
 private fun EscrowEducationCard(accent: Color) {
     Surface(
         Modifier.fillMaxWidth(),
-        RoundedCornerShape(24.dp),
+        RoundedCornerShape(22.dp),
         color = Color(0xFF101827),
         contentColor = Color.White
     ) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(16.dp)) {
             Surface(
-                Modifier.size(44.dp),
-                RoundedCornerShape(14.dp),
+                Modifier.size(42.dp),
+                RoundedCornerShape(13.dp),
                 color = accent
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -512,7 +512,7 @@ private fun EscrowEducationCard(accent: Color) {
             }
             Text(
                 "How Escrow Works",
-                Modifier.padding(top = 14.dp),
+                Modifier.padding(top = 12.dp),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.ExtraBold
             )
@@ -569,7 +569,7 @@ private fun ClientHome(modifier: Modifier) {
 private fun TrustSafetyCard(accent: Color) {
     Surface(
         Modifier.fillMaxWidth(),
-        RoundedCornerShape(24.dp),
+        RoundedCornerShape(22.dp),
         color = accent,
         contentColor = Color.White
     ) {
@@ -589,9 +589,9 @@ private fun TrustSafetyCard(accent: Color) {
                     .background(Color.White.copy(alpha = 0.10f), CircleShape)
             )
 
-            Column(Modifier.padding(18.dp)) {
+            Column(Modifier.padding(16.dp)) {
                 Surface(
-                    Modifier.size(44.dp),
+                    Modifier.size(42.dp),
                     RoundedCornerShape(14.dp),
                     color = Color.White.copy(alpha = 0.14f),
                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
@@ -700,7 +700,7 @@ private fun ClientBriefCard(accent: Color) {
                 border = BorderStroke(1.dp, accent.copy(alpha = 0.14f))
             ) {
                 Row(
-                    Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Outlined.Add, null, Modifier.size(20.dp), tint = accent)
