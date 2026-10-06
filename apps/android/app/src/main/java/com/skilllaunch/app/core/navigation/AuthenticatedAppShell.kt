@@ -146,8 +146,7 @@ fun AuthenticatedAppShell(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .height(26.dp)
-                                    .fillMaxWidth()
+                                    .size(width = 44.dp, height = 26.dp)
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(
                                         if (selected) activeColor.copy(alpha = 0.10f)
