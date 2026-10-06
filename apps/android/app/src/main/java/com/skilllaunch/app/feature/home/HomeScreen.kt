@@ -137,6 +137,7 @@ private fun HomeTopBar(
     onToggleTheme: () -> Unit
 ) {
     val client = state.role?.trim()?.uppercase(Locale.US) == "CLIENT"
+    val greeting = if (client) "Welcome back" else greetingPrefix()
     val displayName = if (client) {
         state.companyOrProjectName?.takeIf(String::isNotBlank)
             ?: state.firstName?.takeIf(String::isNotBlank)
@@ -185,7 +186,7 @@ private fun HomeTopBar(
                     .padding(start = 12.dp)
             ) {
                 Text(
-                    greetingPrefix(),
+                    greeting,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold
@@ -311,29 +312,29 @@ private fun StudentJourneyCard(
         JourneyStepData(
             Icons.Outlined.PersonOutline,
             "Complete profile",
-            if (state.profileComplete) "Your profile setup is complete."
-            else "Add your focus, skills, availability, and intro.",
+            if (state.profileComplete) "Your skills, bio, and availability are ready."
+            else "Complete your skills, bio, and availability.",
             state.profileComplete
         ),
         JourneyStepData(
             Icons.Outlined.Image,
             "Upload proof of work",
             if (state.proofOfWorkComplete) "A portfolio link or sample is already attached."
-            else "Show clients what you can do with a real project.",
+            else "Show clients what you can do.",
             state.proofOfWorkComplete
         ),
         JourneyStepData(
             Icons.Outlined.Storefront,
             "Create your first Gig",
             if (state.hasGig) "You have already created a Gig."
-            else "Package one skill into a fixed-price service.",
+            else "Package a skill into an offer clients can buy.",
             state.hasGig
         ),
         JourneyStepData(
             Icons.Outlined.Send,
             "Submit your first Proposal",
-            if (state.hasProposal) "You have already submitted a proposal."
-            else "Find a good project fit and introduce your approach.",
+            if (state.hasProposal) "Your first proposal is already submitted."
+            else "Find a great fit and introduce your approach.",
             state.hasProposal
         )
     )
@@ -665,7 +666,7 @@ private fun ClientBriefCard(accent: Color) {
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        "Keep your first project focused and specific.",
+                        "Usually takes under 3 minutes",
                         Modifier.padding(top = 2.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.labelMedium
