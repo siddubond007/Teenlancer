@@ -5,6 +5,7 @@ import com.skilllaunch.app.core.session.SessionStore
 import com.skilllaunch.app.data.api.AuthApi
 import com.skilllaunch.app.data.api.GigApi
 import com.skilllaunch.app.data.api.HomeApi
+import com.skilllaunch.app.data.api.HomeApi
 import com.skilllaunch.app.data.api.UserApi
 import com.skilllaunch.app.data.api.UploadApi
 import okhttp3.OkHttpClient
@@ -29,6 +30,11 @@ object ApiClient {
     fun gigApi(sessionStore: SessionStore): GigApi {
         return createRetrofit(sessionStore)
             .create(GigApi::class.java)
+    }
+
+    fun homeApi(sessionStore: SessionStore): HomeApi {
+        return createRetrofit(sessionStore)
+            .create(HomeApi::class.java)
     }
 
     fun homeApi(sessionStore: SessionStore): HomeApi {
