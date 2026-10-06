@@ -9,6 +9,9 @@
  * configured local database and can remove only those test records.
  */
 
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
 const bcrypt = require('bcryptjs');
 const prisma = require('../src/config/db');
 
