@@ -32,7 +32,6 @@ import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -139,9 +138,11 @@ private fun HomeTopBar(
     val client = state.role?.trim()?.uppercase(Locale.US) == "CLIENT"
     val greeting = if (client) "Welcome back" else greetingPrefix()
     val displayName = if (client) {
-        state.companyOrProjectName?.takeIf(String::isNotBlank)
-            ?: state.firstName?.takeIf(String::isNotBlank)
-            ?: "Client"
+        state.companyOrProjectName
+            ?.takeIf(String::isNotBlank)
+            ?.let { "Hello, $it" }
+            ?: state.firstName?.takeIf(String::isNotBlank)?.let { "Hello, $it" }
+            ?: "Hello there"
     } else {
         state.firstName?.takeIf(String::isNotBlank) ?: "there"
     }
@@ -320,14 +321,14 @@ private fun StudentJourneyCard(
             Icons.Outlined.Image,
             "Upload proof of work",
             if (state.proofOfWorkComplete) "A portfolio link or sample is already attached."
-            else "Show clients what you can do.",
+            else "Show clients what you can do with a real project.",
             state.proofOfWorkComplete
         ),
         JourneyStepData(
             Icons.Outlined.Storefront,
             "Create your first Gig",
             if (state.hasGig) "You have already created a Gig."
-            else "Package a skill into an offer clients can buy.",
+            else "Package a skill into a fixed-price service.",
             state.hasGig
         ),
         JourneyStepData(
@@ -413,10 +414,14 @@ private fun JourneyStep(
                 }
             }
             if (!last) {
-                HorizontalDivider(
-                    Modifier.height(24.dp).width(2.dp),
-                    color = if (step.complete) accent.copy(alpha = 0.28f)
-                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)
+                Box(
+                    Modifier
+                        .width(2.dp)
+                        .height(24.dp)
+                        .background(
+                            if (step.complete) accent.copy(alpha = 0.28f)
+                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)
+                        )
                 )
             }
         }
@@ -534,8 +539,14 @@ private fun EscrowEducationCard(accent: Color) {
                     tint = accent
                 )
                 Text(
-                    "Protected by Teenlancer Escrow",
+                    "Learn how you're protected",
                     Modifier.padding(start = 7.dp),
+                    color = accent,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    " →",
                     color = accent,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
