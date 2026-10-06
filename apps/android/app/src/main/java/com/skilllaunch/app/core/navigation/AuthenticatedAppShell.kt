@@ -122,7 +122,7 @@ fun AuthenticatedAppShell(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(72.dp),
+                    .height(64.dp),
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 0.dp
             ) {
@@ -146,7 +146,7 @@ fun AuthenticatedAppShell(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .height(28.dp)
+                                    .height(26.dp)
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(
@@ -158,7 +158,7 @@ fun AuthenticatedAppShell(
                                 Icon(
                                     imageVector = destinationIcon(destination),
                                     contentDescription = destinationTitle(destination),
-                                    modifier = Modifier.size(21.dp),
+                                    modifier = Modifier.size(20.dp),
                                     tint = if (selected) {
                                         activeColor
                                     } else {
@@ -180,7 +180,7 @@ fun AuthenticatedAppShell(
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 },
-                                modifier = Modifier.padding(top = 2.dp)
+                                modifier = Modifier.padding(top = 1.dp)
                             )
                         }
                     }
