@@ -700,7 +700,8 @@ private fun HomeFailure(
 ) {
     Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Surface(
-            RoundedCornerShape(24.dp),
+            modifier = Modifier,
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
         ) {
