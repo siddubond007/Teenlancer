@@ -132,6 +132,7 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeTopBar(
     state: HomeState,
@@ -609,7 +610,7 @@ private fun ClientBriefCard(accent: Color) {
                     color = accent.copy(alpha = 0.10f)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Outlined.Briefcase, null, Modifier.size(24.dp), tint = accent)
+                        Icon(Icons.Outlined.BusinessCenter, null, Modifier.size(24.dp), tint = accent)
                     }
                 }
                 Column(Modifier.padding(start = 12.dp)) {
