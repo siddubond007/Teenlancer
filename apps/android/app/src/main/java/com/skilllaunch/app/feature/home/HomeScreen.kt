@@ -1,18 +1,10 @@
 package com.skilllaunch.app.feature.home
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,257 +13,362 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.Briefcase
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PersonOutline
+import androidx.compose.material.icons.outlined.Send
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
+import com.skilllaunch.app.core.common.collectAsStateWithLifecycleCompat
 import com.skilllaunch.app.core.navigation.AppDestination
 import com.skilllaunch.app.data.model.auth.AuthUser
+import com.skilllaunch.app.data.model.home.HomeState
+import com.skilllaunch.app.data.repository.home.HomeRepository
+import java.text.NumberFormat
+import java.time.LocalTime
 import java.util.Locale
+
+private val StudentAccent = Color(0xFF047857)
+private val ClientAccent = Color(0xFF4338CA)
 
 @Composable
 fun HomeScreen(
     user: AuthUser,
+    homeRepository: HomeRepository,
     onOpenDestination: (AppDestination) -> Unit,
+    onLogout: () -> Unit,
     darkTheme: Boolean,
     onToggleTheme: () -> Unit
 ) {
-    val role = user.role?.uppercase(Locale.US)
-    val firstName = user.firstName ?: user.username ?: "there"
-    val isClient = role == "CLIENT"
+    val viewModel: HomeViewModel = viewModel(
+        factory = remember(homeRepository) { HomeViewModel.factory(homeRepository) }
+    )
+    val uiState by viewModel.uiState.collectAsStateWithLifecycleCompat()
 
-    val verticalScrollState = rememberScrollState()
+    LaunchedEffect(user.id) {
+        viewModel.load(forceRefresh = true)
+    }
+
+    val home = uiState.home
+    val role = home?.role?.trim()?.uppercase(Locale.US)
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            home?.let {
+                HomeTopBar(
+                    state = it,
+                    darkTheme = darkTheme,
+                    onOpenProfile = { onOpenDestination(AppDestination.Profile) },
+                    onToggleTheme = onToggleTheme
+                )
+            }
+        }
+    ) { innerPadding ->
+        when {
+            uiState.isLoading && home == null -> HomeLoading(Modifier.padding(innerPadding))
+            uiState.errorMessage != null && home == null -> HomeFailure(
+                Modifier.padding(innerPadding),
+                uiState.errorMessage ?: "Unable to load Home.",
+                { viewModel.load(forceRefresh = true) },
+                onLogout
+            )
+            home?.isSuspended == true || home?.isBanned == true -> HomeBlocked(
+                Modifier.padding(innerPadding),
+                onLogout
+            )
+            role == "STUDENT_FREELANCER" -> StudentHome(
+                state = home,
+                modifier = Modifier.padding(innerPadding),
+                onOpenProfile = { onOpenDestination(AppDestination.Profile) }
+            )
+            role == "CLIENT" -> ClientHome(Modifier.padding(innerPadding))
+            else -> HomeFailure(
+                Modifier.padding(innerPadding),
+                "Your marketplace role could not be verified.",
+                { viewModel.load(forceRefresh = true) },
+                onLogout
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeTopBar(
+    state: HomeState,
+    darkTheme: Boolean,
+    onOpenProfile: () -> Unit,
+    onToggleTheme: () -> Unit
+) {
+    val client = state.role?.trim()?.uppercase(Locale.US) == "CLIENT"
+    val displayName = if (client) {
+        state.companyOrProjectName?.takeIf(String::isNotBlank)
+            ?: state.firstName?.takeIf(String::isNotBlank)
+            ?: "Client"
+    } else {
+        state.firstName?.takeIf(String::isNotBlank) ?: "there"
+    }
+    val accent = if (client) ClientAccent else StudentAccent
+
+    TopAppBar(
+        navigationIcon = {
+            Surface(
+                onClick = onOpenProfile,
+                modifier = Modifier.size(44.dp).clip(CircleShape),
+                shape = CircleShape,
+                color = accent.copy(alpha = 0.10f),
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+            ) {
+                SubcomposeAsyncImage(
+                    model = state.avatarUrl,
+                    contentDescription = "Open profile",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    loading = { InitialsAvatar(displayName, accent) },
+                    error = { InitialsAvatar(displayName, accent) },
+                    success = { SubcomposeAsyncImageContent() }
+                )
+            }
+        },
+        title = {
+            Column {
+                Text(
+                    greetingPrefix(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        displayName,
+                        maxLines = 1,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    if (state.verificationApproved) {
+                        Spacer(Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = accent.copy(alpha = 0.10f)
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Check,
+                                    null,
+                                    Modifier.size(13.dp),
+                                    tint = accent
+                                )
+                                Text(
+                                    "Verified",
+                                    Modifier.padding(start = 3.dp),
+                                    color = accent,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        actions = {
+            FinancialPill(state, accent)
+            IconButton(onClick = onToggleTheme) {
+                Icon(
+                    if (darkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
+                    if (darkTheme) "Use light theme" else "Use dark theme"
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            scrolledContainerColor = MaterialTheme.colorScheme.surface
+        )
+    )
+}
+
+@Composable
+private fun InitialsAvatar(name: String, accent: Color) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(
+            name.split(" ").filter(String::isNotBlank).take(2)
+                .mapNotNull { it.firstOrNull() }.joinToString("").ifBlank { "T" },
+            color = accent,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.ExtraBold
+        )
+    }
+}
+
+@Composable
+private fun FinancialPill(state: HomeState, accent: Color) {
+    val client = state.role?.trim()?.uppercase(Locale.US) == "CLIENT"
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = accent.copy(alpha = 0.09f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+    ) {
+        Text(
+            if (client) {
+                "Escrow: ₹" + formatMoney(state.financialSummary)
+            } else {
+                "₹" + formatMoney(state.financialSummary)
+            },
+            Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+            color = accent,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.ExtraBold
+        )
+    }
+}
+
+@Composable
+private fun StudentHome(
+    state: HomeState,
+    modifier: Modifier,
+    onOpenProfile: () -> Unit
+) {
+    LazyColumn(
+        modifier.fillMaxSize(),
+        contentPadding = PaddingValues(20.dp, 20.dp, 20.dp, 28.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        item {
+            HomeIntro(
+                StudentAccent,
+                "Your launch plan",
+                "Let’s get you ready to earn",
+                "Build trust with clients and unlock your first opportunity."
+            )
+        }
+        item { StudentJourneyCard(state, StudentAccent, onOpenProfile) }
+        item { EscrowEducationCard(StudentAccent) }
+    }
+}
+
+private data class JourneyStepData(
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val title: String,
+    val subtitle: String,
+    val complete: Boolean
+)
+
+@Composable
+private fun StudentJourneyCard(
+    state: HomeState,
+    accent: Color,
+    onOpenProfile: () -> Unit
+) {
+    val steps = listOf(
+        JourneyStepData(
+            Icons.Outlined.PersonOutline,
+            "Complete profile",
+            if (state.profileComplete) "Your profile setup is complete."
+            else "Add your focus, skills, availability, and intro.",
+            state.profileComplete
+        ),
+        JourneyStepData(
+            Icons.Outlined.Image,
+            "Upload proof of work",
+            if (state.proofOfWorkComplete) "A portfolio link or sample is already attached."
+            else "Show clients what you can do with a real project.",
+            state.proofOfWorkComplete
+        ),
+        JourneyStepData(
+            Icons.Outlined.Storefront,
+            "Create your first Gig",
+            if (state.hasGig) "You have already created a Gig."
+            else "Package one skill into a fixed-price service.",
+            state.hasGig
+        ),
+        JourneyStepData(
+            Icons.Outlined.Send,
+            "Submit your first Proposal",
+            if (state.hasProposal) "You have already submitted a proposal."
+            else "Find a good project fit and introduce your approach.",
+            state.hasProposal
+        )
+    )
+
+    val completed = steps.count { it.complete }
+    val progress = completed / steps.size.toFloat()
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        Modifier.fillMaxWidth(),
+        RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(360.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(verticalScrollState)
-                    .padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 14.dp,
-                        bottom = 32.dp
-                    ),
-                verticalArrangement = Arrangement.spacedBy(15.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        modifier = Modifier.size(38.dp),
-                        shape = RoundedCornerShape(13.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "⚡",
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                    }
-
-                    Column(
-                        modifier = Modifier.padding(start = 9.dp)
-                    ) {
-                        Text(
-                            text = "SkillLaunch",
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (isClient) "Client workspace" else "Freelancer workspace",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    ThemeToggle(
-                        darkTheme = darkTheme,
-                        onToggleTheme = onToggleTheme
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Surface(
-                        modifier = Modifier.size(42.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
-                        border = BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-                        )
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = firstName.firstOrNull()?.uppercase(Locale.US) ?: "S",
-                                color = MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                Column {
-                    Text(
-                        text = "WELCOME BACK",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing
-                    )
-
-                    Text(
-                        text = greetingText(firstName),
-                        modifier = Modifier.padding(top = 3.dp),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Text(
-                        text = if (isClient) {
-                            "Find the right student talent for your next project."
-                        } else {
-                            "Turn your skills into your next opportunity."
-                        },
-                        modifier = Modifier.padding(top = 4.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-
-                SearchBar(
-                    hint = if (isClient) {
-                        "Search jobs, skills, students..."
-                    } else {
-                        "Search jobs, skills, clients..."
-                    },
-                    onClick = { onOpenDestination(AppDestination.Explore) }
-                )
-
+        Column(Modifier.padding(20.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Get started",
-                    style = MaterialTheme.typography.titleLarge,
+                    completed.toString() + " of " + steps.size.toString() + " complete",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    (progress * 100).toInt().toString() + "%",
+                    color = accent,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold
                 )
+            }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(11.dp)
-                ) {
-                    HomeActionCard(
-                        modifier = Modifier.weight(1f),
-                        icon = "⌕",
-                        title = "Explore",
-                        description = if (isClient) {
-                            "Browse the marketplace."
-                        } else {
-                            "Discover available gigs."
-                        },
-                        accent = MaterialTheme.colorScheme.primary,
-                        onClick = { onOpenDestination(AppDestination.Explore) }
+            LinearProgressIndicator(
+                progress = { progress },
+                Modifier.fillMaxWidth().padding(top = 10.dp).height(8.dp).clip(RoundedCornerShape(50)),
+                color = accent,
+                trackColor = accent.copy(alpha = 0.10f)
+            )
+
+            Column(Modifier.padding(top = 20.dp)) {
+                steps.forEachIndexed { index, step ->
+                    JourneyStep(
+                        step = step,
+                        accent = accent,
+                        last = index == steps.lastIndex,
+                        onOpenProfile = onOpenProfile
                     )
-
-                    HomeActionCard(
-                        modifier = Modifier.weight(1f),
-                        icon = "○",
-                        title = "Profile",
-                        description = "Review your account.",
-                        accent = MaterialTheme.colorScheme.secondary,
-                        onClick = { onOpenDestination(AppDestination.Profile) }
-                    )
-                }
-
-                WorkspaceStateCard(
-                    isClient = isClient,
-                    firstName = firstName
-                )
-
-                WhyChooseSection(
-                    isClient = isClient
-                )
-
-                Surface(
-                    onClick = { onOpenDestination(AppDestination.Explore) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
-                    border = BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (isClient) "Explore student services" else "Browse live student gigs",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "Continue into the live SkillLaunch marketplace.",
-                                modifier = Modifier.padding(top = 3.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-
-                        Text(
-                            text = "→",
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    }
                 }
             }
         }
@@ -279,372 +376,363 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SearchBar(
-    hint: String,
-    onClick: () -> Unit
+private fun JourneyStep(
+    step: JourneyStepData,
+    accent: Color,
+    last: Boolean,
+    onOpenProfile: () -> Unit
 ) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp)),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 15.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "⌕",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            Text(
-                text = hint,
-                modifier = Modifier.padding(start = 10.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Surface(
-                modifier = Modifier.size(30.dp),
-                shape = RoundedCornerShape(9.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.88f)
+                Modifier.size(42.dp),
+                CircleShape,
+                color = if (step.complete) accent else MaterialTheme.colorScheme.surface,
+                border = BorderStroke(
+                    2.dp,
+                    if (step.complete) accent else MaterialTheme.colorScheme.outline.copy(alpha = 0.24f)
+                )
             ) {
                 Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        if (step.complete) Icons.Outlined.Check else step.icon,
+                        null,
+                        Modifier.size(19.dp),
+                        tint = if (step.complete) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (!last) {
+                HorizontalDivider(
+                    Modifier.height(34.dp).width(2.dp),
+                    color = if (step.complete) accent.copy(alpha = 0.28f)
+                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)
+                )
+            }
+        }
+
+        Spacer(Modifier.width(14.dp))
+
+        Column(
+            Modifier.weight(1f).padding(bottom = if (last) 0.dp else 14.dp)
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
                     Text(
-                        text = "⌘",
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        step.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (step.complete) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        step.subtitle,
+                        Modifier.padding(top = 4.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (!step.complete) {
+                    AssistChip(
+                        onClick = onOpenProfile,
+                        label = { Text("Update") },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.ArrowForward, null, Modifier.size(14.dp))
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EscrowEducationCard(accent: Color) {
+    Surface(
+        Modifier.fillMaxWidth(),
+        RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.inverseSurface,
+        contentColor = MaterialTheme.colorScheme.inverseOnSurface
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Surface(
+                Modifier.size(46.dp),
+                RoundedCornerShape(16.dp),
+                color = accent
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.Lock, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                }
+            }
+            Text(
+                "How Escrow Works",
+                Modifier.padding(top = 16.dp),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                "Client funds are secured before you start. Payment is released when approved, so your work stays protected.",
+                Modifier.padding(top = 8.dp),
+                color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.78f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Lock, null, Modifier.size(16.dp), tint = accent)
+                Text(
+                    "Protected by Teenlancer Escrow",
+                    Modifier.padding(start = 7.dp),
+                    color = accent,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClientHome(modifier: Modifier) {
+    LazyColumn(
+        modifier.fillMaxSize(),
+        contentPadding = PaddingValues(20.dp, 22.dp, 20.dp, 28.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        item { TrustSafetyCard(ClientAccent) }
+        item {
+            HomeIntro(
+                ClientAccent,
+                "Start a project",
+                "What do you need done?",
+                "Share your goal and get matched with verified student talent."
+            )
+        }
+        item { ClientBriefCard(ClientAccent) }
+    }
+}
+
+@Composable
+private fun TrustSafetyCard(accent: Color) {
+    Surface(
+        Modifier.fillMaxWidth(),
+        RoundedCornerShape(28.dp),
+        color = accent,
+        contentColor = Color.White
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Surface(
+                Modifier.size(48.dp),
+                RoundedCornerShape(16.dp),
+                color = Color.White.copy(alpha = 0.14f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.Shield, null, Modifier.size(27.dp), tint = Color.White)
+                }
+            }
+            Text(
+                "Hire with total confidence",
+                Modifier.padding(top = 16.dp),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                "100% upfront escrow protection. You only pay for the work you approve.",
+                Modifier.padding(top = 8.dp),
+                color = Color.White.copy(alpha = 0.88f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Lock, null, Modifier.size(16.dp), tint = Color.White.copy(alpha = 0.9f))
+                Text(
+                    "Protected by Teenlancer Escrow",
+                    Modifier.padding(start = 7.dp),
+                    color = Color.White.copy(alpha = 0.86f),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClientBriefCard(accent: Color) {
+    Surface(
+        Modifier.fillMaxWidth(),
+        RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.12f))
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    Modifier.size(48.dp),
+                    RoundedCornerShape(16.dp),
+                    color = accent.copy(alpha = 0.10f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.Briefcase, null, Modifier.size(24.dp), tint = accent)
+                    }
+                }
+                Column(Modifier.padding(start = 12.dp)) {
+                    Text(
+                        "Start with a quick brief",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        "Keep your first project focused and specific.",
+                        Modifier.padding(top = 2.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
             }
-        }
-    }
-}
 
-@Composable
-private fun HomeActionCard(
-    modifier: Modifier,
-    icon: String,
-    title: String,
-    description: String,
-    accent: Color,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
-        ),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
             Surface(
-                modifier = Modifier.size(32.dp),
-                shape = RoundedCornerShape(10.dp),
-                color = accent.copy(alpha = 0.12f)
+                Modifier.fillMaxWidth().padding(top = 18.dp),
+                RoundedCornerShape(20.dp),
+                color = accent.copy(alpha = 0.07f)
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Column(
+                    Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(11.dp)
+                ) {
                     Text(
-                        text = icon,
+                        "Get custom proposals from verified students.",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    SafetyPoint("Choose the right skills and budget", accent)
+                    SafetyPoint("Review profiles before you hire", accent)
+                    SafetyPoint("Keep every payment protected", accent)
+                }
+            }
+
+            Surface(
+                Modifier.fillMaxWidth().padding(top = 18.dp),
+                RoundedCornerShape(18.dp),
+                color = accent.copy(alpha = 0.10f),
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.14f))
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Outlined.Add, null, Modifier.size(20.dp), tint = accent)
+                    Text(
+                        "Post a custom Job when you are ready",
+                        Modifier.padding(start = 10.dp).weight(1f),
                         color = accent,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            }
-
-            Text(
-                text = title,
-                modifier = Modifier.padding(top = 10.dp),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = description,
-                modifier = Modifier.padding(top = 3.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
-    }
-}
-
-@Composable
-private fun WorkspaceStateCard(
-    isClient: Boolean,
-    firstName: String
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(21.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f)
-        ),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "YOUR WORKSPACE",
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = "You're all set, " + firstName.replaceFirstChar { it.uppercase() } + ".",
-                modifier = Modifier.padding(top = 4.dp),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = if (isClient) {
-                    "Use Explore to browse the marketplace and Profile to manage your account."
-                } else {
-                    "Use Explore to discover gigs and Profile to manage your account."
-                },
-                modifier = Modifier.padding(top = 5.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall
-            )
-
-            Text(
-                text = "Live dashboard metrics will appear when those data-backed features are connected.",
-                modifier = Modifier.padding(top = 8.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
-    }
-}
-
-@Composable
-private fun WhyChooseSection(
-    isClient: Boolean
-) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-
-    val tabTitles = listOf(
-        "Why clients choose us",
-        "Why skilled students need us"
-    )
-
-    val clientReasons = listOf(
-        "Access motivated student talent for real project needs.",
-        "Choose skills and services that fit your scope and budget.",
-        "Keep hiring focused with a simple marketplace experience."
-    )
-
-    val studentReasons = listOf(
-        "Turn practical skills into real opportunities and portfolio growth.",
-        "Showcase focused services without needing years of professional experience.",
-        "Build credibility through completed work, feedback and a growing profile."
-    )
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(11.dp)
-    ) {
-        Text(
-            text = "Why SkillLaunch",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
-            border = BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-            )
-        ) {
-            Row(
-                modifier = Modifier.padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                tabTitles.forEachIndexed { index, title ->
-                    val selected = selectedTab == index
-
-                    Surface(
-                        onClick = { selectedTab = index },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (selected) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.13f)
-                        } else {
-                            Color.Transparent
-                        }
-                    ) {
-                        Text(
-                            text = title,
-                            modifier = Modifier.padding(
-                                horizontal = 10.dp,
-                                vertical = 10.dp
-                            ),
-                            color = if (selected) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (selected) {
-                                FontWeight.Bold
-                            } else {
-                                FontWeight.Medium
-                            }
-                        )
-                    }
-                }
-            }
-        }
-
-        AnimatedContent(
-            targetState = selectedTab,
-            transitionSpec = {
-                slideInVertically(
-                    initialOffsetY = { it / 5 }
-                ) + fadeIn(
-                    animationSpec = tween(260)
-                ) togetherWith slideOutVertically(
-                    targetOffsetY = { -it / 5 }
-                ) + fadeOut(
-                    animationSpec = tween(180)
-                )
-            },
-            label = "why_choose_content"
-        ) { tab ->
-            val reasons = if (tab == 0) clientReasons else studentReasons
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(9.dp)
-            ) {
-                reasons.forEachIndexed { index, reason ->
-                    WhyChooseCard(
-                        index = index,
-                        text = reason
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun WhyChooseCard(
-    index: Int,
-    text: String
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(17.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(
-                horizontal = 14.dp,
-                vertical = 13.dp
-            ),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                modifier = Modifier.size(30.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "${index + 1}",
-                        color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
+                    Icon(Icons.Outlined.ArrowForward, null, Modifier.size(18.dp), tint = accent)
                 }
             }
-
-            Text(
-                text = text,
-                modifier = Modifier.padding(start = 11.dp),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyMedium
-            )
         }
     }
 }
 
 @Composable
-private fun ThemeToggle(
-    darkTheme: Boolean,
-    onToggleTheme: () -> Unit
-) {
-    val rotation by animateFloatAsState(
-        targetValue = if (darkTheme) 180f else 0f,
-        animationSpec = tween(350),
-        label = "theme_rotation"
-    )
-
-    Surface(
-        onClick = onToggleTheme,
-        modifier = Modifier.size(40.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
-        )
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.graphicsLayer {
-                rotationZ = rotation
+private fun SafetyPoint(text: String, accent: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Surface(Modifier.size(22.dp), CircleShape, color = accent) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Check, null, Modifier.size(13.dp), tint = Color.White)
             }
-        ) {
+        }
+        Text(
+            text,
+            Modifier.padding(start = 9.dp),
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun HomeIntro(
+    accent: Color,
+    eyebrow: String,
+    title: String,
+    description: String
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Storefront, null, Modifier.size(17.dp), tint = accent)
             Text(
-                text = if (darkTheme) "☾" else "☀",
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.titleMedium
+                eyebrow.uppercase(Locale.US),
+                Modifier.padding(start = 7.dp),
+                color = accent,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold
             )
         }
+        Text(
+            title,
+            Modifier.padding(top = 8.dp),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.ExtraBold
+        )
+        Text(
+            description,
+            Modifier.padding(top = 6.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 
-private data class SkillModule(
-    val title: String,
-    val value: String,
-    val valueLabel: String,
-    val accent: Color
-)
+@Composable
+private fun HomeLoading(modifier: Modifier) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
+    }
+}
 
-private fun greetingText(firstName: String): AnnotatedString {
-    return buildAnnotatedString {
-        append("Hey, ")
-        withStyle(
-            SpanStyle(
-                color = Color(0xFF60A5FA)
-            )
+@Composable
+private fun HomeFailure(
+    modifier: Modifier,
+    message: String,
+    onRetry: () -> Unit,
+    onLogout: () -> Unit
+) {
+    Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+        Surface(
+            RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
         ) {
-            append(firstName.replaceFirstChar { it.uppercase() })
+            Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "Home unavailable",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    message,
+                    Modifier.padding(top = 8.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Row(
+                    Modifier.padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    AssistChip(onClick = onRetry, label = { Text("Retry") })
+                    AssistChip(onClick = onLogout, label = { Text("Sign out") })
+                }
+            }
         }
-        append(" 👋")
     }
 }
+private fun greetingPrefix(): String = when (LocalTime.now().hour) {
+    in 5..11 -> "Good morning"
+    in 12..16 -> "Good afternoon"
+    in 17..20 -> "Good evening"
+    else -> "Good night"
+}
+
+private fun formatMoney(value: Int): String =
+    NumberFormat.getIntegerInstance(Locale("en", "IN")).format(value)
