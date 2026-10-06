@@ -22,16 +22,14 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.BusinessCenter
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,8 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,7 +65,6 @@ import java.util.Locale
 private val StudentAccent = Color(0xFF047857)
 private val ClientAccent = Color(0xFF4338CA)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     user: AuthUser,
@@ -132,7 +127,6 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeTopBar(
     state: HomeState,
@@ -150,93 +144,101 @@ private fun HomeTopBar(
     }
     val accent = if (client) ClientAccent else StudentAccent
 
-    TopAppBar(
-        navigationIcon = {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(72.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Surface(
                 onClick = onOpenProfile,
                 modifier = Modifier.size(44.dp).clip(CircleShape),
                 shape = CircleShape,
-                color = accent.copy(alpha = 0.10f),
-                border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+                color = accent
             ) {
-                SubcomposeAsyncImage(
-                    model = state.avatarUrl,
-                    contentDescription = "Open profile",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    loading = { InitialsAvatar(displayName, accent) },
-                    error = { InitialsAvatar(displayName, accent) },
-                    success = { SubcomposeAsyncImageContent() }
-                )
+                if (state.avatarUrl.isNullOrBlank()) {
+                    InitialsAvatar(displayName, accent)
+                } else {
+                    SubcomposeAsyncImage(
+                        model = state.avatarUrl,
+                        contentDescription = "Open profile",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        loading = { InitialsAvatar(displayName, accent) },
+                        error = { InitialsAvatar(displayName, accent) },
+                        success = { SubcomposeAsyncImageContent() }
+                    )
+                }
             }
-        },
-        title = {
-            Column {
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
+            ) {
                 Text(
                     greetingPrefix(),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        displayName,
-                        maxLines = 1,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    if (state.verificationApproved) {
-                        Spacer(Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = accent.copy(alpha = 0.10f)
-                        ) {
-                            Row(
-                                Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Outlined.Check,
-                                    null,
-                                    Modifier.size(13.dp),
-                                    tint = accent
-                                )
-                                Text(
-                                    "Verified",
-                                    Modifier.padding(start = 3.dp),
-                                    color = accent,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        actions = {
-            FinancialPill(state, accent)
-            IconButton(onClick = onToggleTheme) {
-                Icon(
-                    if (darkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                    if (darkTheme) "Use light theme" else "Use dark theme"
+                Text(
+                    displayName,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold
                 )
             }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrolledContainerColor = MaterialTheme.colorScheme.surface
-        )
-    )
-}
 
+            FinancialPill(state, accent)
+
+            Spacer(Modifier.width(6.dp))
+
+            Box(
+                modifier = Modifier.size(40.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    modifier = Modifier.size(40.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+                ) {
+                    IconButton(
+                        onClick = { },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            Icons.Outlined.NotificationsNone,
+                            contentDescription = "Notifications",
+                            modifier = Modifier.size(21.dp)
+                        )
+                    }
+                }
+                Surface(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .align(Alignment.TopEnd)
+                        .offset(x = (-6).dp, y = 7.dp),
+                    shape = CircleShape,
+                    color = Color(0xFFEF4444)
+                ) {}
+            }
+        }
+    }
+}
 @Composable
 private fun InitialsAvatar(name: String, accent: Color) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             name.split(" ").filter(String::isNotBlank).take(2)
                 .mapNotNull { it.firstOrNull() }.joinToString("").ifBlank { "T" },
-            color = accent,
+            color = Color.White,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.ExtraBold
         )
@@ -257,7 +259,7 @@ private fun FinancialPill(state: HomeState, accent: Color) {
             } else {
                 "₹" + formatMoney(state.financialSummary)
             },
-            Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+            Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             color = accent,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.ExtraBold
@@ -343,7 +345,7 @@ private fun StudentJourneyCard(
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
     ) {
-        Column(Modifier.padding(20.dp)) {
+        Column(Modifier.padding(18.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     completed.toString() + " of " + steps.size.toString() + " complete",
@@ -366,7 +368,7 @@ private fun StudentJourneyCard(
                 )
             }
 
-            Column(Modifier.padding(top = 20.dp)) {
+            Column(Modifier.padding(top = 16.dp)) {
                 steps.forEachIndexed { index, step ->
                     JourneyStep(
                         step = step,
@@ -390,7 +392,7 @@ private fun JourneyStep(
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Surface(
-                Modifier.size(42.dp),
+                Modifier.size(40.dp),
                 CircleShape,
                 color = if (step.complete) accent else MaterialTheme.colorScheme.surface,
                 border = BorderStroke(
@@ -409,7 +411,7 @@ private fun JourneyStep(
             }
             if (!last) {
                 HorizontalDivider(
-                    Modifier.height(34.dp).width(2.dp),
+                    Modifier.height(28.dp).width(2.dp),
                     color = if (step.complete) accent.copy(alpha = 0.28f)
                     else MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)
                 )
@@ -419,7 +421,7 @@ private fun JourneyStep(
         Spacer(Modifier.width(14.dp))
 
         Column(
-            Modifier.weight(1f).padding(bottom = if (last) 0.dp else 14.dp)
+            Modifier.weight(1f).padding(bottom = if (last) 0.dp else 10.dp)
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
@@ -444,7 +446,7 @@ private fun JourneyStep(
                             color = accent
                         ) {
                             Row(
-                                Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                                Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
@@ -487,34 +489,47 @@ private fun JourneyStep(
 private fun EscrowEducationCard(accent: Color) {
     Surface(
         Modifier.fillMaxWidth(),
-        RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.inverseSurface,
-        contentColor = MaterialTheme.colorScheme.inverseOnSurface
+        RoundedCornerShape(24.dp),
+        color = Color(0xFF101827),
+        contentColor = Color.White
     ) {
-        Column(Modifier.padding(20.dp)) {
+        Column(Modifier.padding(18.dp)) {
             Surface(
-                Modifier.size(46.dp),
-                RoundedCornerShape(16.dp),
+                Modifier.size(44.dp),
+                RoundedCornerShape(14.dp),
                 color = accent
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.Lock, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    Icon(
+                        Icons.Outlined.Lock,
+                        null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             }
             Text(
                 "How Escrow Works",
-                Modifier.padding(top = 16.dp),
+                Modifier.padding(top = 14.dp),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
                 "Client funds are secured before you start. Payment is released when approved, so your work stays protected.",
-                Modifier.padding(top = 8.dp),
-                color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.78f),
+                Modifier.padding(top = 7.dp),
+                color = Color.White.copy(alpha = 0.78f),
                 style = MaterialTheme.typography.bodyMedium
             )
-            Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Lock, null, Modifier.size(16.dp), tint = accent)
+            Row(
+                Modifier.padding(top = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Outlined.Lock,
+                    null,
+                    Modifier.size(16.dp),
+                    tint = accent
+                )
                 Text(
                     "Protected by Teenlancer Escrow",
                     Modifier.padding(start = 7.dp),
@@ -526,7 +541,6 @@ private fun EscrowEducationCard(accent: Color) {
         }
     }
 }
-
 @Composable
 private fun ClientHome(modifier: Modifier) {
     LazyColumn(
@@ -553,47 +567,76 @@ private fun ClientHome(modifier: Modifier) {
 private fun TrustSafetyCard(accent: Color) {
     Surface(
         Modifier.fillMaxWidth(),
-        RoundedCornerShape(28.dp),
+        RoundedCornerShape(24.dp),
         color = accent,
         contentColor = Color.White
     ) {
-        Column(Modifier.padding(20.dp)) {
-            Surface(
-                Modifier.size(48.dp),
-                RoundedCornerShape(16.dp),
-                color = Color.White.copy(alpha = 0.14f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.Shield, null, Modifier.size(27.dp), tint = Color.White)
+        Box(Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .size(116.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 38.dp, y = (-26).dp)
+                    .background(Color.White.copy(alpha = 0.08f), CircleShape)
+            )
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .align(Alignment.CenterEnd)
+                    .offset(x = (-6).dp, y = 10.dp)
+                    .background(Color.White.copy(alpha = 0.10f), CircleShape)
+            )
+
+            Column(Modifier.padding(18.dp)) {
+                Surface(
+                    Modifier.size(44.dp),
+                    RoundedCornerShape(14.dp),
+                    color = Color.White.copy(alpha = 0.14f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Outlined.Shield,
+                            null,
+                            Modifier.size(24.dp),
+                            tint = Color.White
+                        )
+                    }
                 }
-            }
-            Text(
-                "Hire with total confidence",
-                Modifier.padding(top = 16.dp),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold
-            )
-            Text(
-                "100% upfront escrow protection. You only pay for the work you approve.",
-                Modifier.padding(top = 8.dp),
-                color = Color.White.copy(alpha = 0.88f),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Lock, null, Modifier.size(16.dp), tint = Color.White.copy(alpha = 0.9f))
                 Text(
-                    "Protected by Teenlancer Escrow",
-                    Modifier.padding(start = 7.dp),
-                    color = Color.White.copy(alpha = 0.86f),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
+                    "Hire with total confidence",
+                    Modifier.padding(top = 14.dp),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold
                 )
+                Text(
+                    "100% upfront escrow protection. You only pay for the work you approve.",
+                    Modifier.padding(top = 7.dp),
+                    color = Color.White.copy(alpha = 0.88f),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Row(
+                    Modifier.padding(top = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Outlined.Lock,
+                        null,
+                        Modifier.size(16.dp),
+                        tint = Color.White.copy(alpha = 0.92f)
+                    )
+                    Text(
+                        "Protected by Teenlancer Escrow",
+                        Modifier.padding(start = 7.dp),
+                        color = Color.White.copy(alpha = 0.88f),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
 }
-
 @Composable
 private fun ClientBriefCard(accent: Color) {
     Surface(
@@ -602,7 +645,7 @@ private fun ClientBriefCard(accent: Color) {
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, accent.copy(alpha = 0.12f))
     ) {
-        Column(Modifier.padding(20.dp)) {
+        Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     Modifier.size(48.dp),
@@ -655,7 +698,7 @@ private fun ClientBriefCard(accent: Color) {
                 border = BorderStroke(1.dp, accent.copy(alpha = 0.14f))
             ) {
                 Row(
-                    Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Outlined.Add, null, Modifier.size(20.dp), tint = accent)
@@ -879,4 +922,4 @@ private fun greetingPrefix(): String = when (LocalTime.now().hour) {
 }
 
 private fun formatMoney(value: Int): String =
-    NumberFormat.getIntegerInstance(Locale("en", "IN")).format(value)
+    NumberFormat.getIntegerInstance(Locale.forLanguageTag("en-IN")).format(value)
