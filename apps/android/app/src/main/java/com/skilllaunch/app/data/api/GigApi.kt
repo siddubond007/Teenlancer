@@ -7,4 +7,9 @@ interface GigApi {
 
     @GET("gigs")
     suspend fun getGigs(): List<Gig>
+
+    @GET("gigs/{gigId}")
+    suspend fun getGigById(
+        @retrofit2.http.Path("gigId") gigId: String
+    ): Gig
 }
