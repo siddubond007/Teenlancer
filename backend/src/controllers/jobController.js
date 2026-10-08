@@ -288,8 +288,14 @@ exports.getJobs = async (req, res) => {
     }
 
     // Pagination calculations
-    const pageNumber = parseInt(page, 10);
-    const pageSize = parseInt(limit, 10);
+    const parsedPage = Number.parseInt(page, 10);
+    const parsedLimit = Number.parseInt(limit, 10);
+    const pageNumber = Number.isFinite(parsedPage) && parsedPage > 0
+      ? parsedPage
+      : 1;
+    const pageSize = Number.isFinite(parsedLimit)
+      ? Math.min(Math.max(parsedLimit, 1), 100)
+      : 20;
     const skip = (pageNumber - 1) * pageSize;
 
     // Execute parallel queries for optimal performance
