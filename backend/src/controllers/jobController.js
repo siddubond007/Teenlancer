@@ -129,7 +129,7 @@ exports.createJob = async (req, res) => {
     });
   } catch (err) {
     console.error('Error in createJob:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -227,7 +227,7 @@ exports.updateJob = async (req, res) => {
     });
   } catch (err) {
     console.error('Error in updateJob:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -318,7 +318,7 @@ exports.getJobs = async (req, res) => {
     });
   } catch (err) {
     console.error('Error in Enterprise getJobs:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -334,7 +334,7 @@ exports.getMyDrafts = async (req, res) => {
     });
     res.json(drafts);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -422,7 +422,7 @@ exports.getMyProjects = async (req, res) => {
     res.json(enrichedProjects);
   } catch (err) {
     console.error('Error in getMyProjects:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -548,7 +548,7 @@ exports.getJobById = async (req, res) => {
     res.json(job);
   } catch (err) {
     console.error('Error in getJobById:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -623,7 +623,7 @@ exports.getPublicJobById = async (req, res) => {
     });
   } catch (err) {
     console.error('Error in getPublicJobById:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -661,7 +661,7 @@ exports.deleteJob = async (req, res) => {
     res.json({ message: 'Job deleted successfully' });
   } catch (err) {
     console.error('Error in deleteJob:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1159,7 +1159,7 @@ exports.shortlistBid = async (req, res) => {
 
     return res.json({ success: true, message: 'Proposal shortlisted', bid: updatedBid });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1197,6 +1197,6 @@ exports.rejectBid = async (req, res) => {
 
     return res.json({ success: true, message: 'Proposal rejected', bid: updatedBid });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
