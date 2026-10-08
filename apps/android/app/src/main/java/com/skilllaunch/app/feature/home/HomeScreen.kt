@@ -1325,7 +1325,7 @@ private fun ClientBriefCard(
             Surface(
                 onClick = onPostJob,
                 modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
-                RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = accent.copy(alpha = 0.07f)
             ) {
                 Column(
