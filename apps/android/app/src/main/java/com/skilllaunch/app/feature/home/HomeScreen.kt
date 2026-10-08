@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -24,14 +25,14 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.BusinessCenter
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.PersonOutline
-import androidx.compose.material.icons.outlined.Send
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.AssistChip
@@ -975,7 +976,7 @@ private fun ClientActiveProjectCard(
                             fontWeight = FontWeight.ExtraBold
                         )
                         Icon(
-                            Icons.Outlined.ArrowForward,
+                            Icons.AutoMirrored.Outlined.ArrowForward,
                             contentDescription = null,
                             modifier = Modifier.padding(start = 3.dp).size(16.dp),
                             tint = Color.White
@@ -1063,6 +1064,19 @@ private fun RecommendedJobCard(
         }
     }
 }
+
+private fun relativePostedTime(createdAt: String?): String =
+    runCatching {
+        if (createdAt.isNullOrBlank()) return "Recently"
+        val posted = Instant.parse(createdAt)
+        val minutes = Duration.between(posted, Instant.now()).toMinutes().coerceAtLeast(0)
+        when {
+            minutes < 1 -> "Just now"
+            minutes < 60 -> minutes.toString() + "m ago"
+            minutes < 1440 -> (minutes / 60).toString() + "h ago"
+            else -> (minutes / 1440).toString() + "d ago"
+        }
+    }.getOrDefault("Recently")
 
 @Composable
 private fun GigRecommendationCard(
@@ -1583,7 +1597,7 @@ private fun ClientBriefCard(
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
-                    Icon(Icons.Outlined.ArrowForward, null, Modifier.size(18.dp), tint = accent)
+                    Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, Modifier.size(18.dp), tint = accent)
                 }
             }
         }
@@ -1651,7 +1665,7 @@ private fun ClientSupportCard(accent: Color) {
                 )
             }
             Icon(
-                Icons.Outlined.ArrowForward,
+                Icons.AutoMirrored.Outlined.ArrowForward,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(19.dp)
