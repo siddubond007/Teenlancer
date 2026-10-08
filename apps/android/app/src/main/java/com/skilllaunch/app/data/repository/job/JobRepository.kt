@@ -5,6 +5,7 @@ import com.skilllaunch.app.data.api.JobApi
 import com.skilllaunch.app.data.model.auth.ApiErrorResponse
 import com.skilllaunch.app.data.model.job.CreateJobRequest
 import com.skilllaunch.app.data.model.job.CreateJobResponse
+import com.skilllaunch.app.data.model.job.Job
 import com.skilllaunch.app.data.model.job.JobListResponse
 import com.skilllaunch.app.data.model.job.SubmitBidRequest
 import com.skilllaunch.app.data.model.job.SubmitBidResponse
@@ -20,6 +21,13 @@ class JobRepository(
             api.getJobs(query = query?.trim()?.ifBlank { null })
         }.recoverCatching {
             throw mapError(it, "Unable to load available projects.")
+        }
+
+    suspend fun getPublicJob(jobId: String): Result<Job> =
+        runCatching {
+            api.getPublicJob(jobId)
+        }.recoverCatching {
+            throw mapError(it, "Unable to load this project.")
         }
 
     suspend fun createJob(request: CreateJobRequest): Result<CreateJobResponse> =
