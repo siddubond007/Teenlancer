@@ -211,7 +211,7 @@ exports.getHomeState = async (req, res) => {
       ? await prisma.job.findMany({
           where: {
             clientId: { not: user.id },
-            status: 'published',
+            status: 'OPEN',
             isOpen: true,
             isDeleted: false
           },
