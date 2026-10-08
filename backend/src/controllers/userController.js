@@ -45,7 +45,9 @@ exports.getFreelancers = async (req, res) => {
     const { category } = req.query;
     let whereClause = {
       role: 'STUDENT_FREELANCER',
-      isSuspended: false
+      isSuspended: false,
+      isBanned: false,
+      isDeleted: false
     };
 
     if (category && category !== 'all') {
@@ -127,9 +129,11 @@ exports.getUserProfile = async (req, res) => {
       where: {
         OR: [
           { id: userId },
-          { username: userId },
-          { email: userId }
-        ]
+          { username: userId }
+        ],
+        isBanned: false,
+        isSuspended: false,
+        isDeleted: false
       },
       select: {
         id: true,
