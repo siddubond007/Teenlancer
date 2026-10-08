@@ -78,15 +78,16 @@ export default function OrderWorkspacePage({ currentUser }) {
   useEffect(() => {
     if (!orderId || !currentUser?.id) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     const socketBaseUrl =
       import.meta.env.DEV
         ? `http://${window.location.hostname}:5000`
         : (import.meta.env.VITE_SOCKET_URL ||
-           import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') ||
-           'https://student-marketplace-kg2f.onrender.com');
+           import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, ''));
+
+    if (!socketBaseUrl) {
+      setSocketError('Realtime chat is not configured.');
+      return;
+    }
 
     const socket = createSocket(socketBaseUrl, {
       withCredentials: true
