@@ -58,3 +58,15 @@ data class OrderActionResponse(
     val message: String? = null,
     val order: OrderSummary? = null
 )
+
+
+data class OrderMessage(
+    val id: String? = null,
+    val orderId: String? = null,
+    val senderId: String? = null,
+    val recipientId: String? = null,
+    val content: String? = null,
+    val fileUrl: String? = null,
+    val createdAt: String? = null,
+    val sender: OrderPerson? = null
+)
