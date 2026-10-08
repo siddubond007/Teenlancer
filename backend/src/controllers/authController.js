@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/db');
+const { setAuthCookie, clearAuthCookie } = require('../utils/authCookie');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -148,12 +149,32 @@ exports.register = async (req, res) => {
     });
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    const { passwordHash: _passwordHash, ...safeUser } = user;
-    res.status(201).json({
+    setAuthCookie(res, token);
+
+    const safeUser = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      middleName: user.middleName,
+      lastName: user.lastName,
+      fullName: user.fullName,
+      role: user.role,
+      isMinor: user.isMinor,
+      age: user.age,
+      dob: user.dob
+    };
+
+    const response = {
       message: 'Registration successful',
-      token,
       user: safeUser
-    });
+    };
+
+    if (req.get('X-SkillLaunch-Client') !== 'web') {
+      response.token = token;
+    }
+
+    res.status(201).json(response);
   } catch (err) {
     console.error("Register Error:", err);
 
@@ -323,17 +344,41 @@ exports.login = async (req, res) => {
       );
     }
 
-    console.log(`✅ Login successful: ${user.email} -> Role: ${user.role}`);
-    const { passwordHash: _passwordHash, ...safeUser } = user;
-    res.json({
+    setAuthCookie(res, token);
+
+    const safeUser = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      middleName: user.middleName,
+      lastName: user.lastName,
+      fullName: user.fullName,
+      role: user.role,
+      isMinor: user.isMinor,
+      age: user.age,
+      dob: user.dob
+    };
+
+    const response = {
       message: 'Login successful',
-      token,
       user: safeUser
-    });
+    };
+
+    if (req.get('X-SkillLaunch-Client') !== 'web') {
+      response.token = token;
+    }
+
+    res.json(response);
   } catch (err) {
     console.error("Login Error:", err);
     res.status(500).json({ error: 'Database Error: ' + err.message });
   }
+};
+
+exports.logout = async (req, res) => {
+  clearAuthCookie(res);
+  return res.json({ message: 'Logged out successfully.' });
 };
 
 exports.getMe = async (req, res) => {
