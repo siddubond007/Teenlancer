@@ -23,6 +23,7 @@ router.put('/verifications/:id/status', adminController.updateVerificationStatus
 
 router.get('/payouts', adminController.getPayoutRequests);
 router.put('/payouts/:payoutId/approve', adminController.approvePayoutRequest);
+router.put('/payouts/:payoutId/complete', adminController.completePayoutRequest);
 router.put('/payouts/:payoutId/reject', adminController.rejectPayoutRequest);
 
 
