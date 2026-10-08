@@ -27,6 +27,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.skilllaunch.app.core.common.collectAsStateWithLifecycleCompat
 import com.skilllaunch.app.data.model.job.CreateJobRequest
 import com.skilllaunch.app.data.repository.job.JobRepository
 import kotlinx.coroutines.flow.MutableStateFlow
