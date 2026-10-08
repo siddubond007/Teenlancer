@@ -289,7 +289,7 @@ private fun FinancialPill(state: HomeState, accent: Color) {
 private fun StudentHome(
     state: HomeState,
     modifier: Modifier,
-    onOpenOrders: () -> Unit,
+    onOpenWorkspace: () -> Unit,
     onOpenExplore: () -> Unit
 ) {
     LazyColumn(
@@ -572,7 +572,7 @@ private fun Stage2SectionTitle(
 private fun StudentActiveOrderCard(
     workspace: com.skilllaunch.app.data.model.home.HomeActiveWorkspace?,
     accent: Color,
-    onOpenOrders: () -> Unit
+    onOpenWorkspace: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -647,7 +647,7 @@ private fun StudentActiveOrderCard(
                 )
                 WorkspaceDeadline(workspace.deadline)
                 Surface(
-                    onClick = onOpenOrders,
+                    onClick = onOpenWorkspace,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     color = accent
@@ -680,7 +680,7 @@ private fun StudentActiveOrderCard(
 private fun ClientActiveProjectCard(
     workspace: com.skilllaunch.app.data.model.home.HomeActiveWorkspace?,
     accent: Color,
-    onOpenOrders: () -> Unit
+    onOpenWorkspace: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -729,7 +729,7 @@ private fun ClientActiveProjectCard(
                 )
                 WorkspaceDeadline(workspace.deadline, prefix = "Delivery expected")
                 Surface(
-                    onClick = onOpenOrders,
+                    onClick = onOpenWorkspace,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     color = accent
@@ -1160,7 +1160,7 @@ private fun EscrowEducationCard(accent: Color) {
 private fun ClientHome(
     state: HomeState,
     modifier: Modifier,
-    onOpenOrders: () -> Unit
+    onOpenWorkspace: () -> Unit
 ) {
     LazyColumn(
         modifier.fillMaxSize(),
@@ -1225,7 +1225,7 @@ private fun ClientHome(
                 title = "What do you need done?"
             )
         }
-        item { ClientBriefCard(ClientAccent) }
+        item { ClientBriefCard(ClientAccent, onPostJob = { onOpenDestination(AppDestination.PostJob) }) }
     }
 }
 
@@ -1304,7 +1304,10 @@ private fun TrustSafetyCard(accent: Color) {
     }
 }
 @Composable
-private fun ClientBriefCard(accent: Color) {
+private fun ClientBriefCard(
+    accent: Color,
+    onPostJob: () -> Unit
+) {
     Surface(
         Modifier.fillMaxWidth(),
         RoundedCornerShape(28.dp),
@@ -1338,7 +1341,8 @@ private fun ClientBriefCard(accent: Color) {
             }
 
             Surface(
-                Modifier.fillMaxWidth().padding(top = 18.dp),
+                onClick = onPostJob,
+                modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
                 RoundedCornerShape(20.dp),
                 color = accent.copy(alpha = 0.07f)
             ) {
