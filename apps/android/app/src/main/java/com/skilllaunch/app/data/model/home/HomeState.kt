@@ -46,6 +46,7 @@ data class HomeState(
     val recommendedJobs: List<HomeRecommendedJob> = emptyList(),
     val discoveryCategory: String? = null,
     val topVerifiedGigs: List<HomeGigRecommendation> = emptyList(),
+    val unreadNotifications: Int = 0,
     val isSuspended: Boolean = false,
     val isBanned: Boolean = false
 )
