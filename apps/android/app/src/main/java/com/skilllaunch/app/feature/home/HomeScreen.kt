@@ -60,6 +60,8 @@ import com.skilllaunch.app.data.model.auth.AuthUser
 import com.skilllaunch.app.data.model.home.HomeState
 import com.skilllaunch.app.data.repository.home.HomeRepository
 import java.text.NumberFormat
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalTime
 import java.util.Locale
 
@@ -116,9 +118,13 @@ fun HomeScreen(
             role == "STUDENT_FREELANCER" -> StudentHome(
                 state = home,
                 modifier = Modifier.padding(innerPadding),
-                onOpenProfile = { onOpenDestination(AppDestination.Profile) }
+                onOpenOrders = { onOpenDestination(AppDestination.Orders) }
             )
-            role == "CLIENT" -> ClientHome(Modifier.padding(innerPadding))
+            role == "CLIENT" -> ClientHome(
+                state = home,
+                modifier = Modifier.padding(innerPadding),
+                onOpenOrders = { onOpenDestination(AppDestination.Orders) }
+            )
             else -> HomeFailure(
                 Modifier.padding(innerPadding),
                 "Your marketplace role could not be verified.",
@@ -276,7 +282,7 @@ private fun FinancialPill(state: HomeState, accent: Color) {
 private fun StudentHome(
     state: HomeState,
     modifier: Modifier,
-    onOpenProfile: () -> Unit
+    onOpenOrders: () -> Unit
 ) {
     LazyColumn(
         modifier.fillMaxSize(),
@@ -284,16 +290,32 @@ private fun StudentHome(
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {
-            HomeIntro(
-                StudentAccent,
-                "Your launch plan",
-                "Let’s get you ready to earn",
-                "Build trust with clients and unlock your first opportunity.",
-                Icons.Outlined.AutoAwesome
+            Stage2SectionTitle(
+                accent = StudentAccent,
+                eyebrow = "YOUR WORKSPACE",
+                title = "Active Orders"
             )
         }
-        item { StudentJourneyCard(state, StudentAccent, onOpenProfile) }
-        item { EscrowEducationCard(StudentAccent) }
+        item {
+            StudentActiveOrderCard(
+                workspace = state.activeWorkspace,
+                accent = StudentAccent,
+                onOpenOrders = onOpenOrders
+            )
+        }
+        item {
+            Stage2SectionTitle(
+                accent = StudentAccent,
+                eyebrow = "OPPORTUNITY RADAR",
+                title = "Recommended Jobs for you"
+            )
+        }
+        item {
+            Stage2UnavailableCard(
+                title = "Recommended jobs coming next",
+                message = "Your Home is now ready for live active orders. The recommendation feed will be connected next."
+            )
+        }
     }
 }
 
@@ -495,6 +517,360 @@ private fun JourneyStep(
 }
 
 @Composable
+private fun Stage2SectionTitle(
+    accent: Color,
+    eyebrow: String,
+    title: String
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .width(13.dp)
+                    .height(1.dp)
+                    .background(accent)
+            )
+            Text(
+                eyebrow,
+                modifier = Modifier.padding(start = 6.dp),
+                color = accent,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+        Text(
+            title,
+            modifier = Modifier.padding(top = 5.dp),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.ExtraBold
+        )
+    }
+}
+
+@Composable
+private fun StudentActiveOrderCard(
+    workspace: com.skilllaunch.app.data.model.home.HomeActiveWorkspace?,
+    accent: Color,
+    onOpenOrders: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
+    ) {
+        if (workspace == null) {
+            Stage2UnavailableCard(
+                title = "No active orders yet",
+                message = "Funded and in-progress orders will appear here once work starts."
+            )
+        } else {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        modifier = Modifier.size(35.dp),
+                        shape = RoundedCornerShape(11.dp),
+                        color = Color(0xFF083F36)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                initials(workspace.counterpartName),
+                                color = Color(0xFF8FF6D2),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f).padding(start = 10.dp)
+                    ) {
+                        Text(
+                            "CLIENT",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            workspace.counterpartName ?: "Client",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                    WorkspaceStatusPill(
+                        text = workspace.escrowStatus ?: workspace.status.toDisplayStatus(),
+                        accent = accent
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 19.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(
+                        workspace.title ?: "Active project",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        workspace.progressPercent.toString() + "%",
+                        color = accent,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { workspace.progressPercent.coerceIn(0, 100) / 100f },
+                    modifier = Modifier.fillMaxWidth().padding(top = 9.dp).height(7.dp).clip(RoundedCornerShape(50)),
+                    color = accent,
+                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+                )
+                WorkspaceDeadline(workspace.deadline)
+                Surface(
+                    onClick = onOpenOrders,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = accent
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "View Workspace",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Icon(
+                            Icons.Outlined.ArrowForward,
+                            contentDescription = null,
+                            modifier = Modifier.padding(start = 3.dp).size(16.dp),
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClientActiveProjectCard(
+    workspace: com.skilllaunch.app.data.model.home.HomeActiveWorkspace?,
+    accent: Color,
+    onOpenOrders: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
+    ) {
+        if (workspace == null) {
+            Stage2UnavailableCard(
+                title = "No active projects yet",
+                message = "Projects you hire students for will appear here once work starts."
+            )
+        } else {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AvatarForWorkspace(
+                        name = workspace.counterpartName ?: "Student",
+                        avatarUrl = workspace.counterpartAvatarUrl,
+                        accent = accent
+                    )
+                    Column(
+                        modifier = Modifier.weight(1f).padding(start = 10.dp)
+                    ) {
+                        Text(
+                            "WORKING WITH",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            workspace.counterpartName ?: "Student freelancer",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                    WorkspaceStatusPill(
+                        text = workspace.status.toDisplayStatus(),
+                        accent = accent
+                    )
+                }
+                Text(
+                    workspace.title ?: "Active project",
+                    modifier = Modifier.padding(top = 19.dp),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                WorkspaceDeadline(workspace.deadline, prefix = "Delivery expected")
+                Surface(
+                    onClick = onOpenOrders,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = accent
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Open Workspace",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Icon(
+                            Icons.Outlined.ArrowForward,
+                            contentDescription = null,
+                            modifier = Modifier.padding(start = 3.dp).size(16.dp),
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Stage2UnavailableCard(
+    title: String,
+    message: String
+) {
+    Column(modifier = Modifier.padding(18.dp)) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+        Text(
+            message,
+            modifier = Modifier.padding(top = 6.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun WorkspaceStatusPill(
+    text: String,
+    accent: Color
+) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = accent.copy(alpha = 0.10f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+    ) {
+        Text(
+            text,
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+            color = accent,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold
+        )
+    }
+}
+
+@Composable
+private fun WorkspaceDeadline(
+    deadline: String?,
+    prefix: String = "Deadline:"
+) {
+    Row(
+        modifier = Modifier.padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Outlined.Lock,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            prefix + " " + relativeDeadline(deadline),
+            modifier = Modifier.padding(start = 6.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun AvatarForWorkspace(
+    name: String,
+    avatarUrl: String?,
+    accent: Color
+) {
+    Surface(
+        modifier = Modifier.size(41.dp),
+        shape = CircleShape,
+        color = accent
+    ) {
+        if (avatarUrl.isNullOrBlank()) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(initials(name), color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold)
+            }
+        } else {
+            SubcomposeAsyncImage(
+                model = avatarUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                loading = {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(initials(name), color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold)
+                    }
+                },
+                error = {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(initials(name), color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold)
+                    }
+                },
+                success = { SubcomposeAsyncImageContent() }
+            )
+        }
+    }
+}
+
+private fun initials(name: String?): String =
+    name.orEmpty()
+        .split(" ")
+        .filter(String::isNotBlank)
+        .take(2)
+        .mapNotNull { it.firstOrNull() }
+        .joinToString("")
+        .ifBlank { "T" }
+
+private fun relativeDeadline(deadline: String?): String {
+    val target = deadline
+        ?.let { runCatching { Instant.parse(it) }.getOrNull() }
+        ?: return "pending"
+
+    val duration = Duration.between(Instant.now(), target)
+    val hours = duration.toHours()
+
+    return when {
+        hours < 0 -> "overdue"
+        hours < 24 -> "in " + hours.coerceAtLeast(1) + " hours"
+        else -> "in " + duration.toDays() + " days"
+    }
+}
+
+private fun String?.toDisplayStatus(): String =
+    when (this?.uppercase(Locale.US)) {
+        "FUNDED_IN_ESCROW" -> "Funded"
+        "REQUIREMENTS_SUBMITTED" -> "Requirements"
+        "IN_PROGRESS" -> "In Progress"
+        "DELIVERED" -> "Delivered"
+        "REVISION_REQUESTED" -> "Revision"
+        "IN_REVIEW" -> "In Review"
+        "DISPUTED" -> "Disputed"
+        else -> "Active"
+    }
+
+@Composable
 private fun EscrowEducationCard(accent: Color) {
     Surface(
         Modifier.fillMaxWidth(),
@@ -557,24 +933,38 @@ private fun EscrowEducationCard(accent: Color) {
     }
 }
 @Composable
-private fun ClientHome(modifier: Modifier) {
+private fun ClientHome(
+    state: HomeState,
+    modifier: Modifier,
+    onOpenOrders: () -> Unit
+) {
     LazyColumn(
         modifier.fillMaxSize(),
         contentPadding = PaddingValues(20.dp, 22.dp, 20.dp, 28.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        item { TrustSafetyCard(ClientAccent) }
         item {
-            HomeIntro(
-                ClientAccent,
-                "Start a project",
-                "What do you need done?",
-                "Share your goal and get matched with verified student talent.",
-                Icons.Outlined.BusinessCenter
+            Stage2SectionTitle(
+                accent = ClientAccent,
+                eyebrow = "PROJECT VELOCITY",
+                title = "Active Projects"
+            )
+        }
+        item {
+            ClientActiveProjectCard(
+                workspace = state.activeWorkspace,
+                accent = ClientAccent,
+                onOpenOrders = onOpenOrders
+            )
+        }
+        item {
+            Stage2SectionTitle(
+                accent = ClientAccent,
+                eyebrow = "START A PROJECT",
+                title = "What do you need done?"
             )
         }
         item { ClientBriefCard(ClientAccent) }
-        item { ClientSupportCard(ClientAccent) }
     }
 }
 
