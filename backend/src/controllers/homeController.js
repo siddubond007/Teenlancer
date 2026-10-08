@@ -229,6 +229,7 @@ exports.getHomeState = async (req, res) => {
             fixedBudget: true,
             minimumBudget: true,
             maximumBudget: true,
+            budgetType: true,
             skills: true,
             createdAt: true
           },
@@ -276,18 +277,36 @@ exports.getHomeState = async (req, res) => {
         })
       : [];
 
+    const formatBudgetLabel = (job) => {
+      const fixed = Number(job.fixedBudget);
+      const minimum = Number(job.minimumBudget);
+      const maximum = Number(job.maximumBudget);
+      const budget = Number(job.budget);
+
+      if (Number.isFinite(fixed) && fixed > 0) {
+        return `₹${Math.round(fixed)}`;
+      }
+
+      if (
+        Number.isFinite(minimum) &&
+        minimum > 0 &&
+        Number.isFinite(maximum) &&
+        maximum > 0
+      ) {
+        return `₹${Math.round(minimum)}–₹${Math.round(maximum)}`;
+      }
+
+      if (Number.isFinite(budget) && budget > 0) {
+        return `₹${Math.round(budget)}`;
+      }
+
+      return 'Budget on request';
+    };
+
     const recommendedJobCards = recommendedJobs.map((job) => ({
       id: job.id,
       title: job.title,
-      estimatedBudget: Math.round(
-        Number(
-          job.fixedBudget ??
-          job.budget ??
-          job.maximumBudget ??
-          job.minimumBudget ??
-          0
-        )
-      ),
+      budgetLabel: formatBudgetLabel(job),
       skills: Array.isArray(job.skills) ? job.skills.filter(Boolean).slice(0, 3) : [],
       createdAt: job.createdAt
     }));
