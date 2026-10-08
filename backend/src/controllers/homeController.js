@@ -277,6 +277,14 @@ exports.getHomeState = async (req, res) => {
         recommendedJobs = await prisma.job.findMany({
           where: {
             clientId: { not: user.id },
+            client: {
+              is: {
+                role: 'CLIENT',
+                isBanned: false,
+                isSuspended: false,
+                isDeleted: false
+              }
+            },
             status: { in: ['OPEN', 'PUBLISHED', 'published'] },
             isOpen: true,
             isDeleted: false
