@@ -94,7 +94,7 @@ exports.getAllUsers = async (req, res) => {
     res.json(users);
   } catch (err) {
     console.error("Admin getAllUsers Error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -195,7 +195,7 @@ exports.getStats = async (req, res) => {
     res.json(stats);
   } catch (err) {
     console.error("Admin getStats Error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -232,7 +232,7 @@ exports.toggleSuspend = async (req, res) => {
 
     res.json({ message: `User status changed to ${updated.isSuspended ? 'SUSPENDED' : 'ACTIVE'}.`, isSuspended: updated.isSuspended });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -278,7 +278,7 @@ exports.changeUserRole = async (req, res) => {
       user: updated
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -290,7 +290,7 @@ exports.getModerationLogs = async (req, res) => {
     });
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -317,7 +317,7 @@ exports.getVerifications = async (req, res) => {
     res.json(verifications);
   } catch (err) {
     console.error('getVerifications error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -371,7 +371,7 @@ exports.updateVerificationStatus = async (req, res) => {
     res.json({ message: `Verification for ${type || 'All'} updated to ${status}`, verification });
   } catch (err) {
     console.error('updateVerificationStatus error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -394,7 +394,7 @@ exports.getPayoutRequests = async (req, res) => {
 
     res.json(payouts);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -640,7 +640,7 @@ exports.getAllReviews = async (req, res) => {
 
     res.json(reviews);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -671,7 +671,7 @@ exports.hideReview = async (req, res) => {
 
     res.json(review);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -701,7 +701,7 @@ exports.showReview = async (req, res) => {
 
     res.json(review);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -722,7 +722,7 @@ exports.flagReview = async (req, res) => {
 
     res.json(review);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -752,7 +752,7 @@ exports.deleteReview = async (req, res) => {
 
     res.json({ message: 'Review deleted successfully.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1006,7 +1006,7 @@ exports.getFraudDashboard = async (req, res) => {
       riskLevel
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1159,9 +1159,7 @@ exports.getFraudInvestigationReport = async (req, res) => {
       accountAgeHours
     });
   } catch (err) {
-    res.status(500).json({
-      error: err.message
-    });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1191,7 +1189,7 @@ exports.addInvestigationNote = async (req, res) => {
 
     res.json(action);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1206,7 +1204,7 @@ exports.getInvestigationHistory = async (req, res) => {
 
     res.json(history);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1240,7 +1238,7 @@ exports.banUser = async (req, res) => {
 
     res.json({ message: 'User banned successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1266,7 +1264,7 @@ exports.clearInvestigation = async (req, res) => {
 
     res.json({ message: 'Investigation cleared' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1611,7 +1609,7 @@ exports.getAuditLogs = async (req, res) => {
 
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1650,7 +1648,7 @@ exports.exportAuditLogs = async (req, res) => {
 
     res.send(csv);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
