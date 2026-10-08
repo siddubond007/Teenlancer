@@ -1,16 +1,18 @@
 const Razorpay = require('razorpay');
 
-const keyId = process.env.RAZORPAY_KEY_ID;
-const keySecret = process.env.RAZORPAY_KEY_SECRET;
+function getRazorpayClient() {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
-if (!keyId || !keySecret) {
-  throw new Error('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be configured.');
+  if (!keyId || !keySecret) {
+    throw new Error('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be configured.');
+  }
+
+  return new Razorpay({
+    key_id: keyId,
+    key_secret: keySecret
+  });
 }
-
-const razorpay = new Razorpay({
-  key_id: keyId,
-  key_secret: keySecret
-});
 
 async function refundPayment(paymentId, amountInr) {
   if (!paymentId) {
@@ -21,6 +23,8 @@ async function refundPayment(paymentId, amountInr) {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error('REFUND_AMOUNT_INVALID');
   }
+
+  const razorpay = getRazorpayClient();
 
   return razorpay.payments.refund(paymentId, {
     amount
