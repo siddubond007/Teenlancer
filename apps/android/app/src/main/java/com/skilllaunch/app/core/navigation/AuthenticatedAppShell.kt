@@ -54,11 +54,13 @@ import com.skilllaunch.app.feature.notification.NotificationScreen
 import com.skilllaunch.app.data.repository.job.JobRepository
 import com.skilllaunch.app.data.repository.order.OrderRepository
 import com.skilllaunch.app.feature.job.JobDiscoveryScreen
+import com.skilllaunch.app.feature.job.PostJobScreen
 import com.skilllaunch.app.feature.order.OrdersScreen
 
 sealed interface AppDestination : NavKey {
     data object Home : AppDestination
     data object Explore : AppDestination
+    data object PostJob : AppDestination
     data object Orders : AppDestination
     data class OrderWorkspace(val orderId: String) : AppDestination
     data object Chat : AppDestination
@@ -238,6 +240,15 @@ fun AuthenticatedAppShell(
                         }
                     }
 
+                    AppDestination.PostJob -> NavEntry(key) {
+                        PostJobScreen(
+                            repository = jobRepository,
+                            onCreated = {
+                                openDestination(AppDestination.Home)
+                            }
+                        )
+                    }
+
                     AppDestination.Orders -> NavEntry(key) {
                         OrdersScreen(
                             user = user,
@@ -317,6 +328,7 @@ private fun ShellEmptyState(
 private fun destinationTitle(destination: AppDestination): String = when (destination) {
     AppDestination.Home -> "Home"
     AppDestination.Explore -> "Explore"
+    AppDestination.PostJob -> "Post Job"
     AppDestination.Orders -> "Orders"
     is AppDestination.OrderWorkspace -> "Workspace"
     AppDestination.Chat -> "Chat"
@@ -327,6 +339,7 @@ private fun destinationTitle(destination: AppDestination): String = when (destin
 private fun destinationIcon(destination: AppDestination): androidx.compose.ui.graphics.vector.ImageVector = when (destination) {
     AppDestination.Home -> Icons.Outlined.Home
     AppDestination.Explore -> Icons.Outlined.Explore
+    AppDestination.PostJob -> Icons.Outlined.BusinessCenter
     AppDestination.Orders -> Icons.Outlined.ReceiptLong
     is AppDestination.OrderWorkspace -> Icons.Outlined.ReceiptLong
     AppDestination.Chat -> Icons.Outlined.ChatBubbleOutline
