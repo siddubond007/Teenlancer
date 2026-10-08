@@ -16,4 +16,14 @@ class GigRepository(
             )
         }
     }
+
+    suspend fun getGigById(gigId: String): Result<Gig> {
+        return runCatching {
+            gigApi.getGigById(gigId)
+        }.recoverCatching { error ->
+            throw Exception(
+                error.message ?: "Unable to load this Gig right now"
+            )
+        }
+    }
 }
