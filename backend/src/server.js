@@ -33,6 +33,7 @@ const homeRoutes = require('./routes/homeRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const { moderateMessage } = require('./services/moderationService');
 const { startEscrowReleaseWorker } = require('./workers/escrowReleaseWorker');
+const { getAuthTokenFromCookieHeader } = require('./utils/authCookie');
 
 const app = express();
 const server = http.createServer(app);
@@ -159,7 +160,9 @@ const jwt = require('jsonwebtoken');
 
 io.use(async (socket, next) => {
   try {
-    const token = socket.handshake.auth?.token;
+    const token =
+      socket.handshake.auth?.token ||
+      getAuthTokenFromCookieHeader(socket.handshake.headers?.cookie);
 
     if (!token) {
       return next(new Error('Authentication required'));
