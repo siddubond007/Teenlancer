@@ -666,6 +666,7 @@ model Transfer {
   amount             Float
   onHold             Boolean  @default(true)
   status             String   @default("PENDING")
+  walletCreditedAt   DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
