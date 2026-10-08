@@ -19,7 +19,6 @@ export default function LoginPage({ onLoginSuccess }) {
 
     try {
       const res = await API.post('/auth/login', { email, password });
-      localStorage.setItem('token', res.data.token);
       onLoginSuccess(res.data.user);
       confetti({ particleCount: 100, spread: 70 });
       
