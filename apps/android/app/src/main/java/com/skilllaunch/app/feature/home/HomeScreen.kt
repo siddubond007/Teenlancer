@@ -316,7 +316,7 @@ private fun StudentHome(
             StudentActiveOrderCard(
                 workspace = state.activeWorkspace,
                 accent = StudentAccent,
-                onOpenOrders = onOpenOrders
+                onOpenWorkspace = onOpenWorkspace
             )
         }
         item {
