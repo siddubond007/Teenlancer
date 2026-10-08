@@ -25,9 +25,7 @@ exports.getMyNotifications = async (req, res) => {
       stats
     });
   } catch (err) {
-    res.status(500).json({
-      error: err.message
-    });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -55,9 +53,7 @@ exports.markAsRead = async (req, res) => {
 
     res.json(updatedNotification);
   } catch (err) {
-    res.status(500).json({
-      error: err.message
-    });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -77,9 +73,7 @@ exports.markAllAsRead = async (req, res) => {
       message: 'All notifications marked as read.'
     });
   } catch (err) {
-    res.status(500).json({
-      error: err.message
-    });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -104,8 +98,6 @@ exports.getNotificationStats = async (req, res) => {
       read: total - unread
     });
   } catch (err) {
-    res.status(500).json({
-      error: err.message
-    });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
