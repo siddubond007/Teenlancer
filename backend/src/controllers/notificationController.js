@@ -35,16 +35,25 @@ exports.markAsRead = async (req, res) => {
   try {
     const { notificationId } = req.params;
 
-    const notification = await prisma.notification.update({
+    const notification = await prisma.notification.findFirst({
       where: {
-        id: notificationId
-      },
-      data: {
-        isRead: true
+        id: notificationId,
+        userId: req.user.id
       }
     });
 
-    res.json(notification);
+    if (!notification) {
+      return res.status(404).json({ error: 'Notification not found.' });
+    }
+
+    const updatedNotification = notification.isRead
+      ? notification
+      : await prisma.notification.update({
+          where: { id: notificationId },
+          data: { isRead: true }
+        });
+
+    res.json(updatedNotification);
   } catch (err) {
     res.status(500).json({
       error: err.message
