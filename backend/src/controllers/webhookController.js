@@ -139,7 +139,7 @@ exports.handleRazorpayWebhook = async (req, res) => {
         }
       }
 
-      if (eventType === 'refund.processed') {
+      if (eventType === 'refund.processed' || eventType === 'refund.failed') {
         const refundEntity = payload?.payload?.refund?.entity;
         const refundId = refundEntity?.id;
         const paymentId = refundEntity?.payment_id;
@@ -150,40 +150,61 @@ exports.handleRazorpayWebhook = async (req, res) => {
 
         const refundedOrder = await tx.order.findFirst({
           where: { razorpayPaymentId: paymentId },
-          select: { id: true, status: true }
+          select: {
+            id: true,
+            status: true,
+            jobId: true
+          }
         });
 
         if (!refundedOrder) {
           throw new Error('LOCAL_ORDER_NOT_FOUND');
         }
 
-        if (refundedOrder.status !== 'CANCELLED_REFUNDED') {
-          await tx.order.update({
-            where: { id: refundedOrder.id },
+        await tx.order.update({
+          where: { id: refundedOrder.id },
+          data: {
+            ...(eventType === 'refund.processed'
+              ? {
+                  status: 'CANCELLED_REFUNDED',
+                  razorpayRefundId: refundId,
+                  refundStatus: 'PROCESSED'
+                }
+              : {
+                  razorpayRefundId: refundId,
+                  refundStatus: 'FAILED'
+                })
+          }
+        });
+
+        if (eventType === 'refund.processed' && refundedOrder.jobId) {
+          await tx.job.update({
+            where: { id: refundedOrder.jobId },
             data: {
-              status: 'CANCELLED_REFUNDED',
-              razorpayRefundId: refundId,
-              refundStatus: 'PROCESSED'
+              status: 'CANCELLED',
+              isOpen: false
             }
           });
-
-          if (eventType === 'refund.processed') {
-            await tx.orderActivityEvent.create({
-              data: {
-                orderId: refundedOrder.id,
-                actorId: null,
-                type: 'REFUND_PROCESSED',
-                message: 'Payment refund was confirmed by Razorpay.',
-                source: 'RAZORPAY_WEBHOOK',
-                metadata: {
-                  refundId,
-                  paymentId,
-                  eventType
-                }
-              }
-            });
-          }
         }
+
+        await tx.orderActivityEvent.create({
+          data: {
+            orderId: refundedOrder.id,
+            actorId: null,
+            type: eventType === 'refund.processed'
+              ? 'REFUND_PROCESSED'
+              : 'REFUND_FAILED',
+            message: eventType === 'refund.processed'
+              ? 'Payment refund was confirmed by Razorpay.'
+              : 'Razorpay reported that the payment refund failed.',
+            source: 'RAZORPAY_WEBHOOK',
+            metadata: {
+              refundId,
+              paymentId,
+              eventType
+            }
+          }
+        });
       }
     });
 
