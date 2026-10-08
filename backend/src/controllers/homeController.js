@@ -63,6 +63,13 @@ exports.getHomeState = async (req, res) => {
     let financialSummary = 0;
     let financialLabel = 'Wallet';
 
+    const unreadNotifications = await prisma.notification.count({
+      where: {
+        userId: user.id,
+        isRead: false
+      }
+    });
+
     if (user.role === 'STUDENT_FREELANCER') {
       financialSummary = Math.round(Number(user.wallet?.availableBalance || 0));
     } else {
@@ -315,6 +322,7 @@ exports.getHomeState = async (req, res) => {
       recommendedJobs: recommendedJobCards,
       discoveryCategory,
       topVerifiedGigs: topVerifiedGigCards,
+      unreadNotifications,
       isSuspended: Boolean(user.isSuspended),
       isBanned: Boolean(user.isBanned)
     });
