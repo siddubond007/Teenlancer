@@ -851,117 +851,72 @@ private fun RecommendedJobCard(
 @Composable
 private fun GigRecommendationCard(
     gig: com.skilllaunch.app.data.model.home.HomeGigRecommendation,
-    accent: Color
+    accent: Color,
+    onClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.width(150.dp),
-        shape = RoundedCornerShape(16.dp),
+        onClick = onClick,
+        modifier = Modifier.width(176.dp),
+        shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.14f)
+        )
     ) {
         Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(94.dp)
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
-            ) {
-                if (gig.coverImage.isNullOrBlank()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Outlined.Image,
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    SubcomposeAsyncImage(
-                        model = gig.coverImage,
-                        contentDescription = gig.title,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        loading = {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp,
-                                    color = accent
-                                )
-                            }
-                        },
-                        error = {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Outlined.Image,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        },
-                        success = { SubcomposeAsyncImageContent() }
-                    )
-                }
+            if (!gig.coverImage.isNullOrBlank()) {
+                SubcomposeAsyncImage(
+                    model = gig.coverImage,
+                    contentDescription = gig.title.orEmpty(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(104.dp),
+                    contentScale = ContentScale.Crop,
+                    success = { SubcomposeAsyncImageContent() }
+                )
+            } else {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(104.dp),
+                    color = accent.copy(alpha = 0.10f)
+                ) {}
             }
-            Column(Modifier.padding(10.dp)) {
+
+            Column(Modifier.padding(12.dp)) {
                 Text(
-                    gig.title ?: "Student Gig",
-                    style = MaterialTheme.typography.labelLarge,
+                    gig.title ?: "Service",
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.ExtraBold,
                     maxLines = 2
                 )
                 Text(
                     gig.sellerName ?: "Verified student",
-                    modifier = Modifier.padding(top = 3.dp),
+                    modifier = Modifier.padding(top = 4.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1
                 )
                 Row(
-                    modifier = Modifier.padding(top = 6.dp),
+                    modifier = Modifier.padding(top = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "★",
-                        color = Color(0xFFF59E0B),
+                        "★ " + String.format(Locale.US, "%.1f", gig.rating),
+                        color = accent,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold
                     )
+                    Spacer(Modifier.weight(1f))
                     Text(
-                        String.format(Locale.US, "%.1f", gig.rating),
-                        modifier = Modifier.padding(start = 3.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        "From ₹" + formatMoney(gig.startingPrice),
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.ExtraBold
                     )
                 }
-                Text(
-                    "Starts at ₹" + formatMoney(gig.startingPrice),
-                    modifier = Modifier.padding(top = 7.dp),
-                    color = accent,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.ExtraBold
-                )
             }
         }
-    }
-}
-
-private fun relativePostedTime(createdAt: String?): String {
-    val target = createdAt
-        ?.let { runCatching { Instant.parse(it) }.getOrNull() }
-        ?: return "recently"
-
-    val minutes = Duration.between(target, Instant.now()).toMinutes().coerceAtLeast(0)
-    return when {
-        minutes < 1 -> "just now"
-        minutes < 60 -> "${minutes}m ago"
-        minutes < 24 * 60 -> "${minutes / 60}h ago"
-        else -> "${minutes / (24 * 60)}d ago"
     }
 }
 
