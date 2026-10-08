@@ -35,7 +35,8 @@ exports.createJob = async (req, res) => {
       status
     } = req.body;
 
-    const jobStatus = status || 'OPEN';
+    const requestedStatus = String(status || 'OPEN').trim().toUpperCase();
+    const jobStatus = requestedStatus === 'PUBLISHED' ? 'OPEN' : requestedStatus;
     const isOpenState = jobStatus === 'OPEN';
 
     // If draft ID already exists, update the existing draft
@@ -171,7 +172,8 @@ exports.updateJob = async (req, res) => {
       status
     } = req.body;
 
-    const jobStatus = status || existingJob.status;
+    const requestedStatus = String(status || existingJob.status || 'DRAFT').trim().toUpperCase();
+    const jobStatus = requestedStatus === 'PUBLISHED' ? 'OPEN' : requestedStatus;
     const isOpenState = jobStatus === 'OPEN';
 
     const updatedJob = await prisma.job.update({
