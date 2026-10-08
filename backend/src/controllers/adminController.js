@@ -402,33 +402,37 @@ exports.approvePayoutRequest = async (req, res) => {
   try {
     const { payoutId } = req.params;
 
-    const payout = await prisma.payoutRequest.findUnique({
-      where: { id: payoutId }
-    });
+    const updatedPayout = await prisma.$transaction(async (tx) => {
+      const lockedPayouts = await tx.$queryRaw`
+        SELECT * FROM "PayoutRequest"
+        WHERE id = ${payoutId}
+        FOR UPDATE
+      `;
 
-    if (!payout) {
-      return res.status(404).json({ error: 'Payout request not found.' });
-    }
-
-    if (payout.status !== 'REQUESTED') {
-      return res.status(409).json({
-        error: 'Only a newly requested payout can be approved for processing.'
-      });
-    }
-
-    const updatedPayout = await prisma.payoutRequest.update({
-      where: { id: payoutId },
-      data: {
-        status: 'APPROVED_PROCESSING',
-        failureReason: null
+      if (!lockedPayouts || lockedPayouts.length === 0) {
+        throw new Error('NOT_FOUND: Payout request not found.');
       }
+
+      const payout = lockedPayouts[0];
+
+      if (payout.status !== 'REQUESTED') {
+        throw new Error('CONFLICT: Only a newly requested payout can be approved for processing.');
+      }
+
+      return tx.payoutRequest.update({
+        where: { id: payoutId },
+        data: {
+          status: 'APPROVED_PROCESSING',
+          failureReason: null
+        }
+      });
     });
 
     await createAuditLog(
       req.user.id,
       "APPROVE_PAYOUT",
-      payout.userId,
-      `Payout of ${payout.amount} approved for processing.`
+      updatedPayout.userId,
+      `Payout of ${updatedPayout.amount} approved for processing.`
     );
 
     res.json({
@@ -436,7 +440,19 @@ exports.approvePayoutRequest = async (req, res) => {
       payout: updatedPayout
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err.message?.startsWith('NOT_FOUND:')) {
+      return res.status(404).json({
+        error: err.message.replace('NOT_FOUND: ', '')
+      });
+    }
+
+    if (err.message?.startsWith('CONFLICT:')) {
+      return res.status(409).json({
+        error: err.message.replace('CONFLICT: ', '')
+      });
+    }
+
+    res.status(500).json({ error: 'Failed to approve payout.' });
   }
 };
 
