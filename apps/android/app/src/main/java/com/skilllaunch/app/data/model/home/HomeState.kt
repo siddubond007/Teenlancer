@@ -24,6 +24,7 @@ data class HomeState(
     val proofOfWorkComplete: Boolean = false,
     val hasGig: Boolean = false,
     val hasProposal: Boolean = false,
+    val activeWorkspace: HomeActiveWorkspace? = null,
     val isSuspended: Boolean = false,
     val isBanned: Boolean = false
 )
