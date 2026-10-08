@@ -1,5 +1,6 @@
 const prisma = require('../config/db');
 const { releaseTransfer } = require('../services/escrowService');
+const { refundPayment } = require('../services/refundService');
 
 exports.createDispute = async (req, res) => {
   try {
@@ -92,7 +93,29 @@ exports.createDispute = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err.message === 'REFUND_PAYMENT_REFERENCE_MISSING') {
+      return res.status(409).json({
+        error: 'A verified payment reference is required before a client refund can be processed.'
+      });
+    }
+
+    if (
+      err.message === 'PAYMENT_REFERENCE_MISSING' ||
+      err.message === 'REFUND_AMOUNT_INVALID' ||
+      err.message === 'REFUND_REFERENCE_MISSING'
+    ) {
+      return res.status(409).json({
+        error: 'The payment provider could not verify the refund reference.'
+      });
+    }
+
+    if (err.message === 'REFUND_FAILED') {
+      return res.status(502).json({
+        error: 'The payment provider did not accept the refund request.'
+      });
+    }
+
+    res.status(500).json({ error: 'Failed to resolve dispute.' });
   }
 };
 
@@ -283,63 +306,110 @@ exports.resolveDispute = async (req, res) => {
       });
 
     } else if (decision === 'REFUND_CLIENT') {
+      if (!dispute.order.razorpayPaymentId) {
+        throw new Error('REFUND_PAYMENT_REFERENCE_MISSING');
+      }
 
-      await prisma.$transaction([
-        prisma.order.update({
-          where: { id: dispute.orderId },
-          data: {
-            status: 'CANCELLED_REFUNDED'
-          }
-        }),
+      if (dispute.order.refundStatus === 'PROCESSED') {
+        return res.status(200).json({
+          message: 'The refund was already confirmed.'
+        });
+      }
 
-        ...(dispute.order.jobId ? [
-          prisma.job.update({
-            where: { id: dispute.order.jobId },
+      const refund = await refundPayment(
+        dispute.order.razorpayPaymentId,
+        dispute.order.totalAmount
+      );
+
+      const refundStatus = String(refund?.status || '').toUpperCase();
+      const refundId = refund?.id || null;
+
+      if (!refundId) {
+        throw new Error('REFUND_REFERENCE_MISSING');
+      }
+
+      if (refundStatus === 'PROCESSED') {
+        await prisma.$transaction([
+          prisma.order.update({
+            where: { id: dispute.orderId },
             data: {
-              status: 'CANCELLED',
-              isOpen: false
+              status: 'CANCELLED_REFUNDED',
+              razorpayRefundId: refundId,
+              refundStatus: 'PROCESSED'
+            }
+          }),
+          ...(dispute.order.jobId ? [
+            prisma.job.update({
+              where: { id: dispute.order.jobId },
+              data: {
+                status: 'CANCELLED',
+                isOpen: false
+              }
+            })
+          ] : []),
+          prisma.dispute.update({
+            where: { id },
+            data: {
+              status: 'RESOLVED',
+              adminDecision: decision,
+              resolvedAt: new Date()
+            }
+          }),
+          prisma.orderActivityEvent.create({
+            data: {
+              orderId: dispute.orderId,
+              actorId: req.user.id,
+              type: 'REFUND_PROCESSED',
+              message: 'Dispute resolved: Razorpay confirmed the client refund.',
+              source: 'DISPUTE_CONTROLLER',
+              metadata: {
+                disputeId: dispute.id,
+                decision,
+                refundId,
+                refundStatus
+              }
             }
           })
-        ] : []),
+        ]);
 
-        prisma.dispute.update({
-          where: { id },
+        return res.status(200).json({
+          message: 'Dispute resolved and the client refund was confirmed.',
+          refundStatus
+        });
+      }
+
+      if (['PENDING', 'CREATED', 'PROCESSING'].includes(refundStatus)) {
+        await prisma.order.update({
+          where: { id: dispute.orderId },
           data: {
-            status: 'RESOLVED',
-            adminDecision: decision,
-            resolvedAt: new Date()
+            razorpayRefundId: refundId,
+            refundStatus
           }
-        }),
-        prisma.orderActivityEvent.create({
+        });
+
+        await prisma.orderActivityEvent.create({
           data: {
             orderId: dispute.orderId,
             actorId: req.user.id,
-            type: 'DISPUTE_RESOLVED',
-            message: 'Dispute resolved: order moved to cancelled/refunded state.',
+            type: 'REFUND_INITIATED',
+            message: 'Client refund initiated with Razorpay; awaiting provider confirmation.',
             source: 'DISPUTE_CONTROLLER',
             metadata: {
               disputeId: dispute.id,
               decision,
-              financialOutcome: 'LOCAL_CANCELLED_REFUNDED'
+              refundId,
+              refundStatus
             }
           }
-        }),
-        prisma.orderActivityEvent.create({
-          data: {
-            orderId: dispute.orderId,
-            actorId: req.user.id,
-            type: 'ORDER_CANCELLED',
-            message: 'Order cancelled following dispute resolution in favor of the client.',
-            source: 'DISPUTE_CONTROLLER',
-            metadata: {
-              disputeId: dispute.id,
-              cancellationType: 'DISPUTE_RESOLUTION',
-              financialOutcome: 'LOCAL_CANCELLED_REFUNDED',
-              gatewayRefundConfirmed: false
-            }
-          }
-        })
-      ]);
+        });
+
+        return res.status(202).json({
+          message: 'Client refund initiated; waiting for Razorpay confirmation.',
+          refundStatus
+        });
+      }
+
+      throw new Error('REFUND_FAILED');
 
     } else {
       return res.status(400).json({
