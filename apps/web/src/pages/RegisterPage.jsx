@@ -157,7 +157,6 @@ export default function RegisterPage({ onLoginSuccess }) {
         dob: dobString
       });
 
-      localStorage.setItem('token', res.data.token);
       onLoginSuccess(res.data.user);
 
       if (selectedRole === 'STUDENT_FREELANCER') {
