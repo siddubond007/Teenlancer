@@ -1,6 +1,7 @@
 package com.skilllaunch.app.data.api
 
 import com.skilllaunch.app.data.model.order.OrderSummary
+import com.skilllaunch.app.data.model.order.OrderMessage
 import com.skilllaunch.app.data.model.order.SubmitDeliverableRequest
 import com.skilllaunch.app.data.model.order.OrderActionResponse
 import retrofit2.http.Body
@@ -28,6 +29,17 @@ interface OrderApi {
     suspend fun approveOrder(
         @Path("orderId") orderId: String
     ): OrderActionResponse
+
+    @GET("orders/{orderId}/messages")
+    suspend fun getMessages(
+        @Path("orderId") orderId: String
+    ): List<OrderMessage>
+
+    @POST("orders/{orderId}/messages")
+    suspend fun sendMessage(
+        @Path("orderId") orderId: String,
+        @Body request: Map<String, String>
+    ): OrderMessage
 
     @POST("orders/{orderId}/request-revision")
     suspend fun requestRevision(
