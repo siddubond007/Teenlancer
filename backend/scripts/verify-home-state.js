@@ -19,8 +19,12 @@ const STUDENT_EMAIL = 'home-verify-student@local.test';
 const CLIENT_EMAIL = 'home-verify-client@local.test';
 const STUDENT_USERNAME = '__home_verify_student';
 const CLIENT_USERNAME = '__home_verify_client';
-const TEST_GIG_TITLE = '[HOME_VERIFY] Student Test Gig';
-const TEST_JOB_TITLE = '[HOME_VERIFY] Client Test Job';
+const TEST_GIG_TITLE = 'Python Data Scraping';
+const TEST_JOB_TITLE = 'React Native Bug Fix';
+const TEST_RECOMMENDED_JOB_1 = 'Build a 5-page Portfolio Website';
+const TEST_RECOMMENDED_JOB_2 = 'Redesign a Food Delivery App';
+const TEST_DESIGN_GIG_1 = 'Custom UI/UX Prototypes';
+const TEST_DESIGN_GIG_2 = 'Mobile App Design System';
 
 async function getOrCreateUsers() {
   const passwordHash = await bcrypt.hash('HomeVerify@2026', 12);
@@ -29,9 +33,9 @@ async function getOrCreateUsers() {
     where: { email: STUDENT_EMAIL },
     update: {
       username: STUDENT_USERNAME,
-      firstName: 'Home',
-      lastName: 'Student',
-      fullName: 'Home Student',
+      firstName: 'Amit',
+      lastName: 'S.',
+      fullName: 'Amit S.',
       role: 'STUDENT_FREELANCER',
       isMinor: false,
       age: 20,
@@ -43,9 +47,9 @@ async function getOrCreateUsers() {
       username: STUDENT_USERNAME,
       email: STUDENT_EMAIL,
       passwordHash,
-      firstName: 'Home',
-      lastName: 'Student',
-      fullName: 'Home Student',
+      firstName: 'Amit',
+      lastName: 'S.',
+      fullName: 'Amit S.',
       role: 'STUDENT_FREELANCER',
       isMinor: false,
       age: 20,
@@ -272,8 +276,8 @@ async function getOrCreateUsers() {
     update: {
       sellerId: student.id,
       title: TEST_GIG_TITLE,
-      category: 'Web Development',
-      description: 'Local Home verification Gig.',
+      category: 'Data Science',
+      description: 'Python data scraping service used for the Home active-project verification flow.',
       coverImage: '',
       status: 'PUBLISHED',
       isDeleted: false,
@@ -295,9 +299,11 @@ async function getOrCreateUsers() {
     update: {
       clientId: client.id,
       title: TEST_JOB_TITLE,
-      category: 'Web Development',
-      description: 'Local Home verification Job.',
-      budget: 3000,
+      category: 'Mobile Development',
+      description: 'Local Home verification job for an in-progress React Native project.',
+      skills: ['React Native', 'JavaScript', 'Mobile Development'],
+      budget: 5000,
+      fixedBudget: 5000,
       status: 'published',
       isOpen: true,
       isDeleted: false,
@@ -338,6 +344,156 @@ async function getOrCreateUsers() {
     }
   });
 
+  const recommendedJobOne = await prisma.job.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000003' },
+    update: {
+      clientId: client.id,
+      title: TEST_RECOMMENDED_JOB_1,
+      category: 'Web Development',
+      description: 'Local Home verification recommended job.',
+      skills: ['React', 'Node.js'],
+      budget: 5000,
+      fixedBudget: 5000,
+      status: 'published',
+      isOpen: true,
+      isDeleted: false,
+      deletedAt: null,
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000003',
+      clientId: client.id,
+      title: TEST_RECOMMENDED_JOB_1,
+      category: 'Web Development',
+      description: 'Local Home verification recommended job.',
+      skills: ['React', 'Node.js'],
+      budget: 5000,
+      fixedBudget: 5000,
+      status: 'published',
+      isOpen: true,
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
+    }
+  });
+
+  const recommendedJobTwo = await prisma.job.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000004' },
+    update: {
+      clientId: client.id,
+      title: TEST_RECOMMENDED_JOB_2,
+      category: 'UI/UX Design',
+      description: 'Local Home verification second recommended job.',
+      skills: ['Figma', 'UI/UX'],
+      budget: 3500,
+      fixedBudget: 3500,
+      status: 'published',
+      isOpen: true,
+      isDeleted: false,
+      deletedAt: null,
+      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000)
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000004',
+      clientId: client.id,
+      title: TEST_RECOMMENDED_JOB_2,
+      category: 'UI/UX Design',
+      description: 'Local Home verification second recommended job.',
+      skills: ['Figma', 'UI/UX'],
+      budget: 3500,
+      fixedBudget: 3500,
+      status: 'published',
+      isOpen: true,
+      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000)
+    }
+  });
+
+  const designGigOne = await prisma.gig.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000005' },
+    update: {
+      sellerId: student.id,
+      title: TEST_DESIGN_GIG_1,
+      category: 'Design',
+      description: 'Custom UI/UX prototypes for mobile and web products.',
+      coverImage: 'https://images.unsplash.com/photo-1558655146-d09347e92766?auto=format&fit=crop&w=900&q=80',
+      status: 'PUBLISHED',
+      isDeleted: false,
+      deletedAt: null
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000005',
+      sellerId: student.id,
+      title: TEST_DESIGN_GIG_1,
+      category: 'Design',
+      description: 'Custom UI/UX prototypes for mobile and web products.',
+      coverImage: 'https://images.unsplash.com/photo-1558655146-d09347e92766?auto=format&fit=crop&w=900&q=80',
+      status: 'PUBLISHED'
+    }
+  });
+
+  const designGigTwo = await prisma.gig.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000006' },
+    update: {
+      sellerId: student.id,
+      title: TEST_DESIGN_GIG_2,
+      category: 'Design',
+      description: 'Reusable mobile UI systems and production-ready screen designs.',
+      coverImage: 'https://images.unsplash.com/photo-1559028012-481c04fa702d?auto=format&fit=crop&w=900&q=80',
+      status: 'PUBLISHED',
+      isDeleted: false,
+      deletedAt: null
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000006',
+      sellerId: student.id,
+      title: TEST_DESIGN_GIG_2,
+      category: 'Design',
+      description: 'Reusable mobile UI systems and production-ready screen designs.',
+      coverImage: 'https://images.unsplash.com/photo-1559028012-481c04fa702d?auto=format&fit=crop&w=900&q=80',
+      status: 'PUBLISHED'
+    }
+  });
+
+  await prisma.gigPackage.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000007' },
+    update: {
+      gigId: designGigOne.id,
+      tierName: 'Basic',
+      price: 2000,
+      deliveryDays: 3,
+      revisions: 2,
+      description: 'A polished UI/UX prototype package.'
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000007',
+      gigId: designGigOne.id,
+      tierName: 'Basic',
+      price: 2000,
+      deliveryDays: 3,
+      revisions: 2,
+      description: 'A polished UI/UX prototype package.'
+    }
+  });
+
+  await prisma.gigPackage.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000008' },
+    update: {
+      gigId: designGigTwo.id,
+      tierName: 'Basic',
+      price: 2500,
+      deliveryDays: 4,
+      revisions: 2,
+      description: 'A reusable mobile design system package.'
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000008',
+      gigId: designGigTwo.id,
+      tierName: 'Basic',
+      price: 2500,
+      deliveryDays: 4,
+      revisions: 2,
+      description: 'A reusable mobile design system package.'
+    }
+  });
+
   const existingOrder = await prisma.order.findFirst({
     where: {
       clientId: client.id,
@@ -361,8 +517,8 @@ async function getOrCreateUsers() {
       totalAmount: 3000,
       platformFee: 300,
       sellerEarnings: 2700,
-      status: 'FUNDED_IN_ESCROW',
-      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      status: 'IN_PROGRESS',
+      deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
       requirements: '[HOME_VERIFY] Escrow test order'
     }
   });
@@ -445,17 +601,48 @@ async function cleanup() {
     await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
   }
 
-  const job = await prisma.job.findFirst({
-    where: { title: TEST_JOB_TITLE },
+  const testJobs = await prisma.job.findMany({
+    where: {
+      id: {
+        in: [
+          '00000000-0000-4000-8000-000000000002',
+          '00000000-0000-4000-8000-000000000003',
+          '00000000-0000-4000-8000-000000000004'
+        ]
+      }
+    },
     select: { id: true }
   });
 
-  if (job) {
-    await prisma.bid.deleteMany({ where: { jobId: job.id } });
-    await prisma.job.delete({ where: { id: job.id } });
+  if (testJobs.length) {
+    const testJobIds = testJobs.map((row) => row.id);
+    await prisma.bid.deleteMany({ where: { jobId: { in: testJobIds } } });
+    await prisma.job.deleteMany({ where: { id: { in: testJobIds } } });
   }
 
-  await prisma.gig.deleteMany({ where: { title: TEST_GIG_TITLE } });
+  await prisma.gigPackage.deleteMany({
+    where: {
+      gigId: {
+        in: [
+          '00000000-0000-4000-8000-000000000001',
+          '00000000-0000-4000-8000-000000000005',
+          '00000000-0000-4000-8000-000000000006'
+        ]
+      }
+    }
+  });
+
+  await prisma.gig.deleteMany({
+    where: {
+      id: {
+        in: [
+          '00000000-0000-4000-8000-000000000001',
+          '00000000-0000-4000-8000-000000000005',
+          '00000000-0000-4000-8000-000000000006'
+        ]
+      }
+    }
+  });
 
   if (client) {
     await prisma.user.delete({ where: { id: client.id } });
