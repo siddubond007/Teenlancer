@@ -108,7 +108,10 @@ exports.getFreelancers = async (req, res) => {
         points: true,
         createdAt: true,
         profile: true,
-        reviewsReceived: { select: { overallRating: true, comment: true } }
+        reviewsReceived: {
+          where: { isVisible: true },
+          select: { overallRating: true, comment: true }
+        }
       },
       orderBy: { createdAt: 'desc' }
     })
