@@ -45,19 +45,19 @@ export default function HomePage({ currentUser }) {
           <ul className="space-y-2.5 text-sm sm:text-base text-slate-300 font-medium">
             <li className="flex items-center space-x-2.5">
               <span className="w-2 h-2 rounded-full bg-pink-500 shadow-lg shadow-pink-500/50" />
-              <span>India's largest student freelancer network (Ages 16–26)</span>
+              <span>Discover student freelancers across technology, design, writing, and more</span>
             </li>
             <li className="flex items-center space-x-2.5">
               <span className="w-2 h-2 rounded-full bg-pink-500 shadow-lg shadow-pink-500/50" />
-              <span>Any tech, design, editing, or writing task you can think of</span>
+              <span>Compare portfolios, skills, and project proposals before you hire</span>
             </li>
             <li className="flex items-center space-x-2.5">
               <span className="w-2 h-2 rounded-full bg-pink-500 shadow-lg shadow-pink-500/50" />
-              <span>Save up to 70% with hungry freshers & get bids in minutes</span>
+              <span>Post a project and receive proposals from available students</span>
             </li>
             <li className="flex items-center space-x-2.5">
               <span className="w-2 h-2 rounded-full bg-pink-500 shadow-lg shadow-pink-500/50" />
-              <span>Pay safely with 5-Day Escrow only when you're 100% satisfied</span>
+              <span>Keep eligible marketplace payments protected through escrow</span>
             </li>
           </ul>
 
@@ -77,21 +77,22 @@ export default function HomePage({ currentUser }) {
           </div>
         </div>
 
-        {/* Dynamic Proof-of-Work Badge Bottom-Right (Screenshot 1) */}
         <div className="relative z-20 self-end text-right pt-8">
           <div className="inline-block p-4 glass-panel rounded-2xl border border-slate-700/60 shadow-2xl max-w-sm text-left">
-            <div className="flex items-center space-x-1 text-amber-400 font-bold text-xs mb-1">
-              <Star className="w-4 h-4 fill-amber-400" />
-              <span>5.0 Star Verified Work</span>
+            <div className="flex items-center space-x-1 text-emerald-400 font-bold text-xs mb-1">
+              <ShieldCheck className="w-4 h-4" />
+              <span>Verified marketplace workflow</span>
             </div>
-            <h4 className="text-sm font-black text-white">Aarav J. <span className="text-slate-400 text-xs font-normal">@aarav_codes (IIT Madras)</span></h4>
+            <h4 className="text-sm font-black text-white">Real students. Real projects.</h4>
             <p className="text-xs text-slate-300 mt-1">
-              "This AI web app & PostgreSQL architecture cost ₹1,500 and took 3 days."
+              Explore live profiles and services from students who publish them on SkillLaunch.
             </p>
           </div>
         </div>
       </section>
 
+      {import.meta.env.DEV && (
+        <>
       {/* ─── 2. "YEAR OF THE LAUNCH" 4-QUADRANT SHOWCASE (Screenshot 5) ─── */}
       <section className="glass-panel p-8 sm:p-12 rounded-3xl border border-slate-800 space-y-8">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-800 pb-6">
@@ -343,7 +344,10 @@ export default function HomePage({ currentUser }) {
         </Link>
       </section>
 
-      {/* ─── 8. 6-COLUMN MASTER FOOTER WITH REALTIME COUNTERS (Screenshot 13) ─── */}
+        </>
+      )}
+
+      {/* ─── 8. Footer ─── */}
       <footer className="border-t border-slate-800 pt-16 space-y-12 text-slate-400 text-xs">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8">
           
@@ -407,12 +411,7 @@ export default function HomePage({ currentUser }) {
           </div>
         </div>
 
-        {/* Live Counters & Copyright Bar */}
         <div className="border-t border-slate-800/80 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex space-x-8 text-sm font-black text-white">
-            <div><span className="text-pink-400">89,588,964</span> Registered Students</div>
-            <div><span className="text-emerald-400">25,789,566</span> Projects Completed</div>
-          </div>
           <div className="text-[11px] text-slate-500">
             © 2026 SkillLaunch Marketplace Technologies Pvt Ltd. All rights reserved.
           </div>
