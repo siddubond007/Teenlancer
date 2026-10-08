@@ -48,6 +48,8 @@ import com.skilllaunch.app.data.repository.home.HomeRepository
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
 import com.skilllaunch.app.feature.gig.GigDiscoveryScreen
 import com.skilllaunch.app.feature.home.HomeScreen
+import com.skilllaunch.app.data.repository.notification.NotificationRepository
+import com.skilllaunch.app.feature.notification.NotificationScreen
 
 sealed interface AppDestination : NavKey {
     data object Home : AppDestination
@@ -55,6 +57,7 @@ sealed interface AppDestination : NavKey {
     data object Orders : AppDestination
     data object Chat : AppDestination
     data object Profile : AppDestination
+    data object Notifications : AppDestination
 }
 
 private val shellDestinations = listOf(
@@ -72,6 +75,7 @@ fun AuthenticatedAppShell(
     profileRepository: ProfileRepository,
     gigRepository: GigRepository,
     homeRepository: HomeRepository,
+    notificationRepository: NotificationRepository,
     onLogout: () -> Unit,
     onOpenOnboarding: () -> Unit,
     profileRefreshVersion: Int = 0,
@@ -244,6 +248,12 @@ fun AuthenticatedAppShell(
                             refreshVersion = profileRefreshVersion
                         )
                     }
+
+                    AppDestination.Notifications -> NavEntry(key) {
+                        NotificationScreen(
+                            repository = notificationRepository
+                        )
+                    }
                 }
             },
             modifier = Modifier
@@ -289,6 +299,7 @@ private fun destinationTitle(destination: AppDestination): String = when (destin
     AppDestination.Orders -> "Orders"
     AppDestination.Chat -> "Chat"
     AppDestination.Profile -> "Profile"
+    AppDestination.Notifications -> "Notifications"
 }
 
 private fun destinationIcon(destination: AppDestination): androidx.compose.ui.graphics.vector.ImageVector = when (destination) {
@@ -297,4 +308,5 @@ private fun destinationIcon(destination: AppDestination): androidx.compose.ui.gr
     AppDestination.Orders -> Icons.Outlined.ReceiptLong
     AppDestination.Chat -> Icons.Outlined.ChatBubbleOutline
     AppDestination.Profile -> Icons.Outlined.PersonOutline
+    AppDestination.Notifications -> Icons.Outlined.ChatBubbleOutline
 }
