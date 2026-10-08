@@ -135,6 +135,12 @@ fun HomeScreen(
                     home.activeWorkspace?.id?.let { id ->
                         onOpenDestination(AppDestination.OrderWorkspace(id))
                     }
+                },
+                onOpenGig = { gigId ->
+                    onOpenDestination(AppDestination.GigDetails(gigId))
+                },
+                onPostJob = {
+                    onOpenDestination(AppDestination.PostJob)
                 }
             )
             else -> HomeFailure(
@@ -1168,7 +1174,9 @@ private fun EscrowEducationCard(accent: Color) {
 private fun ClientHome(
     state: HomeState,
     modifier: Modifier,
-    onOpenWorkspace: () -> Unit
+    onOpenWorkspace: () -> Unit,
+    onOpenGig: (String) -> Unit,
+    onPostJob: () -> Unit
 ) {
     LazyColumn(
         modifier.fillMaxSize(),
@@ -1220,7 +1228,10 @@ private fun ClientHome(
                     ) { gig ->
                         GigRecommendationCard(
                             gig = gig,
-                            accent = ClientAccent
+                            accent = ClientAccent,
+                            onClick = {
+                                gig.id?.let(onOpenGig)
+                            }
                         )
                     }
                 }
@@ -1233,7 +1244,7 @@ private fun ClientHome(
                 title = "What do you need done?"
             )
         }
-        item { ClientBriefCard(ClientAccent, onPostJob = { onOpenDestination(AppDestination.PostJob) }) }
+        item { ClientBriefCard(ClientAccent, onPostJob = onPostJob) }
     }
 }
 
