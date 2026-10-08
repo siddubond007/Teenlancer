@@ -26,14 +26,24 @@ exports.requireAuth = async (req, res, next) => {
       where: { id: decoded.userId },
       select: {
         id: true,
+        username: true,
+        email: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        fullName: true,
         role: true,
+        isMinor: true,
+        age: true,
+        dob: true,
+        isDeleted: true,
         isSuspended: true,
         suspendedUntil: true,
         isBanned: true
       }
     });
 
-    if (!user) return res.status(401).json({ error: 'User not found.' });
+    if (!user || user.isDeleted) return res.status(401).json({ error: 'User account is no longer available.' });
     if (user.isBanned) return res.status(403).json({ error: 'Your account has been banned from the platform.' });
     if (user.isSuspended) return res.status(403).json({ error: 'Your account has been permanently suspended.' });
     if (user.suspendedUntil && new Date(user.suspendedUntil) > new Date()) {
@@ -78,14 +88,24 @@ exports.optionalAuth = async (req, res, next) => {
       where: { id: decoded.userId },
       select: {
         id: true,
+        username: true,
+        email: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        fullName: true,
         role: true,
+        isMinor: true,
+        age: true,
+        dob: true,
+        isDeleted: true,
         isSuspended: true,
         suspendedUntil: true,
         isBanned: true
       }
     });
 
-    if (!user || user.isSuspended || user.isBanned) {
+    if (!user || user.isDeleted || user.isSuspended || user.isBanned) {
       req.user = null;
       return next();
     }
