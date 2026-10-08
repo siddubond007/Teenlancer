@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.BusinessCenter
 import androidx.compose.material.icons.outlined.Check
@@ -49,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +62,7 @@ import coil3.compose.SubcomposeAsyncImageContent
 import com.skilllaunch.app.core.common.collectAsStateWithLifecycleCompat
 import com.skilllaunch.app.core.navigation.AppDestination
 import com.skilllaunch.app.data.model.auth.AuthUser
+import com.skilllaunch.app.data.model.home.HomeActionQueueItem
 import com.skilllaunch.app.data.model.home.HomeState
 import com.skilllaunch.app.data.repository.home.HomeRepository
 import java.text.NumberFormat
@@ -166,21 +170,16 @@ private fun HomeTopBar(
 ) {
     val client = state.role?.trim()?.uppercase(Locale.US) == "CLIENT"
     val greeting = if (client) "Welcome back" else greetingPrefix()
-    val displayName = if (client) {
-        state.companyOrProjectName
-            ?.takeIf(String::isNotBlank)
-            ?.let { "Hello, $it" }
-            ?: state.firstName?.takeIf(String::isNotBlank)?.let { "Hello, $it" }
-            ?: "Hello there"
-    } else {
-        state.firstName?.takeIf(String::isNotBlank) ?: "there"
-    }
+    val displayName = state.firstName
+        ?.takeIf(String::isNotBlank)
+        ?.let { "Hello, $it" }
+        ?: "Hello there"
     val accent = if (client) ClientAccent else StudentAccent
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp),
+            .height(72.dp),
         color = MaterialTheme.colorScheme.surface
     ) {
         Row(
@@ -312,9 +311,21 @@ private fun StudentHome(
 ) {
     LazyColumn(
         modifier.fillMaxSize(),
-        contentPadding = PaddingValues(18.dp, 18.dp, 18.dp, 28.dp),
+        contentPadding = PaddingValues(18.dp, 15.dp, 18.dp, 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        if (state.actionQueue.isNotEmpty()) {
+            item {
+                ActionQueueSection(
+                    items = state.actionQueue,
+                    isStudent = true,
+                    onAction = { item ->
+                        item.orderId?.let { onOpenWorkspace() }
+                    }
+                )
+            }
+        }
+
         item {
             Stage2SectionTitle(
                 accent = StudentAccent,
@@ -551,6 +562,196 @@ private fun JourneyStep(
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionQueueSection(
+    items: List<HomeActionQueueItem>,
+    isStudent: Boolean,
+    onAction: (HomeActionQueueItem) -> Unit
+) {
+    val accent = if (isStudent) Color(0xFFFBBF24) else Color(0xFFFDA48D)
+    val border = if (isStudent) {
+        Color(0xFFF59E0B).copy(alpha = 0.38f)
+    } else {
+        Color(0xFFFB9278).copy(alpha = 0.36f)
+    }
+    val background = if (isStudent) {
+        Brush.linearGradient(
+            listOf(
+                Color(0xFF78350F).copy(alpha = 0.42f),
+                Color(0xFF291A14).copy(alpha = 0.72f)
+            )
+        )
+    } else {
+        Brush.linearGradient(
+            listOf(
+                Color(0xFF662B32).copy(alpha = 0.43f),
+                Color(0xFF2B1A20).copy(alpha = 0.76f)
+            )
+        )
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(13.dp)
+                    .height(1.dp)
+                    .background(accent)
+            )
+            Text(
+                if (isStudent) "NEEDS ATTENTION" else "ACTION REQUIRED",
+                modifier = Modifier.padding(start = 6.dp),
+                color = accent,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(Modifier.weight(1f))
+            Surface(
+                modifier = Modifier.size(17.dp),
+                shape = CircleShape,
+                color = accent.copy(alpha = 0.10f),
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.35f))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        items.size.toString(),
+                        color = accent,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            }
+        }
+
+        items.forEach { item ->
+            ActionQueueCard(
+                item = item,
+                isStudent = isStudent,
+                accent = accent,
+                border = border,
+                background = background,
+                onAction = { onAction(item) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionQueueCard(
+    item: HomeActionQueueItem,
+    isStudent: Boolean,
+    accent: Color,
+    border: Color,
+    background: Brush,
+    onAction: () -> Unit
+) {
+    val buttonBackground = if (isStudent) {
+        Brush.linearGradient(
+            listOf(Color(0xFFFBBF24), Color(0xFFF59E0B))
+        )
+    } else {
+        Brush.linearGradient(
+            listOf(Color(0xFFFDA48D), Color(0xFFFB7185))
+        )
+    }
+    val buttonText = if (isStudent) Color(0xFF291603) else Color(0xFF2E1116)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(background)
+            .border(1.dp, border, RoundedCornerShape(20.dp))
+            .padding(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
+        ) {
+            Surface(
+                modifier = Modifier.size(42.dp),
+                shape = RoundedCornerShape(13.dp),
+                color = accent.copy(alpha = 0.13f),
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.30f))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = if (isStudent) {
+                            Icons.Outlined.AccessTime
+                        } else {
+                            Icons.Outlined.Description
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(21.dp),
+                        tint = accent
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 11.dp)
+            ) {
+                Text(
+                    item.title ?: if (isStudent) "Deliverable due soon" else "Review delivery",
+                    color = if (isStudent) Color(0xFFFFF7ED) else Color.White,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 2
+                )
+                Text(
+                    item.subtitle ?: "Order workspace",
+                    modifier = Modifier.padding(top = 4.dp),
+                    color = if (isStudent) Color(0xFFD8C4AD) else Color(0xFFE5B9AE),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2
+                )
+                Surface(
+                    onClick = onAction,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 11.dp)
+                        .height(34.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color.Transparent
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(buttonBackground, RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                item.actionLabel ?: if (isStudent) "Submit Work" else "Review Work",
+                                color = buttonText,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Icon(
+                                Icons.AutoMirrored.Outlined.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(start = 3.dp)
+                                    .size(15.dp),
+                                tint = buttonText
+                            )
+                        }
                     }
                 }
             }
@@ -1143,9 +1344,21 @@ private fun ClientHome(
 ) {
     LazyColumn(
         modifier.fillMaxSize(),
-        contentPadding = PaddingValues(18.dp, 18.dp, 18.dp, 28.dp),
+        contentPadding = PaddingValues(18.dp, 15.dp, 18.dp, 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        if (state.actionQueue.isNotEmpty()) {
+            item {
+                ActionQueueSection(
+                    items = state.actionQueue,
+                    isStudent = false,
+                    onAction = { item ->
+                        item.orderId?.let { onOpenWorkspace() }
+                    }
+                )
+            }
+        }
+
         item {
             Stage2SectionTitle(
                 accent = ClientAccent,
@@ -1344,8 +1557,9 @@ private fun ClientBriefCard(
             }
 
             Surface(
-                Modifier.fillMaxWidth().padding(top = 18.dp),
-                RoundedCornerShape(18.dp),
+                onClick = onPostJob,
+                modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
+                shape = RoundedCornerShape(18.dp),
                 color = accent.copy(alpha = 0.10f),
                 border = BorderStroke(1.dp, accent.copy(alpha = 0.14f))
             ) {
