@@ -186,7 +186,13 @@ exports.resolveDispute = async (req, res) => {
           where: { orderId: dispute.orderId }
         });
 
-        if (transferRecord?.razorpayTransferId && transferRecord.onHold) {
+        if (!transferRecord || !transferRecord.razorpayTransferId) {
+          throw new Error(
+            'ESCROW_RELEASE_NOT_COMPLETED: A verified Razorpay transfer is required before funds can be released.'
+          );
+        }
+
+        if (transferRecord.onHold || transferRecord.status !== 'RELEASED') {
           const result = await releaseTransfer(transferRecord);
 
           if (!result.released) {
@@ -194,7 +200,9 @@ exports.resolveDispute = async (req, res) => {
               `ESCROW_RELEASE_NOT_COMPLETED: ${result.reason}`
             );
           }
+        }
 
+        if (transferRecord.onHold || transferRecord.status !== 'RELEASED') {
           await tx.transfer.update({
             where: { id: transferRecord.id },
             data: {
@@ -230,18 +238,25 @@ exports.resolveDispute = async (req, res) => {
           });
         }
 
-        await tx.wallet.upsert({
-          where: { userId: dispute.order.sellerId },
-          create: {
-            userId: dispute.order.sellerId,
-            availableBalance: dispute.order.sellerEarnings
-          },
-          update: {
-            availableBalance: {
-              increment: dispute.order.sellerEarnings
+        if (!transferRecord.walletCreditedAt) {
+          await tx.wallet.upsert({
+            where: { userId: dispute.order.sellerId },
+            create: {
+              userId: dispute.order.sellerId,
+              availableBalance: dispute.order.sellerEarnings
+            },
+            update: {
+              availableBalance: {
+                increment: dispute.order.sellerEarnings
+              }
             }
-          }
-        });
+          });
+
+          await tx.transfer.update({
+            where: { id: transferRecord.id },
+            data: { walletCreditedAt: new Date() }
+          });
+        }
 
         await tx.dispute.update({
           where: { id },
