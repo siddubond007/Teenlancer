@@ -297,7 +297,7 @@ exports.getJobs = async (req, res) => {
       prisma.job.findMany({
         where,
         include: {
-          client: { select: { id: true, fullName: true, email: true } },
+          client: { select: { id: true, fullName: true } },
           bids: { select: { id: true } }
         },
         orderBy: { createdAt: 'desc' },
@@ -575,10 +575,7 @@ exports.getPublicJobById = async (req, res) => {
             },
             verification: {
               select: {
-                status: true,
-                isCollegeEmailVerified: true,
-                collegeIdStatus: true,
-                govtIdStatus: true
+                status: true
               }
             }
           }
