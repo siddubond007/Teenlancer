@@ -658,6 +658,12 @@ async function cleanup() {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('Home verification fixtures are disabled when NODE_ENV=production.');
+    process.exitCode = 1;
+    return;
+  }
+
   const mode = process.argv[2];
 
   if (!['seed', 'cleanup'].includes(mode)) {
