@@ -11,6 +11,24 @@ data class HomeActiveWorkspace(
     val progressPercent: Int = 0
 )
 
+data class HomeRecommendedJob(
+    val id: String? = null,
+    val title: String? = null,
+    val estimatedBudget: Int = 0,
+    val skills: List<String> = emptyList(),
+    val createdAt: String? = null
+)
+
+data class HomeGigRecommendation(
+    val id: String? = null,
+    val title: String? = null,
+    val sellerName: String? = null,
+    val sellerAvatarUrl: String? = null,
+    val rating: Double = 0.0,
+    val startingPrice: Int = 0,
+    val coverImage: String? = null
+)
+
 data class HomeState(
     val id: String? = null,
     val firstName: String? = null,
@@ -25,6 +43,9 @@ data class HomeState(
     val hasGig: Boolean = false,
     val hasProposal: Boolean = false,
     val activeWorkspace: HomeActiveWorkspace? = null,
+    val recommendedJobs: List<HomeRecommendedJob> = emptyList(),
+    val discoveryCategory: String? = null,
+    val topVerifiedGigs: List<HomeGigRecommendation> = emptyList(),
     val isSuspended: Boolean = false,
     val isBanned: Boolean = false
 )
