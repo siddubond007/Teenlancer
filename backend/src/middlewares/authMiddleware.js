@@ -6,16 +6,14 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is not configured.');
 }
 const prisma = require('../config/db');
+const { getAuthToken } = require('../utils/authCookie');
 
 exports.requireAuth = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = getAuthToken(req);
+    if (!token) {
       return res.status(401).json({ error: 'Authentication required. Please sign in.' });
     }
-    
-    // Clean string token extraction (removes 'Bearer ')
-    const token = authHeader.substring(7).trim();
     if (!token) {
       return res.status(401).json({ error: 'Invalid token format.' });
     }
@@ -68,15 +66,13 @@ exports.requireAdmin = (req, res, next) => {
 
 exports.optionalAuth = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    const token = getAuthToken(req);
 
     // Public requests remain anonymous and continue normally.
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!token) {
       req.user = null;
       return next();
     }
-
-    const token = authHeader.substring(7).trim();
     if (!token) {
       req.user = null;
       return next();
