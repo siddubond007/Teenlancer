@@ -100,6 +100,7 @@ fun HomeScreen(
                     state = it,
                     darkTheme = darkTheme,
                     onOpenProfile = { onOpenDestination(AppDestination.Profile) },
+                    onOpenNotifications = { onOpenDestination(AppDestination.Notifications) },
                     onToggleTheme = onToggleTheme
                 )
             }
@@ -143,6 +144,7 @@ private fun HomeTopBar(
     state: HomeState,
     darkTheme: Boolean,
     onOpenProfile: () -> Unit,
+    onOpenNotifications: () -> Unit,
     onToggleTheme: () -> Unit
 ) {
     val client = state.role?.trim()?.uppercase(Locale.US) == "CLIENT"
@@ -224,7 +226,7 @@ private fun HomeTopBar(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
                 ) {
                     IconButton(
-                        onClick = { },
+                        onClick = onOpenNotifications,
                         modifier = Modifier.fillMaxSize()
                     ) {
                         Icon(
@@ -234,14 +236,16 @@ private fun HomeTopBar(
                         )
                     }
                 }
-                Surface(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .align(Alignment.TopEnd)
-                        .offset(x = (-6).dp, y = 7.dp),
-                    shape = CircleShape,
-                    color = Color(0xFFEF4444)
-                ) {}
+                if (state.unreadNotifications > 0) {
+                    Surface(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .align(Alignment.TopEnd)
+                            .offset(x = (-6).dp, y = 7.dp),
+                        shape = CircleShape,
+                        color = Color(0xFFEF4444)
+                    ) {}
+                }
             }
         }
     }
