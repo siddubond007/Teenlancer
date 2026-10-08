@@ -5,6 +5,7 @@ import com.skilllaunch.app.core.session.SessionStore
 import com.skilllaunch.app.data.api.AuthApi
 import com.skilllaunch.app.data.api.GigApi
 import com.skilllaunch.app.data.api.HomeApi
+import com.skilllaunch.app.data.api.NotificationApi
 import com.skilllaunch.app.data.api.UserApi
 import com.skilllaunch.app.data.api.UploadApi
 import okhttp3.OkHttpClient
@@ -39,6 +40,11 @@ object ApiClient {
     fun uploadApi(sessionStore: SessionStore): UploadApi {
         return createRetrofit(sessionStore)
             .create(UploadApi::class.java)
+    }
+
+    fun notificationApi(sessionStore: SessionStore): NotificationApi {
+        return createRetrofit(sessionStore)
+            .create(NotificationApi::class.java)
     }
 
     private fun createRetrofit(sessionStore: SessionStore): Retrofit {
