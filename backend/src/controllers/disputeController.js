@@ -135,7 +135,7 @@ exports.getMyDisputes = async (req, res) => {
 
     res.json(disputes);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -159,7 +159,7 @@ exports.getAllDisputes = async (req, res) => {
 
     res.json(disputes);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -422,6 +422,6 @@ exports.resolveDispute = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
