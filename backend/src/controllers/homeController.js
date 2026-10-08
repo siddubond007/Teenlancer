@@ -93,6 +93,116 @@ exports.getHomeState = async (req, res) => {
       user.profile?.onboardingCompleted === true &&
       user.profile?.onboardingStatus === 'COMPLETED';
 
+    const activeOrderStatuses = [
+      'FUNDED_IN_ESCROW',
+      'REQUIREMENTS_SUBMITTED',
+      'IN_PROGRESS',
+      'DELIVERED',
+      'REVISION_REQUESTED',
+      'IN_REVIEW',
+      'DISPUTED'
+    ];
+
+    const activeOrder = await prisma.order.findFirst({
+      where: user.role === 'STUDENT_FREELANCER'
+        ? {
+            sellerId: user.id,
+            status: { in: activeOrderStatuses }
+          }
+        : {
+            clientId: user.id,
+            status: { in: activeOrderStatuses }
+          },
+      include: {
+        client: {
+          select: {
+            id: true,
+            fullName: true
+          }
+        },
+        seller: {
+          select: {
+            id: true,
+            fullName: true,
+            profile: {
+              select: {
+                avatarUrl: true
+              }
+            }
+          }
+        },
+        job: {
+          select: {
+            id: true,
+            title: true
+          }
+        },
+        gig: {
+          select: {
+            id: true,
+            title: true
+          }
+        },
+        transfer: {
+          select: {
+            onHold: true,
+            status: true
+          }
+        }
+      },
+      orderBy: {
+        updatedAt: 'desc'
+      }
+    });
+
+    const getWorkflowProgress = (status) => {
+      switch (status) {
+        case 'FUNDED_IN_ESCROW':
+          return 20;
+        case 'REQUIREMENTS_SUBMITTED':
+          return 35;
+        case 'IN_PROGRESS':
+          return 60;
+        case 'REVISION_REQUESTED':
+          return 70;
+        case 'DELIVERED':
+          return 85;
+        case 'IN_REVIEW':
+          return 90;
+        case 'DISPUTED':
+          return 50;
+        default:
+          return 0;
+      }
+    };
+
+    const activeWorkspace = activeOrder
+      ? {
+          id: activeOrder.id,
+          title:
+            activeOrder.job?.title ||
+            activeOrder.gig?.title ||
+            'Active project',
+          counterpartName:
+            user.role === 'STUDENT_FREELANCER'
+              ? activeOrder.client?.fullName || 'Client'
+              : activeOrder.seller?.fullName || 'Student freelancer',
+          counterpartAvatarUrl:
+            user.role === 'CLIENT'
+              ? activeOrder.seller?.profile?.avatarUrl || null
+              : null,
+          status: activeOrder.status,
+          escrowStatus:
+            activeOrder.transfer?.onHold === true
+              ? 'Funded'
+              : activeOrder.status === 'FUNDED_IN_ESCROW'
+                ? 'Funded'
+                : null,
+          deadline: activeOrder.deadline,
+          progressPercent: getWorkflowProgress(activeOrder.status)
+        }
+      : null;
+
     return res.json({
       id: user.id,
       firstName: user.firstName,
@@ -109,6 +219,7 @@ exports.getHomeState = async (req, res) => {
       proofOfWorkComplete: hasProofOfWork(user.profile),
       hasGig: user._count.gigs > 0,
       hasProposal: user._count.bidsPlaced > 0,
+      activeWorkspace,
       isSuspended: Boolean(user.isSuspended),
       isBanned: Boolean(user.isBanned)
     });
