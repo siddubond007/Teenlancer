@@ -14,7 +14,7 @@ data class HomeActiveWorkspace(
 data class HomeRecommendedJob(
     val id: String? = null,
     val title: String? = null,
-    val estimatedBudget: Int = 0,
+    val budgetLabel: String? = null,
     val skills: List<String> = emptyList(),
     val createdAt: String? = null
 )
