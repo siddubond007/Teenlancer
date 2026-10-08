@@ -1891,12 +1891,13 @@ private fun skipOnboarding(
         youtubeUrl = youtubeUrl.trim().ifBlank { null },
         portfolioUrl = portfolioUrl.trim().ifBlank { null },
         academicStatus = academicStatus.ifBlank { null },
-        graduationMonth = graduationMonth.takeIf { academicStatus in setOf(
-            "High School",
-            "Undergraduate",
-            "Postgraduate",
-            "Bootcamp / Cert"
-        ) },
+        graduationMonth = graduationMonth.takeIf {
+            academicStatus in setOf(
+                "High School Student",
+                "Undergraduate Student",
+                "Postgraduate Student"
+            )
+        },
         graduationYear = graduationYear.toIntOrNull(),
         availability = availability.ifBlank { null },
         clientType = clientType.ifBlank { null },
