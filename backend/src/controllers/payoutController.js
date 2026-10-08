@@ -57,7 +57,7 @@ exports.createPayoutRequest = async (req, res) => {
           userId: req.user.id,
           amount: withdrawAmount,
           method: 'UPI',
-          destination: upiId
+          destination: normalizedUpiId
         }
       });
     }, { maxWait: 2000, timeout: 5000 });
