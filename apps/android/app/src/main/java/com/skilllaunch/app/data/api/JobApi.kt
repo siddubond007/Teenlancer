@@ -5,12 +5,18 @@ import com.skilllaunch.app.data.model.job.JobListResponse
 import com.skilllaunch.app.data.model.job.SubmitBidRequest
 import com.skilllaunch.app.data.model.job.SubmitBidResponse
 import retrofit2.http.Body
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface JobApi {
+
+    @POST("jobs")
+    suspend fun createJob(
+        @Body request: CreateJobRequest
+    ): CreateJobResponse
 
     @GET("jobs")
     suspend fun getJobs(
