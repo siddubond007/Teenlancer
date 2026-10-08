@@ -52,12 +52,15 @@ import com.skilllaunch.app.feature.home.HomeScreen
 import com.skilllaunch.app.data.repository.notification.NotificationRepository
 import com.skilllaunch.app.feature.notification.NotificationScreen
 import com.skilllaunch.app.data.repository.job.JobRepository
+import com.skilllaunch.app.data.repository.order.OrderRepository
 import com.skilllaunch.app.feature.job.JobDiscoveryScreen
+import com.skilllaunch.app.feature.order.OrdersScreen
 
 sealed interface AppDestination : NavKey {
     data object Home : AppDestination
     data object Explore : AppDestination
     data object Orders : AppDestination
+    data class OrderWorkspace(val orderId: String) : AppDestination
     data object Chat : AppDestination
     data object Profile : AppDestination
     data object Notifications : AppDestination
@@ -236,9 +239,17 @@ fun AuthenticatedAppShell(
                     }
 
                     AppDestination.Orders -> NavEntry(key) {
-                        ShellEmptyState(
-                            title = "Orders",
-                            message = "Your active and completed work will appear here as the native Orders feature is connected."
+                        OrdersScreen(
+                            user = user,
+                            repository = orderRepository
+                        )
+                    }
+
+                    is AppDestination.OrderWorkspace -> NavEntry(key) {
+                        OrdersScreen(
+                            user = user,
+                            repository = orderRepository,
+                            initialOrderId = key.orderId
                         )
                     }
 
@@ -307,6 +318,7 @@ private fun destinationTitle(destination: AppDestination): String = when (destin
     AppDestination.Home -> "Home"
     AppDestination.Explore -> "Explore"
     AppDestination.Orders -> "Orders"
+    is AppDestination.OrderWorkspace -> "Workspace"
     AppDestination.Chat -> "Chat"
     AppDestination.Profile -> "Profile"
     AppDestination.Notifications -> "Notifications"
@@ -316,6 +328,7 @@ private fun destinationIcon(destination: AppDestination): androidx.compose.ui.gr
     AppDestination.Home -> Icons.Outlined.Home
     AppDestination.Explore -> Icons.Outlined.Explore
     AppDestination.Orders -> Icons.Outlined.ReceiptLong
+    is AppDestination.OrderWorkspace -> Icons.Outlined.ReceiptLong
     AppDestination.Chat -> Icons.Outlined.ChatBubbleOutline
     AppDestination.Profile -> Icons.Outlined.PersonOutline
     AppDestination.Notifications -> Icons.Outlined.NotificationsNone
