@@ -275,10 +275,27 @@ export default function AdminDashboard({ currentUser }) {
   const handleApprovePayout = async (payoutId) => {
     try {
       await API.put(`/admin/payouts/${payoutId}/approve`);
-      alert('Payout approved successfully.');
+      alert('Payout approved for external processing.');
       fetchAdminData();
     } catch (err) {
       alert('Failed to approve payout: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleCompletePayout = async (payoutId) => {
+    const providerReference = window.prompt(
+      'Enter the external payout provider transaction/reference ID:'
+    );
+    if (!providerReference?.trim()) return;
+
+    try {
+      await API.put(`/admin/payouts/${payoutId}/complete`, {
+        providerReference: providerReference.trim()
+      });
+      alert('Payout marked as completed and reconciled.');
+      fetchAdminData();
+    } catch (err) {
+      alert('Failed to complete payout: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -1061,7 +1078,7 @@ export default function AdminDashboard({ currentUser }) {
                   </div>
 
                   <div className="flex gap-2">
-                    {payout.status === 'PENDING' ? (
+                    {payout.status === 'REQUESTED' ? (
                       <>
                         <button
                           onClick={() => handleApprovePayout(payout.id)}
@@ -1077,6 +1094,13 @@ export default function AdminDashboard({ currentUser }) {
                           Reject
                         </button>
                       </>
+                    ) : payout.status === 'APPROVED_PROCESSING' ? (
+                      <button
+                        onClick={() => handleCompletePayout(payout.id)}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white"
+                      >
+                        Mark Sent
+                      </button>
                     ) : (
                       <span className="text-xs font-bold text-slate-400">
                         {payout.status}
