@@ -208,7 +208,7 @@ fun GigDiscoveryScreen(
                                         .padding(top = 14.dp),
                                     singleLine = true,
                                     label = { Text("Search gigs, skills, categories") }
-                                }
+                                )
 
                                 Row(
                                     modifier = Modifier
