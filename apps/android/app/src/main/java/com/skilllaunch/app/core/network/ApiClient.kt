@@ -5,6 +5,7 @@ import com.skilllaunch.app.core.session.SessionStore
 import com.skilllaunch.app.data.api.AuthApi
 import com.skilllaunch.app.data.api.GigApi
 import com.skilllaunch.app.data.api.HomeApi
+import com.skilllaunch.app.data.api.JobApi
 import com.skilllaunch.app.data.api.NotificationApi
 import com.skilllaunch.app.data.api.UserApi
 import com.skilllaunch.app.data.api.UploadApi
@@ -45,6 +46,11 @@ object ApiClient {
     fun notificationApi(sessionStore: SessionStore): NotificationApi {
         return createRetrofit(sessionStore)
             .create(NotificationApi::class.java)
+    }
+
+    fun jobApi(sessionStore: SessionStore): JobApi {
+        return createRetrofit(sessionStore)
+            .create(JobApi::class.java)
     }
 
     private fun createRetrofit(sessionStore: SessionStore): Retrofit {
