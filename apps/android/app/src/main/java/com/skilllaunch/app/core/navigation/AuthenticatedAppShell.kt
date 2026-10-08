@@ -50,6 +50,7 @@ import com.skilllaunch.app.data.repository.home.HomeRepository
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
 import com.skilllaunch.app.feature.gig.GigDiscoveryScreen
 import com.skilllaunch.app.feature.gig.GigDetailsScreen
+import com.skilllaunch.app.feature.chat.ChatScreen
 import com.skilllaunch.app.feature.home.HomeScreen
 import com.skilllaunch.app.data.repository.notification.NotificationRepository
 import com.skilllaunch.app.feature.notification.NotificationScreen
@@ -275,9 +276,9 @@ fun AuthenticatedAppShell(
                     }
 
                     AppDestination.Chat -> NavEntry(key) {
-                        ShellEmptyState(
-                            title = "Chat",
-                            message = "Conversations and realtime messaging will appear here as the native Chat feature is connected."
+                        ChatScreen(
+                            user = user,
+                            repository = orderRepository
                         )
                     }
 
