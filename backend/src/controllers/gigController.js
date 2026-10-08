@@ -64,6 +64,7 @@ exports.getGigById = async (req, res) => {
         isDeleted: false,
         seller: {
           is: {
+            role: 'STUDENT_FREELANCER',
             isBanned: false,
             isSuspended: false,
             isDeleted: false
