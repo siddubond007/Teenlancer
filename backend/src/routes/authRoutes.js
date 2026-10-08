@@ -113,7 +113,7 @@ router.post('/admin-login', async (req, res) => {
       user: safeAdminUser
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 });
 
