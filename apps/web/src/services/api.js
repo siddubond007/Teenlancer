@@ -14,13 +14,11 @@ const API = axios.create({
   baseURL: isLocalDev
     ? `http://${window.location.hostname}:5000/api`
     : configuredApiUrl.replace(/\/$/, ''),
+  withCredentials: true,
 });
 
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  config.headers['X-SkillLaunch-Client'] = 'web';
   return config;
 });
 
