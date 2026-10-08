@@ -1186,7 +1186,7 @@ private fun ClientHome(
             ClientActiveProjectCard(
                 workspace = state.activeWorkspace,
                 accent = ClientAccent,
-                onOpenOrders = onOpenOrders
+                onOpenWorkspace = onOpenWorkspace
             )
         }
         item {
