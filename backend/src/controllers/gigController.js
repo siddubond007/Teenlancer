@@ -61,7 +61,14 @@ exports.getGigById = async (req, res) => {
       where: {
         id: gigId,
         status: 'PUBLISHED',
-        isDeleted: false
+        isDeleted: false,
+        seller: {
+          is: {
+            isBanned: false,
+            isSuspended: false,
+            isDeleted: false
+          }
+        }
       },
       include: {
         packages: {
@@ -390,7 +397,14 @@ exports.getGigs = async (req, res) => {
     const gigs = await prisma.gig.findMany({
       where: {
         status: 'PUBLISHED',
-        isDeleted: false
+        isDeleted: false,
+        seller: {
+          is: {
+            isBanned: false,
+            isSuspended: false,
+            isDeleted: false
+          }
+        }
       },
       include: {
         packages: {
