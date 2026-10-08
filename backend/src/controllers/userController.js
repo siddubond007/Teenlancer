@@ -4,14 +4,56 @@ function sanitizePublicProfile(profile) {
   if (!profile) return profile;
 
   const {
-    resumeUrl: _resumeUrl,
-    resumeFileName: _resumeFileName,
-    onboardingData,
-    ...publicProfile
+    id,
+    tagline,
+    bio,
+    avatarUrl,
+    coverUrl,
+    college,
+    category,
+    hourlyRate,
+    githubUrl,
+    youtubeUrl,
+    drivePortfolio,
+    skills,
+    badges,
+    canUseTieredGigs,
+    responseTimeExpectation,
+    portfolioItems,
+    experienceList,
+    educationList,
+    qualificationList,
+    certificationList,
+    socialLinks,
+    onboardingData
   } = profile;
 
+  const safeProfile = {
+    id,
+    tagline,
+    bio,
+    avatarUrl,
+    coverUrl,
+    college,
+    category,
+    hourlyRate,
+    githubUrl,
+    youtubeUrl,
+    drivePortfolio,
+    skills,
+    badges,
+    canUseTieredGigs,
+    responseTimeExpectation,
+    portfolioItems,
+    experienceList,
+    educationList,
+    qualificationList,
+    certificationList,
+    socialLinks
+  };
+
   if (!onboardingData || typeof onboardingData !== 'object' || Array.isArray(onboardingData)) {
-    return publicProfile;
+    return safeProfile;
   }
 
   const {
@@ -26,7 +68,7 @@ function sanitizePublicProfile(profile) {
   } = onboardingData;
 
   return {
-    ...publicProfile,
+    ...safeProfile,
     onboardingData: {
       version,
       role,
