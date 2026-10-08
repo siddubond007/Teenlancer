@@ -126,6 +126,9 @@ fun HomeScreen(
                         onOpenDestination(AppDestination.OrderWorkspace(id))
                     }
                 },
+                onOpenJob = { jobId ->
+                    onOpenDestination(AppDestination.JobDetails(jobId))
+                },
                 onOpenExplore = { onOpenDestination(AppDestination.Explore) }
             )
             role == "CLIENT" -> ClientHome(
@@ -304,6 +307,7 @@ private fun StudentHome(
     state: HomeState,
     modifier: Modifier,
     onOpenWorkspace: () -> Unit,
+    onOpenJob: (String) -> Unit,
     onOpenExplore: () -> Unit
 ) {
     LazyColumn(
@@ -347,6 +351,9 @@ private fun StudentHome(
                 RecommendedJobCard(
                     job = job,
                     accent = StudentAccent,
+                    onOpenJob = {
+                        job.id?.let(onOpenJob)
+                    },
                     onOpenExplore = onOpenExplore
                 )
             }
@@ -776,6 +783,7 @@ private fun ClientActiveProjectCard(
 private fun RecommendedJobCard(
     job: com.skilllaunch.app.data.model.home.HomeRecommendedJob,
     accent: Color,
+    onOpenJob: () -> Unit,
     onOpenExplore: () -> Unit
 ) {
     Surface(
