@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material.icons.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
@@ -50,6 +51,8 @@ import com.skilllaunch.app.feature.gig.GigDiscoveryScreen
 import com.skilllaunch.app.feature.home.HomeScreen
 import com.skilllaunch.app.data.repository.notification.NotificationRepository
 import com.skilllaunch.app.feature.notification.NotificationScreen
+import com.skilllaunch.app.data.repository.job.JobRepository
+import com.skilllaunch.app.feature.job.JobDiscoveryScreen
 
 sealed interface AppDestination : NavKey {
     data object Home : AppDestination
@@ -76,6 +79,7 @@ fun AuthenticatedAppShell(
     gigRepository: GigRepository,
     homeRepository: HomeRepository,
     notificationRepository: NotificationRepository,
+    jobRepository: JobRepository,
     onLogout: () -> Unit,
     onOpenOnboarding: () -> Unit,
     profileRefreshVersion: Int = 0,
@@ -220,9 +224,15 @@ fun AuthenticatedAppShell(
                     }
 
                     AppDestination.Explore -> NavEntry(key) {
-                        GigDiscoveryScreen(
-                            repository = gigRepository
-                        )
+                        if (user.role?.uppercase() == "STUDENT_FREELANCER") {
+                            JobDiscoveryScreen(
+                                repository = jobRepository
+                            )
+                        } else {
+                            GigDiscoveryScreen(
+                                repository = gigRepository
+                            )
+                        }
                     }
 
                     AppDestination.Orders -> NavEntry(key) {
@@ -308,5 +318,5 @@ private fun destinationIcon(destination: AppDestination): androidx.compose.ui.gr
     AppDestination.Orders -> Icons.Outlined.ReceiptLong
     AppDestination.Chat -> Icons.Outlined.ChatBubbleOutline
     AppDestination.Profile -> Icons.Outlined.PersonOutline
-    AppDestination.Notifications -> Icons.Outlined.ChatBubbleOutline
+    AppDestination.Notifications -> Icons.Outlined.NotificationsNone
 }
