@@ -372,7 +372,7 @@ exports.login = async (req, res) => {
     res.json(response);
   } catch (err) {
     console.error("Login Error:", err);
-    res.status(500).json({ error: 'Database Error: ' + err.message });
+    res.status(500).json({ error: 'Unable to sign in right now. Please try again.' });
   }
 };
 
