@@ -29,6 +29,16 @@ data class HomeGigRecommendation(
     val coverImage: String? = null
 )
 
+data class HomeActionQueueItem(
+    val id: String? = null,
+    val orderId: String? = null,
+    val type: String? = null,
+    val title: String? = null,
+    val subtitle: String? = null,
+    val actionLabel: String? = null,
+    val dueAt: String? = null
+)
+
 data class HomeState(
     val id: String? = null,
     val firstName: String? = null,
@@ -47,6 +57,7 @@ data class HomeState(
     val discoveryCategory: String? = null,
     val topVerifiedGigs: List<HomeGigRecommendation> = emptyList(),
     val unreadNotifications: Int = 0,
+    val actionQueue: List<HomeActionQueueItem> = emptyList(),
     val isSuspended: Boolean = false,
     val isBanned: Boolean = false
 )
