@@ -37,6 +37,13 @@ exports.createJob = async (req, res) => {
 
     const requestedStatus = String(status || 'OPEN').trim().toUpperCase();
     const jobStatus = requestedStatus === 'PUBLISHED' ? 'OPEN' : requestedStatus;
+
+    if (!['DRAFT', 'OPEN'].includes(jobStatus)) {
+      return res.status(400).json({
+        error: 'Job status must be DRAFT or OPEN.'
+      });
+    }
+
     const isOpenState = jobStatus === 'OPEN';
 
     // If draft ID already exists, update the existing draft
@@ -174,6 +181,13 @@ exports.updateJob = async (req, res) => {
 
     const requestedStatus = String(status || existingJob.status || 'DRAFT').trim().toUpperCase();
     const jobStatus = requestedStatus === 'PUBLISHED' ? 'OPEN' : requestedStatus;
+
+    if (!['DRAFT', 'OPEN'].includes(jobStatus)) {
+      return res.status(400).json({
+        error: 'Job status must be DRAFT or OPEN.'
+      });
+    }
+
     const isOpenState = jobStatus === 'OPEN';
 
     const updatedJob = await prisma.job.update({
@@ -225,7 +239,7 @@ exports.getJobs = async (req, res) => {
     // Base constraints
     let where = {
       isOpen: true,
-      status: 'OPEN'
+      status: { in: ['OPEN', 'PUBLISHED', 'published'] }
     };
 
     // Full-Text Search
@@ -555,7 +569,13 @@ exports.getPublicJobById = async (req, res) => {
       }
     });
 
-    if (!job || job.status === 'DRAFT' || !job.isOpen) {
+    if (
+      !job ||
+      ['DRAFT', 'CANCELLED_REFUNDED', 'COMPLETED', 'IN_PROGRESS', 'PENDING_PAYMENT'].includes(
+        String(job.status || '').toUpperCase()
+      ) ||
+      !job.isOpen
+    ) {
       return res.status(404).json({ error: 'Job not available or private.' });
     }
 
@@ -844,7 +864,7 @@ exports.acceptBid = async (req, res) => {
       }
 
       if (
-        String(lockedJob.status).toUpperCase() !== 'OPEN' ||
+        !['OPEN', 'PUBLISHED'].includes(String(lockedJob.status).toUpperCase()) ||
         lockedJob.isOpen !== true
       ) {
         throw new Error(
