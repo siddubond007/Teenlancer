@@ -1,5 +1,25 @@
 const prisma = require('../config/db');
 
+function getOrderTitle(order) {
+  return order.job?.title ||
+    order.gig?.title ||
+    'Active project';
+}
+
+function formatHoursUntil(target, now) {
+  return Math.max(
+    1,
+    Math.ceil((new Date(target).getTime() - now.getTime()) / (60 * 60 * 1000))
+  );
+}
+
+function formatDaysUntil(target, now) {
+  return Math.max(
+    1,
+    Math.ceil((new Date(target).getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+  );
+}
+
 function getCompanyOrProjectName(onboardingData) {
   if (!onboardingData || typeof onboardingData !== 'object' || Array.isArray(onboardingData)) {
     return null;
@@ -214,6 +234,108 @@ exports.getHomeState = async (req, res) => {
         }
       : null;
 
+    const actionQueueOrders = user.role === 'STUDENT_FREELANCER'
+      ? await prisma.order.findMany({
+          where: {
+            sellerId: user.id,
+            status: {
+              in: [
+                'REQUIREMENTS_SUBMITTED',
+                'IN_PROGRESS',
+                'REVISION_REQUESTED'
+              ]
+            },
+            deadline: {
+              gt: new Date(),
+              lte: new Date(Date.now() + 24 * 60 * 60 * 1000)
+            }
+          },
+          include: {
+            job: {
+              select: {
+                id: true,
+                title: true
+              }
+            },
+            gig: {
+              select: {
+                id: true,
+                title: true
+              }
+            }
+          },
+          orderBy: {
+            deadline: 'asc'
+          },
+          take: 3
+        })
+      : await prisma.order.findMany({
+          where: {
+            clientId: user.id,
+            status: 'DELIVERED',
+            autoApproveAt: {
+              gt: new Date()
+            },
+            deliverables: {
+              some: {
+                reviewStatus: 'PENDING_REVIEW'
+              }
+            }
+          },
+          include: {
+            seller: {
+              select: {
+                id: true,
+                fullName: true
+              }
+            },
+            job: {
+              select: {
+                id: true,
+                title: true
+              }
+            },
+            gig: {
+              select: {
+                id: true,
+                title: true
+              }
+            }
+          },
+          orderBy: {
+            autoApproveAt: 'asc'
+          },
+          take: 3
+        });
+
+    const actionQueue = actionQueueOrders.map((order) => {
+      if (user.role === 'STUDENT_FREELANCER') {
+        const hours = formatHoursUntil(order.deadline, new Date());
+        return {
+          id: order.id,
+          orderId: order.id,
+          type: 'SUBMIT_WORK',
+          title: 'Deliverable due in ' + hours + ' hours',
+          subtitle: getOrderTitle(order),
+          actionLabel: 'Submit Work',
+          dueAt: order.deadline
+        };
+      }
+
+      const days = formatDaysUntil(order.autoApproveAt, new Date());
+      const sellerName = order.seller?.fullName || 'Student freelancer';
+
+      return {
+        id: order.id,
+        orderId: order.id,
+        type: 'REVIEW_WORK',
+        title: 'Review delivery from ' + sellerName,
+        subtitle: 'Auto-approves in ' + days + ' day' + (days === 1 ? '' : 's'),
+        actionLabel: 'Review Work',
+        dueAt: order.autoApproveAt
+      };
+    });
+
     const studentSkills = Array.isArray(onboardingData.selectedSkills)
       ? onboardingData.selectedSkills.filter(
           (value) => typeof value === 'string' && value.trim()
@@ -419,6 +541,7 @@ exports.getHomeState = async (req, res) => {
       discoveryCategory,
       topVerifiedGigs: topVerifiedGigCards,
       unreadNotifications,
+      actionQueue,
       isSuspended: Boolean(user.isSuspended),
       isBanned: Boolean(user.isBanned)
     });
