@@ -32,17 +32,19 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      API.get('/auth/me')
-        .then(res => setCurrentUser(res.data.user))
-        .catch(() => localStorage.removeItem('token'));
-    }
+    API.get('/auth/me')
+      .then(res => setCurrentUser(res.data.user))
+      .catch(() => setCurrentUser(null));
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    try {
+      await API.post('/auth/logout');
+    } catch {
+      // Clear local UI state even when the network is unavailable.
+    } finally {
+      setCurrentUser(null);
+    }
   };
 
   // A subtle loading fallback that matches your dark theme
