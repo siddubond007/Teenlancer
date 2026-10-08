@@ -65,7 +65,7 @@ exports.createPayoutRequest = async (req, res) => {
     res.status(201).json({ message: 'Withdrawal request submitted successfully.', payout });
   } catch (err) {
     if (err.message.includes('BAD_REQUEST')) return res.status(400).json({ error: err.message.replace('BAD_REQUEST: ', '') });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -82,7 +82,7 @@ exports.getMyPayoutRequests = async (req, res) => {
 
     res.json(payouts);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -106,6 +106,6 @@ exports.getMyWallet = async (req, res) => {
 
     res.json(wallet);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
