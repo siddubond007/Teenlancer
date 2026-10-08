@@ -55,7 +55,35 @@ async function createAuditLog(adminId, actionType, targetId = null, details = nu
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
-      include: {
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        fullName: true,
+        phone: true,
+        role: true,
+        isMinor: true,
+        age: true,
+        dob: true,
+        points: true,
+        strikesCount: true,
+        isSuspended: true,
+        suspendedUntil: true,
+        isBanned: true,
+        bannedAt: true,
+        freeBidsRemaining: true,
+        averageRating: true,
+        communicationAvg: true,
+        qualityAvg: true,
+        timelinessAvg: true,
+        totalReviews: true,
+        createdAt: true,
+        updatedAt: true,
+        isDeleted: true,
+        deletedAt: true,
         profile: true,
         wallet: true
       },
@@ -213,20 +241,40 @@ exports.changeUserRole = async (req, res) => {
     const { userId } = req.params;
     const { role } = req.body;
 
+    const validRoles = new Set(['STUDENT_FREELANCER', 'CLIENT', 'ADMIN']);
+    const normalizedRole = String(role || '').trim().toUpperCase();
+
+    if (!validRoles.has(normalizedRole)) {
+      return res.status(400).json({ error: 'Invalid user role.' });
+    }
+
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: { role }
+      data: { role: normalizedRole },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        fullName: true,
+        role: true,
+        isSuspended: true,
+        isBanned: true,
+        isDeleted: true
+      }
     });
 
     await createAuditLog(
       req.user.id,
       "CHANGE_ROLE",
       userId,
-      `Role changed to ${role}`
+      `Role changed to ${normalizedRole}`
     );
 
     res.json({
-      message: `User role changed to ${role}.`,
+      message: `User role changed to ${normalizedRole}.`,
       user: updated
     });
   } catch (err) {
