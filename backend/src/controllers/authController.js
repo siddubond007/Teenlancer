@@ -117,17 +117,30 @@ exports.register = async (req, res) => {
         age: parsedAge,
         dob: dobDate,
         profile: {
-          create: {
-            tagline: isMinor ? 'Young Student Creator (Minor Verified)' : 'Student Creator & Freelancer',
-            bio: 'Student Fresher ready to deliver quality work and build a verified portfolio.',
-            college: '',
-            category: 'General Freelancing',
-            hourlyRate: 350,
-            skills: ['Student Talent', 'Fast Learner'],
-            onboardingCompleted: false,
-            onboardingStatus: 'PENDING',
-            onboardingData: {}
-          }
+          create: normalizedRole === 'CLIENT'
+            ? {
+                tagline: '',
+                bio: '',
+                college: '',
+                category: 'General',
+                hourlyRate: null,
+                skills: [],
+                badges: [],
+                onboardingCompleted: false,
+                onboardingStatus: 'PENDING',
+                onboardingData: {}
+              }
+            : {
+                tagline: isMinor ? 'Young Student Creator (Minor Verified)' : 'Student Creator & Freelancer',
+                bio: 'Student Fresher ready to deliver quality work and build a verified portfolio.',
+                college: '',
+                category: 'General Freelancing',
+                hourlyRate: 350,
+                skills: ['Student Talent', 'Fast Learner'],
+                onboardingCompleted: false,
+                onboardingStatus: 'PENDING',
+                onboardingData: {}
+              }
         },
         wallet: { create: { isParentAccount: isMinor, availableBalance: 0 } }
       },
