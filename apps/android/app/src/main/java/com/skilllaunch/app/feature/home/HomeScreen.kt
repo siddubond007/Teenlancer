@@ -78,7 +78,7 @@ fun HomeScreen(
     onToggleTheme: () -> Unit
 ) {
     val viewModel: HomeViewModel = viewModel(
-        key = "home-\${user.id ?: "unknown"}",
+        key = "home-${user.id ?: "unknown"}",
         factory = remember(homeRepository) { HomeViewModel.factory(homeRepository) }
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycleCompat()
