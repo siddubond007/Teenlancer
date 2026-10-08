@@ -1,16 +1,18 @@
 const Razorpay = require('razorpay');
 
-const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
-const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+function getRazorpayClient() {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
-if (!razorpayKeyId || !razorpayKeySecret) {
-  throw new Error('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be configured.');
+  if (!keyId || !keySecret) {
+    throw new Error('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be configured.');
+  }
+
+  return new Razorpay({
+    key_id: keyId,
+    key_secret: keySecret
+  });
 }
-
-const razorpay = new Razorpay({
-  key_id: razorpayKeyId,
-  key_secret: razorpayKeySecret
-});
 
 async function releaseTransfer(transferRecord) {
   if (!transferRecord) {
@@ -33,6 +35,8 @@ async function releaseTransfer(transferRecord) {
       reason: 'ALREADY_RELEASED'
     };
   }
+
+  const razorpay = getRazorpayClient();
 
   const remoteTransfer = await razorpay.transfers.fetch(
     transferRecord.razorpayTransferId
