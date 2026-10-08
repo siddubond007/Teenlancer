@@ -121,13 +121,21 @@ fun HomeScreen(
             role == "STUDENT_FREELANCER" -> StudentHome(
                 state = home,
                 modifier = Modifier.padding(innerPadding),
-                onOpenOrders = { onOpenDestination(AppDestination.Orders) },
+                onOpenWorkspace = {
+                    home.activeWorkspace?.id?.let { id ->
+                        onOpenDestination(AppDestination.OrderWorkspace(id))
+                    }
+                },
                 onOpenExplore = { onOpenDestination(AppDestination.Explore) }
             )
             role == "CLIENT" -> ClientHome(
                 state = home,
                 modifier = Modifier.padding(innerPadding),
-                onOpenOrders = { onOpenDestination(AppDestination.Orders) }
+                onOpenWorkspace = {
+                    home.activeWorkspace?.id?.let { id ->
+                        onOpenDestination(AppDestination.OrderWorkspace(id))
+                    }
+                }
             )
             else -> HomeFailure(
                 Modifier.padding(innerPadding),
