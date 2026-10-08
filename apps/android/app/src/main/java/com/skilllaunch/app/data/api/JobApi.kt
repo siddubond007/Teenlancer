@@ -1,10 +1,10 @@
 package com.skilllaunch.app.data.api
 
-import com.skilllaunch.app.data.model.job.Job
+import com.skilllaunch.app.data.model.job.CreateJobRequest
+import com.skilllaunch.app.data.model.job.CreateJobResponse
 import com.skilllaunch.app.data.model.job.JobListResponse
 import com.skilllaunch.app.data.model.job.SubmitBidRequest
 import com.skilllaunch.app.data.model.job.SubmitBidResponse
-import retrofit2.http.Body
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
