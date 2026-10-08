@@ -111,12 +111,18 @@ app.use('/api', globalLimiter);
 app.use('/api/auth', authLimiter);
 
 
-// TEMP REQUEST DEBUG LOGGER
-app.use((req, res, next) => {
-  console.log('📥 REQUEST:', req.method, req.originalUrl);
-  console.log('🔐 AUTH:', req.headers.authorization ? 'Bearer token present' : 'NO AUTH TOKEN');
-  next();
-});
+// Development request diagnostics only. Keep production logs focused on
+// application errors and security-relevant events.
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log('📥 REQUEST:', req.method, req.originalUrl);
+    console.log(
+      '🔐 AUTH:',
+      req.headers.authorization ? 'Bearer token present' : 'NO AUTH TOKEN'
+    );
+    next();
+  });
+}
 // 🛡️ CRITICAL: Webhooks must use raw buffer to mathematically verify Razorpay signatures
 app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes);
 
