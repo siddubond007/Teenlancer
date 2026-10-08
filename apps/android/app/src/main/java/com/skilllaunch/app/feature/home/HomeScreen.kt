@@ -778,7 +778,7 @@ private fun RecommendedJobCard(
                 maxLines = 2
             )
             Text(
-                "Est. ₹" + formatMoney(job.estimatedBudget),
+                "Est. " + (job.budgetLabel ?: "Budget on request"),
                 modifier = Modifier.padding(top = 4.dp),
                 color = accent,
                 style = MaterialTheme.typography.labelMedium,
