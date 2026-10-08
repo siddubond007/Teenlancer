@@ -31,8 +31,9 @@ async function releaseTransfer(transferRecord) {
 
   if (!transferRecord.onHold || transferRecord.status === 'RELEASED') {
     return {
-      released: false,
-      reason: 'ALREADY_RELEASED'
+      released: true,
+      reason: 'ALREADY_RELEASED',
+      razorpayTransferId: transferRecord.razorpayTransferId
     };
   }
 
