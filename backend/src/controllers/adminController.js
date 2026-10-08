@@ -410,33 +410,97 @@ exports.approvePayoutRequest = async (req, res) => {
       return res.status(404).json({ error: 'Payout request not found.' });
     }
 
-    await prisma.$transaction([
-      prisma.payoutRequest.update({
+    if (payout.status !== 'REQUESTED') {
+      return res.status(409).json({
+        error: 'Only a newly requested payout can be approved for processing.'
+      });
+    }
+
+    const updatedPayout = await prisma.payoutRequest.update({
+      where: { id: payoutId },
+      data: {
+        status: 'APPROVED_PROCESSING',
+        failureReason: null
+      }
+    });
+
+    await createAuditLog(
+      req.user.id,
+      "APPROVE_PAYOUT",
+      payout.userId,
+      `Payout of ${payout.amount} approved for processing.`
+    );
+
+    res.json({
+      message: 'Payout approved for processing. Complete it only after the external payout provider confirms the transfer.',
+      payout: updatedPayout
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.completePayoutRequest = async (req, res) => {
+  try {
+    const { payoutId } = req.params;
+    const providerReference = typeof req.body?.providerReference === 'string'
+      ? req.body.providerReference.trim()
+      : '';
+
+    if (providerReference.length < 6 || providerReference.length > 200) {
+      return res.status(400).json({
+        error: 'A valid external payout reference is required to mark the payout as completed.'
+      });
+    }
+
+    const payout = await prisma.payoutRequest.findUnique({
+      where: { id: payoutId }
+    });
+
+    if (!payout) {
+      return res.status(404).json({ error: 'Payout request not found.' });
+    }
+
+    if (payout.status !== 'APPROVED_PROCESSING') {
+      return res.status(409).json({
+        error: 'Only a payout approved for processing can be completed.'
+      });
+    }
+
+    const updatedPayout = await prisma.$transaction(async (tx) => {
+      const updated = await tx.payoutRequest.update({
         where: { id: payoutId },
         data: {
           status: 'COMPLETED',
-          processedAt: new Date()
+          providerReference,
+          processedAt: new Date(),
+          failureReason: null
         }
-      }),
-      prisma.wallet.update({
+      });
+
+      await tx.wallet.update({
         where: { userId: payout.userId },
         data: {
           pendingBalance: {
             decrement: payout.amount
           }
         }
-      })
-    ]);
+      });
 
+      return updated;
+    });
 
-      await createAuditLog(
-        req.user.id,
-        "APPROVE_PAYOUT",
-        payout.userId,
-        `Approved payout of ${payout.amount}`
-      );
+    await createAuditLog(
+      req.user.id,
+      "COMPLETE_PAYOUT",
+      payout.userId,
+      `Payout of ${payout.amount} completed with provider reference ${providerReference}.`
+    );
 
-    res.json({ message: 'Payout approved successfully.' });
+    return res.json({
+      message: 'Payout marked as completed and the pending wallet balance was reconciled.',
+      payout: updatedPayout
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -454,12 +518,19 @@ exports.rejectPayoutRequest = async (req, res) => {
       return res.status(404).json({ error: 'Payout request not found.' });
     }
 
+    if (payout.status !== 'REQUESTED') {
+      return res.status(409).json({
+        error: 'Only newly requested payouts can be rejected before external processing begins.'
+      });
+    }
+
     await prisma.$transaction([
       prisma.payoutRequest.update({
         where: { id: payoutId },
         data: {
           status: 'REJECTED',
-          processedAt: new Date()
+          processedAt: new Date(),
+          failureReason: 'Rejected by admin'
         }
       }),
       prisma.wallet.update({
