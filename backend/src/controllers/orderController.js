@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { moderateMessage } = require('../services/moderationService');
 const Razorpay = require('razorpay');
 const { releaseTransfer } = require('../services/escrowService');
 const { isGigAcceptingOrders } = require('../services/gigAvailabilityService');
@@ -1164,13 +1165,50 @@ exports.sendMessage = async (req, res) => {
       ? order.sellerId
       : order.clientId;
 
+    const safeContent = typeof content === 'string' ? content.trim() : '';
+    const safeFileUrl = typeof fileUrl === 'string' && fileUrl.trim()
+      ? fileUrl.trim()
+      : null;
+
+    if (!safeContent && !safeFileUrl) {
+      return res.status(400).json({ error: 'Message or attachment required' });
+    }
+
+    if (safeFileUrl) {
+      try {
+        const parsed = new URL(safeFileUrl);
+        if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname) {
+          throw new Error('invalid attachment URL');
+        }
+      } catch {
+        return res.status(400).json({ error: 'Invalid attachment URL' });
+      }
+    }
+
+    const moderation = await moderateMessage(safeContent);
+
+    if (!moderation.isAllowed) {
+      await prisma.moderationLog.create({
+        data: {
+          senderId: req.user.id,
+          flaggedText: safeContent,
+          violationType: moderation.reason,
+          confidence: 0.95
+        }
+      });
+
+      return res.status(422).json({
+        error: moderation.warning || 'This message cannot be sent.'
+      });
+    }
+
     const message = await prisma.message.create({
       data: {
         orderId,
         senderId: req.user.id,
         recipientId,
-        content: content?.trim() || '',
-        fileUrl: fileUrl?.trim() || null
+        content: safeContent,
+        fileUrl: safeFileUrl
       },
       include: {
         sender: {
