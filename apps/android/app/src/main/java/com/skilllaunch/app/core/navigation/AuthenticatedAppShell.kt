@@ -49,6 +49,7 @@ import com.skilllaunch.app.data.repository.gig.GigRepository
 import com.skilllaunch.app.data.repository.home.HomeRepository
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
 import com.skilllaunch.app.feature.gig.GigDiscoveryScreen
+import com.skilllaunch.app.feature.gig.GigDetailsScreen
 import com.skilllaunch.app.feature.home.HomeScreen
 import com.skilllaunch.app.data.repository.notification.NotificationRepository
 import com.skilllaunch.app.feature.notification.NotificationScreen
@@ -61,6 +62,7 @@ import com.skilllaunch.app.feature.order.OrdersScreen
 sealed interface AppDestination : NavKey {
     data object Home : AppDestination
     data object Explore : AppDestination
+    data class GigDetails(val gigId: String) : AppDestination
     data object PostJob : AppDestination
     data object Orders : AppDestination
     data class OrderWorkspace(val orderId: String) : AppDestination
@@ -241,6 +243,13 @@ fun AuthenticatedAppShell(
                         }
                     }
 
+                    is AppDestination.GigDetails -> NavEntry(key) {
+                        GigDetailsScreen(
+                            gigId = key.gigId,
+                            repository = gigRepository
+                        )
+                    }
+
                     AppDestination.PostJob -> NavEntry(key) {
                         PostJobScreen(
                             repository = jobRepository,
@@ -329,6 +338,7 @@ private fun ShellEmptyState(
 private fun destinationTitle(destination: AppDestination): String = when (destination) {
     AppDestination.Home -> "Home"
     AppDestination.Explore -> "Explore"
+    is AppDestination.GigDetails -> "Gig"
     AppDestination.PostJob -> "Post Job"
     AppDestination.Orders -> "Orders"
     is AppDestination.OrderWorkspace -> "Workspace"
@@ -340,6 +350,7 @@ private fun destinationTitle(destination: AppDestination): String = when (destin
 private fun destinationIcon(destination: AppDestination): androidx.compose.ui.graphics.vector.ImageVector = when (destination) {
     AppDestination.Home -> Icons.Outlined.Home
     AppDestination.Explore -> Icons.Outlined.Explore
+    is AppDestination.GigDetails -> Icons.Outlined.BusinessCenter
     AppDestination.PostJob -> Icons.Outlined.BusinessCenter
     AppDestination.Orders -> Icons.Outlined.ReceiptLong
     is AppDestination.OrderWorkspace -> Icons.Outlined.ReceiptLong
