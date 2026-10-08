@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -118,7 +120,8 @@ fun HomeScreen(
             role == "STUDENT_FREELANCER" -> StudentHome(
                 state = home,
                 modifier = Modifier.padding(innerPadding),
-                onOpenOrders = { onOpenDestination(AppDestination.Orders) }
+                onOpenOrders = { onOpenDestination(AppDestination.Orders) },
+                onOpenExplore = { onOpenDestination(AppDestination.Explore) }
             )
             role == "CLIENT" -> ClientHome(
                 state = home,
@@ -282,12 +285,13 @@ private fun FinancialPill(state: HomeState, accent: Color) {
 private fun StudentHome(
     state: HomeState,
     modifier: Modifier,
-    onOpenOrders: () -> Unit
+    onOpenOrders: () -> Unit,
+    onOpenExplore: () -> Unit
 ) {
     LazyColumn(
         modifier.fillMaxSize(),
-        contentPadding = PaddingValues(20.dp, 20.dp, 20.dp, 28.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        contentPadding = PaddingValues(18.dp, 18.dp, 18.dp, 28.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
             Stage2SectionTitle(
@@ -310,11 +314,24 @@ private fun StudentHome(
                 title = "Recommended Jobs for you"
             )
         }
-        item {
-            Stage2UnavailableCard(
-                title = "Recommended jobs coming next",
-                message = "Your Home is now ready for live active orders. The recommendation feed will be connected next."
-            )
+        if (state.recommendedJobs.isEmpty()) {
+            item {
+                Stage2UnavailableCard(
+                    title = "No recommended jobs yet",
+                    message = "New custom projects that match your marketplace activity will appear here."
+                )
+            }
+        } else {
+            items(
+                items = state.recommendedJobs,
+                key = { it.id ?: it.title.orEmpty() }
+            ) { job ->
+                RecommendedJobCard(
+                    job = job,
+                    accent = StudentAccent,
+                    onOpenExplore = onOpenExplore
+                )
+            }
         }
     }
 }
@@ -738,6 +755,199 @@ private fun ClientActiveProjectCard(
 }
 
 @Composable
+private fun RecommendedJobCard(
+    job: com.skilllaunch.app.data.model.home.HomeRecommendedJob,
+    accent: Color,
+    onOpenExplore: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))
+    ) {
+        Column(Modifier.padding(13.dp)) {
+            Text(
+                job.title ?: "Custom project",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 2
+            )
+            Text(
+                "Est. ₹" + formatMoney(job.estimatedBudget),
+                modifier = Modifier.padding(top = 4.dp),
+                color = accent,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Row(
+                modifier = Modifier.padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                job.skills.take(3).forEach { skill ->
+                    Surface(
+                        shape = RoundedCornerShape(7.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.055f)
+                    ) {
+                        Text(
+                            skill,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 9.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    relativePostedTime(job.createdAt),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Spacer(Modifier.weight(1f))
+                Surface(
+                    onClick = onOpenExplore,
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color.Transparent,
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.85f))
+                ) {
+                    Text(
+                        "Submit Proposal",
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
+                        color = accent,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GigRecommendationCard(
+    gig: com.skilllaunch.app.data.model.home.HomeGigRecommendation,
+    accent: Color
+) {
+    Surface(
+        modifier = Modifier.width(150.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(94.dp)
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+            ) {
+                if (gig.coverImage.isNullOrBlank()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Outlined.Image,
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    SubcomposeAsyncImage(
+                        model = gig.coverImage,
+                        contentDescription = gig.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        loading = {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = accent
+                                )
+                            }
+                        },
+                        error = {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Outlined.Image,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        success = { SubcomposeAsyncImageContent() }
+                    )
+                }
+            }
+            Column(Modifier.padding(10.dp)) {
+                Text(
+                    gig.title ?: "Student Gig",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 2
+                )
+                Text(
+                    gig.sellerName ?: "Verified student",
+                    modifier = Modifier.padding(top = 3.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1
+                )
+                Row(
+                    modifier = Modifier.padding(top = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "★",
+                        color = Color(0xFFF59E0B),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        String.format(Locale.US, "%.1f", gig.rating),
+                        modifier = Modifier.padding(start = 3.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Text(
+                    "Starts at ₹" + formatMoney(gig.startingPrice),
+                    modifier = Modifier.padding(top = 7.dp),
+                    color = accent,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+        }
+    }
+}
+
+private fun relativePostedTime(createdAt: String?): String {
+    val target = createdAt
+        ?.let { runCatching { Instant.parse(it) }.getOrNull() }
+        ?: return "recently"
+
+    val minutes = Duration.between(target, Instant.now()).toMinutes().coerceAtLeast(0)
+    return when {
+        minutes < 1 -> "just now"
+        minutes < 60 -> "${minutes}m ago"
+        minutes < 24 * 60 -> "${minutes / 60}h ago"
+        else -> "${minutes / (24 * 60)}d ago"
+    }
+}
+
+@Composable
 private fun Stage2UnavailableCard(
     title: String,
     message: String
@@ -940,8 +1150,8 @@ private fun ClientHome(
 ) {
     LazyColumn(
         modifier.fillMaxSize(),
-        contentPadding = PaddingValues(20.dp, 22.dp, 20.dp, 28.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        contentPadding = PaddingValues(18.dp, 18.dp, 18.dp, 28.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
             Stage2SectionTitle(
@@ -956,6 +1166,43 @@ private fun ClientHome(
                 accent = ClientAccent,
                 onOpenOrders = onOpenOrders
             )
+        }
+        item {
+            Stage2SectionTitle(
+                accent = ClientAccent,
+                eyebrow = "VERIFIED TALENT",
+                title = "Top Verified Freelancers in '" + (state.discoveryCategory ?: "Design") + "'"
+            )
+        }
+        item {
+            if (state.topVerifiedGigs.isEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
+                ) {
+                    Stage2UnavailableCard(
+                        title = "No verified Gigs yet",
+                        message = "Verified student services in " + (state.discoveryCategory ?: "Design") + " will appear here."
+                    )
+                }
+            } else {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(horizontal = 1.dp)
+                ) {
+                    items(
+                        items = state.topVerifiedGigs,
+                        key = { it.id ?: it.title.orEmpty() }
+                    ) { gig ->
+                        GigRecommendationCard(
+                            gig = gig,
+                            accent = ClientAccent
+                        )
+                    }
+                }
+            }
         }
         item {
             Stage2SectionTitle(
