@@ -39,6 +39,7 @@ async function getOrCreateUsers() {
       role: 'STUDENT_FREELANCER',
       isMinor: false,
       age: 20,
+      averageRating: 4.9,
       passwordHash,
       isSuspended: false,
       isBanned: false
@@ -53,6 +54,7 @@ async function getOrCreateUsers() {
       role: 'STUDENT_FREELANCER',
       isMinor: false,
       age: 20,
+      averageRating: 4.9,
       dob: new Date('2006-01-15T00:00:00.000Z'),
       profile: {
         create: {
@@ -413,7 +415,7 @@ async function getOrCreateUsers() {
       title: TEST_DESIGN_GIG_1,
       category: 'Design',
       description: 'Custom UI/UX prototypes for mobile and web products.',
-      coverImage: 'https://images.unsplash.com/photo-1558655146-d09347e92766?auto=format&fit=crop&w=900&q=80',
+      coverImage: 'https://images.unsplash.com/photo-1581287053822-fd7bf4f4bfec?auto=format&fit=crop&w=640&q=85',
       status: 'PUBLISHED',
       isDeleted: false,
       deletedAt: null
@@ -436,7 +438,7 @@ async function getOrCreateUsers() {
       title: TEST_DESIGN_GIG_2,
       category: 'Design',
       description: 'Reusable mobile UI systems and production-ready screen designs.',
-      coverImage: 'https://images.unsplash.com/photo-1559028012-481c04fa702d?auto=format&fit=crop&w=900&q=80',
+      coverImage: 'https://images.unsplash.com/photo-1706700392642-dee59f678a09?auto=format&fit=crop&w=640&q=85',
       status: 'PUBLISHED',
       isDeleted: false,
       deletedAt: null
