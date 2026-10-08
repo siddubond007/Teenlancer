@@ -176,32 +176,93 @@ exports.getHomeState = async (req, res) => {
       }
     };
 
-    const activeWorkspace = activeOrder
-      ? {
-          id: activeOrder.id,
-          title:
-            activeOrder.job?.title ||
-            activeOrder.gig?.title ||
-            'Active project',
-          counterpartName:
-            user.role === 'STUDENT_FREELANCER'
-              ? activeOrder.client?.fullName || 'Client'
-              : activeOrder.seller?.fullName || 'Student freelancer',
-          counterpartAvatarUrl:
-            user.role === 'CLIENT'
-              ? activeOrder.seller?.profile?.avatarUrl || null
-              : null,
-          status: activeOrder.status,
-          escrowStatus:
-            activeOrder.transfer?.onHold === true
-              ? 'Funded'
-              : activeOrder.status === 'FUNDED_IN_ESCROW'
-                ? 'Funded'
-                : null,
-          deadline: activeOrder.deadline,
-          progressPercent: getWorkflowProgress(activeOrder.status)
-        }
-      : null;
+    const recommendedJobs = user.role === 'STUDENT_FREELANCER'
+      ? await prisma.job.findMany({
+          where: {
+            clientId: { not: user.id },
+            status: 'published',
+            isOpen: true,
+            isDeleted: false
+          },
+          select: {
+            id: true,
+            title: true,
+            budget: true,
+            fixedBudget: true,
+            minimumBudget: true,
+            maximumBudget: true,
+            skills: true,
+            createdAt: true
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 2
+        })
+      : [];
+
+    const discoveryCategory = user.role === 'CLIENT' ? 'Design' : null;
+
+    const topVerifiedGigs = user.role === 'CLIENT'
+      ? await prisma.gig.findMany({
+          where: {
+            status: 'PUBLISHED',
+            isDeleted: false,
+            category: { equals: discoveryCategory, mode: 'insensitive' },
+            seller: {
+              isBanned: false,
+              isSuspended: false,
+              verification: { status: 'APPROVED' }
+            }
+          },
+          select: {
+            id: true,
+            title: true,
+            coverImage: true,
+            seller: {
+              select: {
+                fullName: true,
+                averageRating: true,
+                profile: { select: { avatarUrl: true } }
+              }
+            },
+            packages: {
+              select: { price: true },
+              orderBy: { price: 'asc' },
+              take: 1
+            }
+          },
+          orderBy: [
+            { seller: { averageRating: 'desc' } },
+            { updatedAt: 'desc' }
+          ],
+          take: 6
+        })
+      : [];
+
+    const recommendedJobCards = recommendedJobs.map((job) => ({
+      id: job.id,
+      title: job.title,
+      estimatedBudget: Math.round(
+        Number(
+          job.fixedBudget ??
+          job.budget ??
+          job.maximumBudget ??
+          job.minimumBudget ??
+          0
+        )
+      ),
+      skills: Array.isArray(job.skills) ? job.skills.filter(Boolean).slice(0, 3) : [],
+      createdAt: job.createdAt
+    }));
+
+    const topVerifiedGigCards = topVerifiedGigs.map((gig) => ({
+      id: gig.id,
+      title: gig.title,
+      sellerName: gig.seller?.fullName || 'Verified student',
+      sellerAvatarUrl: gig.seller?.profile?.avatarUrl || null,
+      rating: Number(gig.seller?.averageRating || 0),
+      startingPrice: Math.round(Number(gig.packages?.[0]?.price || 0)),
+      coverImage: gig.coverImage || null
+    }));
 
     return res.json({
       id: user.id,
@@ -220,6 +281,9 @@ exports.getHomeState = async (req, res) => {
       hasGig: user._count.gigs > 0,
       hasProposal: user._count.bidsPlaced > 0,
       activeWorkspace,
+      recommendedJobs: recommendedJobCards,
+      discoveryCategory,
+      topVerifiedGigs: topVerifiedGigCards,
       isSuspended: Boolean(user.isSuspended),
       isBanned: Boolean(user.isBanned)
     });
