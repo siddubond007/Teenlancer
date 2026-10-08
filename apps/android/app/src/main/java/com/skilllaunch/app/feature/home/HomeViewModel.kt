@@ -26,7 +26,11 @@ class HomeViewModel(
         if (!forceRefresh && _uiState.value.home != null) return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.value = if (forceRefresh) {
+                HomeUiState(isLoading = true)
+            } else {
+                _uiState.value.copy(isLoading = true, errorMessage = null)
+            }
 
             repository.getHomeState()
                 .onSuccess { home ->
