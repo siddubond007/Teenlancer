@@ -484,10 +484,12 @@ model PayoutRequest {
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   amount      Float
   method      String
-  destination String
-  status      PayoutStatus @default(REQUESTED)
-  createdAt   DateTime     @default(now())
-  processedAt DateTime?
+  destination       String
+  status            PayoutStatus @default(REQUESTED)
+  providerReference String?
+  failureReason     String?
+  createdAt         DateTime     @default(now())
+  processedAt       DateTime?
 
   @@index([userId])
 }
