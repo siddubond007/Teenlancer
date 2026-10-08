@@ -360,6 +360,22 @@ exports.getHomeState = async (req, res) => {
       status: { in: ['OPEN', 'PUBLISHED', 'published'] },
       isOpen: true,
       isDeleted: false,
+      // Do not recommend work the student is already working on or has already proposed for.
+      orders: {
+        none: {
+          status: {
+            in: [
+              'PENDING_PAYMENT',
+              ...activeOrderStatuses
+            ]
+          }
+        }
+      },
+      bids: {
+        none: {
+          studentId: user.id
+        }
+      },
       ...(studentSkills.length || studentDomain
         ? {
             OR: [
@@ -397,20 +413,11 @@ exports.getHomeState = async (req, res) => {
       // onboarding signals, without inventing or fabricating marketplace data.
       if (recommendedJobs.length === 0 && (studentSkills.length || studentDomain)) {
         recommendedJobs = await prisma.job.findMany({
-          where: {
-            clientId: { not: user.id },
-            client: {
-              is: {
-                role: 'CLIENT',
-                isBanned: false,
-                isSuspended: false,
-                isDeleted: false
-              }
-            },
-            status: { in: ['OPEN', 'PUBLISHED', 'published'] },
-            isOpen: true,
-            isDeleted: false
-          },
+          where: (() => {
+            const fallback = { ...studentRecommendationWhere };
+            delete fallback.OR;
+            return fallback;
+          })(),
           select: {
             id: true,
             title: true,
