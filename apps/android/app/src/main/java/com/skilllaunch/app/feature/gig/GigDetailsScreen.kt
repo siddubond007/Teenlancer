@@ -154,7 +154,7 @@ private fun GigDetailsContent(gig: Gig?) {
                     contentDescription = gig.title.orEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .size(height = 220.dp, width = 1.dp),
+                        .height(220.dp),
                     contentScale = ContentScale.Crop
                 )
             }
