@@ -306,7 +306,7 @@ async function getOrCreateUsers() {
       skills: ['React Native', 'JavaScript', 'Mobile Development'],
       budget: 5000,
       fixedBudget: 5000,
-      status: 'published',
+      status: 'OPEN',
       isOpen: true,
       isDeleted: false,
       deletedAt: null
