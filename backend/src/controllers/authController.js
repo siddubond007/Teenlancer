@@ -182,7 +182,36 @@ exports.login = async (req, res) => {
           { username: { equals: cleanInput, mode: 'insensitive' } }
         ]
       },
-      include: { profile: true, wallet: true, verification: true }
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        fullName: true,
+        role: true,
+        isMinor: true,
+        age: true,
+        dob: true,
+        passwordHash: true,
+        isSuspended: true,
+        suspendedUntil: true,
+        isBanned: true,
+        isDeleted: true,
+        profile: {
+          select: {
+            avatarUrl: true,
+            tagline: true,
+            bio: true,
+            category: true,
+            skills: true,
+            onboardingCompleted: true,
+            onboardingStatus: true,
+            onboardingData: true
+          }
+        }
+      }
     });
     
     if (!user) {
@@ -202,6 +231,22 @@ exports.login = async (req, res) => {
       }
 
       return res.status(400).json({ error: 'Incorrect password. Please try again.' });
+    }
+
+    if (user.isDeleted) {
+      if (user.role === 'ADMIN') {
+        await createAdminLoginLog(
+          user.id,
+          user.email,
+          req.ip,
+          req.headers['user-agent'],
+          'FAILED_DELETED'
+        );
+      }
+
+      return res.status(403).json({
+        error: 'This account is no longer available.'
+      });
     }
 
     if (user.isBanned) {
