@@ -47,11 +47,13 @@ async function processMatureOrders() {
             where: { orderId: order.id }
           });
 
-          if (
-            transferRecord &&
-            transferRecord.razorpayTransferId &&
-            transferRecord.onHold
-          ) {
+          if (!transferRecord || !transferRecord.razorpayTransferId) {
+            throw new Error(
+              'ESCROW_RELEASE_NOT_COMPLETED: A verified Razorpay transfer is required before funds can be released.'
+            );
+          }
+
+          if (transferRecord.onHold || transferRecord.status !== 'RELEASED') {
             const releaseResult = await releaseTransfer(transferRecord);
 
             if (!releaseResult.released) {
@@ -59,7 +61,9 @@ async function processMatureOrders() {
                 `ESCROW_RELEASE_NOT_COMPLETED: ${releaseResult.reason}`
               );
             }
+          }
 
+          if (transferRecord.onHold || transferRecord.status !== 'RELEASED') {
             await tx.transfer.update({
               where: { id: transferRecord.id },
               data: {
@@ -97,18 +101,27 @@ async function processMatureOrders() {
             }
           });
 
-          await tx.wallet.upsert({
-            where: { userId: order.sellerId },
-            create: {
-              userId: order.sellerId,
-              availableBalance: order.sellerEarnings
-            },
-            update: {
-              availableBalance: {
-                increment: order.sellerEarnings
+          if (!transferRecord.walletCreditedAt) {
+            await tx.wallet.upsert({
+              where: { userId: order.sellerId },
+              create: {
+                userId: order.sellerId,
+                availableBalance: order.sellerEarnings
+              },
+              update: {
+                availableBalance: {
+                  increment: order.sellerEarnings
+                }
               }
-            }
-          });
+            });
+
+            await tx.transfer.update({
+              where: { id: transferRecord.id },
+              data: {
+                walletCreditedAt: new Date()
+              }
+            });
+          }
 
           await tx.user.update({
             where: { id: order.sellerId },
