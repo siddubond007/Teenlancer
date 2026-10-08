@@ -3,7 +3,6 @@ package com.skilllaunch.app.feature.onboarding
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -52,7 +51,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
@@ -62,7 +60,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.withContext
 
 private data class ProfileSetupColors(
     val background: Color,
@@ -613,31 +610,7 @@ private fun ProfilePhotoImage(
     imageUrl: String,
     modifier: Modifier
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    var bitmap by remember(imageUrl) { mutableStateOf<android.graphics.Bitmap?>(null) }
-
-    LaunchedEffect(imageUrl) {
-        bitmap = if (imageUrl.isBlank()) {
-            null
-        } else {
-            withContext(kotlinx.coroutines.Dispatchers.IO) {
-                runCatching {
-                    java.net.URL(imageUrl).openStream().use { stream ->
-                        android.graphics.BitmapFactory.decodeStream(stream)
-                    }
-                }.getOrNull()
-            }
-        }
-    }
-
-    if (bitmap != null) {
-        androidx.compose.foundation.Image(
-            bitmap = bitmap!!.asImageBitmap(),
-            contentDescription = "Profile photo",
-            modifier = modifier.clip(CircleShape),
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-        )
-    } else {
+    if (imageUrl.isBlank()) {
         Box(
             modifier = modifier
                 .clip(CircleShape)
@@ -649,7 +622,44 @@ private fun ProfilePhotoImage(
                 modifier = Modifier.size(50.dp)
             )
         }
+        return
     }
+
+    coil3.compose.SubcomposeAsyncImage(
+        model = imageUrl,
+        contentDescription = "Profile photo",
+        modifier = modifier.clip(CircleShape),
+        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+        loading = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF262629)),
+                contentAlignment = Alignment.Center
+            ) {
+                PersonGlyph(
+                    tint = Color(0xFF8B8B93),
+                    modifier = Modifier.size(50.dp)
+                )
+            }
+        },
+        error = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF262629)),
+                contentAlignment = Alignment.Center
+            ) {
+                PersonGlyph(
+                    tint = Color(0xFF8B8B93),
+                    modifier = Modifier.size(50.dp)
+                )
+            }
+        },
+        success = {
+            coil3.compose.SubcomposeAsyncImageContent()
+        }
+    )
 }
 
 @Composable
