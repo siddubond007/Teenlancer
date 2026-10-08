@@ -60,6 +60,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.SubcomposeAsyncImageContent
 
 private data class ProfileSetupColors(
     val background: Color,
@@ -657,7 +658,7 @@ private fun ProfilePhotoImage(
             }
         },
         success = {
-            coil3.compose.SubcomposeAsyncImageContent()
+            SubcomposeAsyncImageContent()
         }
     )
 }
