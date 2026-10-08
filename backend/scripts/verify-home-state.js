@@ -318,7 +318,7 @@ async function getOrCreateUsers() {
       category: 'Web Development',
       description: 'Local Home verification Job.',
       budget: 3000,
-      status: 'published',
+      status: 'OPEN',
       isOpen: true
     }
   });
@@ -356,7 +356,7 @@ async function getOrCreateUsers() {
       skills: ['React', 'Node.js'],
       budget: 5000,
       fixedBudget: 5000,
-      status: 'published',
+      status: 'OPEN',
       isOpen: true,
       isDeleted: false,
       deletedAt: null,
@@ -371,7 +371,7 @@ async function getOrCreateUsers() {
       skills: ['React', 'Node.js'],
       budget: 5000,
       fixedBudget: 5000,
-      status: 'published',
+      status: 'OPEN',
       isOpen: true,
       createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
     }
@@ -387,7 +387,7 @@ async function getOrCreateUsers() {
       skills: ['Figma', 'UI/UX'],
       budget: 3500,
       fixedBudget: 3500,
-      status: 'published',
+      status: 'OPEN',
       isOpen: true,
       isDeleted: false,
       deletedAt: null,
@@ -402,7 +402,7 @@ async function getOrCreateUsers() {
       skills: ['Figma', 'UI/UX'],
       budget: 3500,
       fixedBudget: 3500,
-      status: 'published',
+      status: 'OPEN',
       isOpen: true,
       createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000)
     }
@@ -496,20 +496,91 @@ async function getOrCreateUsers() {
     }
   });
 
-  const existingOrder = await prisma.order.findFirst({
+  const existingHomeOrders = await prisma.order.findMany({
     where: {
-      clientId: client.id,
-      sellerId: student.id,
-      requirements: '[HOME_VERIFY] Escrow test order'
+      requirements: {
+        startsWith: '[HOME_VERIFY]'
+      },
+      OR: [
+        { clientId: client.id },
+        { sellerId: student.id }
+      ]
     },
     select: { id: true }
   });
 
-  if (existingOrder) {
-    await prisma.transfer.deleteMany({ where: { orderId: existingOrder.id } });
-    await prisma.order.delete({ where: { id: existingOrder.id } });
+  const existingHomeOrderIds = existingHomeOrders.map((row) => row.id);
+
+  if (existingHomeOrderIds.length) {
+    await prisma.transfer.deleteMany({
+      where: { orderId: { in: existingHomeOrderIds } }
+    });
+    await prisma.deliverable.deleteMany({
+      where: { orderId: { in: existingHomeOrderIds } }
+    });
+    await prisma.message.deleteMany({
+      where: { orderId: { in: existingHomeOrderIds } }
+    });
+    await prisma.review.deleteMany({
+      where: { orderId: { in: existingHomeOrderIds } }
+    });
+    await prisma.dispute.deleteMany({
+      where: { orderId: { in: existingHomeOrderIds } }
+    });
+    await prisma.orderActivityEvent.deleteMany({
+      where: { orderId: { in: existingHomeOrderIds } }
+    });
+    await prisma.order.deleteMany({
+      where: { id: { in: existingHomeOrderIds } }
+    });
   }
 
+  // Student Phase 3 action queue fixture: urgent work due in four hours.
+  const studentActionOrder = await prisma.order.create({
+    data: {
+      clientId: client.id,
+      sellerId: student.id,
+      gigId: gig.id,
+      jobId: job.id,
+      totalAmount: 2800,
+      platformFee: 280,
+      sellerEarnings: 2520,
+      status: 'IN_PROGRESS',
+      deadline: new Date(Date.now() + 4 * 60 * 60 * 1000),
+      requirements: '[HOME_VERIFY] Student action queue order'
+    }
+  });
+
+  // Client Phase 3 action queue fixture: delivered work awaiting review.
+  const clientActionOrder = await prisma.order.create({
+    data: {
+      clientId: client.id,
+      sellerId: student.id,
+      gigId: gig.id,
+      jobId: job.id,
+      totalAmount: 2200,
+      platformFee: 220,
+      sellerEarnings: 1980,
+      status: 'DELIVERED',
+      deadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      autoApproveAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      requirements: '[HOME_VERIFY] Client action queue order'
+    }
+  });
+
+  await prisma.deliverable.create({
+    data: {
+      orderId: clientActionOrder.id,
+      fileUrls: ['https://example.com/home-verify-delivery.pdf'],
+      driveLinks: [],
+      message: 'Local Home verification delivery awaiting client review.',
+      version: 1,
+      reviewStatus: 'PENDING_REVIEW'
+    }
+  });
+
+  // The featured workspace stays two days away from delivery and is created last
+  // so Home's single featured workspace remains this order.
   const order = await prisma.order.create({
     data: {
       clientId: client.id,
@@ -534,6 +605,32 @@ async function getOrCreateUsers() {
     }
   });
 
+  // The notification dot is driven by real notification records even in QA.
+  await prisma.notification.deleteMany({
+    where: {
+      userId: {
+        in: [student.id, client.id]
+      }
+    }
+  });
+
+  await prisma.notification.createMany({
+    data: [
+      {
+        userId: student.id,
+        title: 'Deliverable reminder',
+        message: 'Your React Native Bug Fix delivery is due soon.',
+        type: 'ORDER_DEADLINE'
+      },
+      {
+        userId: client.id,
+        title: 'Delivery ready for review',
+        message: 'Amit S. submitted work for review.',
+        type: 'DELIVERY_REVIEW'
+      }
+    ]
+  });
+
   console.log('');
   console.log('HOME VERIFICATION DATA READY');
   console.log('--------------------------------');
@@ -551,6 +648,8 @@ async function getOrCreateUsers() {
   console.log('  Password: HomeVerify@2026');
   console.log('  Company:  Home Verification Studio');
   console.log('  Held escrow: ₹' + transfer.amount);
+  console.log('  Student action: deliverable due in 4 hours');
+  console.log('  Client action: review delivery, auto-approves in 3 days');
   console.log('');
   console.log('Expected Home API values:');
   console.log('  STUDENT financialSummary = 4750');
