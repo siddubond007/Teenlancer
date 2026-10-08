@@ -5,6 +5,7 @@ import com.skilllaunch.app.data.api.OrderApi
 import com.skilllaunch.app.data.model.auth.ApiErrorResponse
 import com.skilllaunch.app.data.model.order.OrderActionResponse
 import com.skilllaunch.app.data.model.order.OrderSummary
+import com.skilllaunch.app.data.model.order.OrderMessage
 import com.skilllaunch.app.data.model.order.SubmitDeliverableRequest
 import retrofit2.HttpException
 
@@ -33,6 +34,29 @@ class OrderRepository(
             .recoverCatching {
                 throw mapError(it, "Unable to submit the delivery.")
             }
+
+    suspend fun getMessages(orderId: String): Result<List<OrderMessage>> =
+        runCatching { api.getMessages(orderId) }
+            .recoverCatching {
+                throw mapError(it, "Unable to load conversation.")
+            }
+
+    suspend fun sendMessage(
+        orderId: String,
+        content: String,
+        fileUrl: String? = null
+    ): Result<OrderMessage> =
+        runCatching {
+            api.sendMessage(
+                orderId = orderId,
+                request = buildMap {
+                    if (content.trim().isNotBlank()) put("content", content.trim())
+                    if (!fileUrl.isNullOrBlank()) put("fileUrl", fileUrl.trim())
+                }
+            )
+        }.recoverCatching {
+            throw mapError(it, "Unable to send message.")
+        }
 
     suspend fun approveOrder(orderId: String): Result<OrderActionResponse> =
         runCatching { api.approveOrder(orderId) }
