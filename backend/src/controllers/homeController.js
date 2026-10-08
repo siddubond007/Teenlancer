@@ -176,6 +176,33 @@ exports.getHomeState = async (req, res) => {
       }
     };
 
+    const activeWorkspace = activeOrder
+      ? {
+          id: activeOrder.id,
+          title:
+            activeOrder.job?.title ||
+            activeOrder.gig?.title ||
+            'Active project',
+          counterpartName:
+            user.role === 'STUDENT_FREELANCER'
+              ? activeOrder.client?.fullName || 'Client'
+              : activeOrder.seller?.fullName || 'Student freelancer',
+          counterpartAvatarUrl:
+            user.role === 'CLIENT'
+              ? activeOrder.seller?.profile?.avatarUrl || null
+              : null,
+          status: activeOrder.status,
+          escrowStatus:
+            activeOrder.transfer?.onHold === true
+              ? 'Funded'
+              : activeOrder.status === 'FUNDED_IN_ESCROW'
+                ? 'Funded'
+                : null,
+          deadline: activeOrder.deadline,
+          progressPercent: getWorkflowProgress(activeOrder.status)
+        }
+      : null;
+
     const recommendedJobs = user.role === 'STUDENT_FREELANCER'
       ? await prisma.job.findMany({
           where: {
