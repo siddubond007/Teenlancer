@@ -838,7 +838,7 @@ private fun RecommendedJobCard(
                 )
                 Spacer(Modifier.weight(1f))
                 Surface(
-                    onClick = onOpenExplore,
+                    onClick = if (job.id.isNullOrBlank()) onOpenExplore else onOpenJob,
                     shape = RoundedCornerShape(10.dp),
                     color = Color.Transparent,
                     border = BorderStroke(1.dp, accent.copy(alpha = 0.85f))
