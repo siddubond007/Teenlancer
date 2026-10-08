@@ -372,7 +372,7 @@ private fun StudentJourneyCard(
             state.hasGig
         ),
         JourneyStepData(
-            Icons.Outlined.Send,
+            Icons.AutoMirrored.Outlined.Send,
             "Submit your first Proposal",
             if (state.hasProposal) "Your first proposal is already submitted."
             else "Find a great fit and introduce your approach.",
@@ -660,7 +660,7 @@ private fun StudentActiveOrderCard(
                             fontWeight = FontWeight.ExtraBold
                         )
                         Icon(
-                            Icons.Outlined.ArrowForward,
+                            Icons.AutoMirrored.Outlined.ArrowForward,
                             contentDescription = null,
                             modifier = Modifier.padding(start = 3.dp).size(16.dp),
                             tint = Color.White
@@ -999,7 +999,10 @@ private fun WorkspaceDeadline(
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            prefix + " " + relativeDeadline(deadline),
+            prefix + " " + relativeDeadline(
+                deadline = deadline,
+                tomorrowForDelivery = prefix == "Delivery expected"
+            ),
             modifier = Modifier.padding(start = 6.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall
@@ -1053,7 +1056,10 @@ private fun initials(name: String?): String =
         .joinToString("")
         .ifBlank { "T" }
 
-private fun relativeDeadline(deadline: String?): String {
+private fun relativeDeadline(
+    deadline: String?,
+    tomorrowForDelivery: Boolean = false
+): String {
     val target = deadline
         ?.let { runCatching { Instant.parse(it) }.getOrNull() }
         ?: return "pending"
@@ -1064,7 +1070,11 @@ private fun relativeDeadline(deadline: String?): String {
     return when {
         hours < 0 -> "overdue"
         hours < 24 -> "in " + hours.coerceAtLeast(1) + " hours"
-        else -> "in " + duration.toDays() + " days"
+        tomorrowForDelivery && hours < 48 -> "tomorrow"
+        else -> {
+            val days = ((hours + 23) / 24).coerceAtLeast(1)
+            "in " + days + " days"
+        }
     }
 }
 
