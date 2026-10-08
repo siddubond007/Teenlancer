@@ -91,6 +91,7 @@ fun AuthenticatedAppShell(
     homeRepository: HomeRepository,
     notificationRepository: NotificationRepository,
     jobRepository: JobRepository,
+    orderRepository: OrderRepository,
     onLogout: () -> Unit,
     onOpenOnboarding: () -> Unit,
     profileRefreshVersion: Int = 0,
