@@ -89,9 +89,7 @@ export default function OrderWorkspacePage({ currentUser }) {
            'https://student-marketplace-kg2f.onrender.com');
 
     const socket = createSocket(socketBaseUrl, {
-      auth: {
-        token
-      }
+      withCredentials: true
     });
 
     const handleNewMessage = (message) => {
