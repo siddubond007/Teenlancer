@@ -551,30 +551,41 @@ exports.rejectPayoutRequest = async (req, res) => {
   try {
     const { payoutId } = req.params;
 
-    const payout = await prisma.payoutRequest.findUnique({
-      where: { id: payoutId }
-    });
+    const result = await prisma.$transaction(async (tx) => {
+      const lockedPayouts = await tx.$queryRaw`
+        SELECT * FROM "PayoutRequest"
+        WHERE id = ${payoutId}
+        FOR UPDATE
+      `;
 
-    if (!payout) {
-      return res.status(404).json({ error: 'Payout request not found.' });
-    }
+      if (!lockedPayouts || lockedPayouts.length === 0) {
+        throw new Error('NOT_FOUND: Payout request not found.');
+      }
 
-    if (payout.status !== 'REQUESTED') {
-      return res.status(409).json({
-        error: 'Only newly requested payouts can be rejected before external processing begins.'
+      const payout = lockedPayouts[0];
+
+      if (payout.status !== 'REQUESTED') {
+        throw new Error('CONFLICT: Only newly requested payouts can be rejected before external processing begins.');
+      }
+
+      const wallet = await tx.wallet.findUnique({
+        where: { userId: payout.userId }
       });
-    }
 
-    await prisma.$transaction([
-      prisma.payoutRequest.update({
+      if (!wallet || wallet.pendingBalance < payout.amount) {
+        throw new Error('CONFLICT: The wallet pending balance cannot cover this payout return.');
+      }
+
+      await tx.payoutRequest.update({
         where: { id: payoutId },
         data: {
           status: 'REJECTED',
           processedAt: new Date(),
           failureReason: 'Rejected by admin'
         }
-      }),
-      prisma.wallet.update({
+      });
+
+      await tx.wallet.update({
         where: { userId: payout.userId },
         data: {
           pendingBalance: {
@@ -584,23 +595,38 @@ exports.rejectPayoutRequest = async (req, res) => {
             increment: payout.amount
           }
         }
-      })
-    ]);
+      });
 
+      return {
+        userId: payout.userId,
+        amount: payout.amount
+      };
+    });
 
-      await createAuditLog(
-        req.user.id,
-        "REJECT_PAYOUT",
-        payout.userId,
-        `Rejected payout of ${payout.amount}`
-      );
+    await createAuditLog(
+      req.user.id,
+      "REJECT_PAYOUT",
+      result.userId,
+      `Rejected payout of ${result.amount}`
+    );
 
     res.json({ message: 'Payout rejected and funds returned to wallet.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err.message?.startsWith('NOT_FOUND:')) {
+      return res.status(404).json({
+        error: err.message.replace('NOT_FOUND: ', '')
+      });
+    }
+
+    if (err.message?.startsWith('CONFLICT:')) {
+      return res.status(409).json({
+        error: err.message.replace('CONFLICT: ', '')
+      });
+    }
+
+    res.status(500).json({ error: 'Failed to reject payout.' });
   }
 };
-
 
 exports.getAllReviews = async (req, res) => {
   try {
