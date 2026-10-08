@@ -87,10 +87,8 @@ exports.getGigById = async (req, res) => {
             id: true,
             username: true,
             fullName: true,
-            age: true,
             averageRating: true,
             totalReviews: true,
-            points: true,
             profile: {
               select: {
                 avatarUrl: true,
