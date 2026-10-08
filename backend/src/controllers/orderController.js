@@ -138,7 +138,7 @@ exports.createOrder = async (req, res) => {
     });
   } catch (err) {
     console.error('Escrow Gateway Error:', err);
-    res.status(500).json({ error: 'Escrow gateway failure: ' + err.message });
+    res.status(500).json({ error: 'Escrow gateway failure: ' });
   }
 }
 
@@ -658,7 +658,7 @@ exports.getOrderById = async (req, res) => {
     res.json(order);
   } catch (err) {
     console.error('Get Order Workspace Error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -694,7 +694,7 @@ exports.getMyOrders = async (req, res) => {
     });
     res.json(orders);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -794,7 +794,7 @@ exports.submitDeliverable = async (req, res) => {
 
     res.json({ message: 'Deliverable submitted. 5-day review timer started.', deliverable, order: updatedOrder });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -904,7 +904,7 @@ exports.requestRevision = async (req, res) => {
       return res.status(400).json({ error: err.message.replace('BAD_REQUEST: ', '') });
     }
 
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1077,7 +1077,7 @@ exports.approveOrder = async (req, res) => {
   } catch (err) {
     if (err.message.includes('FORBIDDEN')) return res.status(403).json({ error: err.message.replace('FORBIDDEN: ', '') });
     if (err.message.includes('BAD_REQUEST')) return res.status(400).json({ error: err.message.replace('BAD_REQUEST: ', '') });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1123,7 +1123,7 @@ exports.getMessages = async (req, res) => {
 
     res.json(messages);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -1189,7 +1189,7 @@ exports.sendMessage = async (req, res) => {
 
     res.status(201).json(message);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
