@@ -48,7 +48,7 @@ exports.createGig = async (req, res) => {
     });
     res.status(201).json(gig);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -465,7 +465,7 @@ exports.getGigs = async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
