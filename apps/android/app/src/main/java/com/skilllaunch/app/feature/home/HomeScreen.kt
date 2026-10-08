@@ -130,6 +130,9 @@ fun HomeScreen(
                         onOpenDestination(AppDestination.OrderWorkspace(id))
                     }
                 },
+                onOpenActionOrder = { orderId ->
+                    onOpenDestination(AppDestination.OrderWorkspace(orderId))
+                },
                 onOpenJob = { jobId ->
                     onOpenDestination(AppDestination.JobDetails(jobId))
                 },
@@ -142,6 +145,9 @@ fun HomeScreen(
                     home.activeWorkspace?.id?.let { id ->
                         onOpenDestination(AppDestination.OrderWorkspace(id))
                     }
+                },
+                onOpenActionOrder = { orderId ->
+                    onOpenDestination(AppDestination.OrderWorkspace(orderId))
                 },
                 onOpenGig = { gigId ->
                     onOpenDestination(AppDestination.GigDetails(gigId))
@@ -306,6 +312,7 @@ private fun StudentHome(
     state: HomeState,
     modifier: Modifier,
     onOpenWorkspace: () -> Unit,
+    onOpenActionOrder: (String) -> Unit,
     onOpenJob: (String) -> Unit,
     onOpenExplore: () -> Unit
 ) {
@@ -320,7 +327,7 @@ private fun StudentHome(
                     items = state.actionQueue,
                     isStudent = true,
                     onAction = { item ->
-                        item.orderId?.let { onOpenWorkspace() }
+                        item.orderId?.let(onOpenActionOrder)
                     }
                 )
             }
@@ -1339,6 +1346,7 @@ private fun ClientHome(
     state: HomeState,
     modifier: Modifier,
     onOpenWorkspace: () -> Unit,
+    onOpenActionOrder: (String) -> Unit,
     onOpenGig: (String) -> Unit,
     onPostJob: () -> Unit
 ) {
@@ -1353,7 +1361,7 @@ private fun ClientHome(
                     items = state.actionQueue,
                     isStudent = false,
                     onAction = { item ->
-                        item.orderId?.let { onOpenWorkspace() }
+                        item.orderId?.let(onOpenActionOrder)
                     }
                 )
             }
