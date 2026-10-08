@@ -945,7 +945,13 @@ exports.approveOrder = async (req, res) => {
         where: { orderId }
       });
 
-      if (transferRecord?.razorpayTransferId && transferRecord.onHold) {
+      if (!transferRecord || !transferRecord.razorpayTransferId) {
+        throw new Error(
+          'ESCROW_RELEASE_NOT_COMPLETED: A verified Razorpay transfer is required before funds can be released.'
+        );
+      }
+
+      if (transferRecord.onHold || transferRecord.status !== 'RELEASED') {
         const releaseResult = await releaseTransfer(transferRecord);
 
         if (!releaseResult.released) {
@@ -953,7 +959,9 @@ exports.approveOrder = async (req, res) => {
             `ESCROW_RELEASE_NOT_COMPLETED: ${releaseResult.reason}`
           );
         }
+      }
 
+      if (transferRecord.onHold || transferRecord.status !== 'RELEASED') {
         await tx.transfer.update({
           where: { id: transferRecord.id },
           data: {
@@ -990,11 +998,24 @@ exports.approveOrder = async (req, res) => {
         });
       }
 
-      const updatedWallet = await tx.wallet.upsert({
-        where: { userId: order.sellerId },
-        create: { userId: order.sellerId, availableBalance: order.sellerEarnings },
-        update: { availableBalance: { increment: order.sellerEarnings } }
-      });
+      let updatedWallet;
+
+      if (!transferRecord.walletCreditedAt) {
+        updatedWallet = await tx.wallet.upsert({
+          where: { userId: order.sellerId },
+          create: { userId: order.sellerId, availableBalance: order.sellerEarnings },
+          update: { availableBalance: { increment: order.sellerEarnings } }
+        });
+
+        await tx.transfer.update({
+          where: { id: transferRecord.id },
+          data: { walletCreditedAt: new Date() }
+        });
+      } else {
+        updatedWallet = await tx.wallet.findUnique({
+          where: { userId: order.sellerId }
+        });
+      }
 
       await tx.user.update({
         where: { id: order.sellerId },
