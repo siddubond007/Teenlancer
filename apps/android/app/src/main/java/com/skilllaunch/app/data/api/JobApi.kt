@@ -33,7 +33,7 @@ interface JobApi {
         @Path("jobId") jobId: String
     ): Job
 
-    @POST("jobs/{jobId}/bids")
+    @POST("jobs/{jobId}/bid")
     suspend fun submitBid(
         @Path("jobId") jobId: String,
         @Body request: SubmitBidRequest
