@@ -411,6 +411,8 @@ model Order {
   autoApproveAt     DateTime?
   razorpayOrderId   String?
   razorpayPaymentId String?
+  razorpayRefundId  String?
+  refundStatus      String?
   transfer          Transfer?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
