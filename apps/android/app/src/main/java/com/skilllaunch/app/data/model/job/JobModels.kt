@@ -70,3 +70,21 @@ data class SubmittedBid(
     val deliveryDays: Int? = null,
     val status: String? = null
 )
+
+
+data class CreateJobRequest(
+    val title: String,
+    val category: String,
+    val projectType: String = "FIXED",
+    val description: String,
+    val skills: List<String> = emptyList(),
+    val budget: Double,
+    val timeline: String = "1_MONTH",
+    val visibility: String = "PUBLIC",
+    val status: String = "OPEN"
+)
+
+data class CreateJobResponse(
+    val message: String? = null,
+    val job: Job? = null
+)
