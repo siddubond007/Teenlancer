@@ -214,8 +214,59 @@ exports.getHomeState = async (req, res) => {
         }
       : null;
 
-    const recommendedJobs = user.role === 'STUDENT_FREELANCER'
-      ? await prisma.job.findMany({
+    const studentSkills = Array.isArray(onboardingData.selectedSkills)
+      ? onboardingData.selectedSkills.filter(
+          (value) => typeof value === 'string' && value.trim()
+        ).slice(0, 6)
+      : [];
+    const studentDomain =
+      typeof onboardingData.primaryDomain === 'string' &&
+      onboardingData.primaryDomain.trim()
+        ? onboardingData.primaryDomain.trim()
+        : null;
+
+    const studentRecommendationWhere = {
+      clientId: { not: user.id },
+      status: { in: ['OPEN', 'PUBLISHED', 'published'] },
+      isOpen: true,
+      isDeleted: false,
+      ...(studentSkills.length || studentDomain
+        ? {
+            OR: [
+              ...(studentSkills.length
+                ? [{ skills: { hasSome: studentSkills } }]
+                : []),
+              ...(studentDomain
+                ? [{ category: { contains: studentDomain, mode: 'insensitive' } }]
+                : [])
+            ]
+          }
+        : {})
+    };
+
+    let recommendedJobs = [];
+    if (user.role === 'STUDENT_FREELANCER') {
+      recommendedJobs = await prisma.job.findMany({
+        where: studentRecommendationWhere,
+        select: {
+          id: true,
+          title: true,
+          budget: true,
+          fixedBudget: true,
+          minimumBudget: true,
+          maximumBudget: true,
+          budgetType: true,
+          skills: true,
+          createdAt: true
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 2
+      });
+
+      // Keep the Home section useful when no current listing matches the student's
+      // onboarding signals, without inventing or fabricating marketplace data.
+      if (recommendedJobs.length === 0 && (studentSkills.length || studentDomain)) {
+        recommendedJobs = await prisma.job.findMany({
           where: {
             clientId: { not: user.id },
             status: { in: ['OPEN', 'PUBLISHED', 'published'] },
@@ -235,10 +286,20 @@ exports.getHomeState = async (req, res) => {
           },
           orderBy: { createdAt: 'desc' },
           take: 2
-        })
-      : [];
+        });
+      }
+    }
 
-    const discoveryCategory = user.role === 'CLIENT' ? 'Design' : null;
+    const discoveryCategory =
+      user.role === 'CLIENT'
+        ? (
+            Array.isArray(onboardingData.hiringCategories)
+              ? onboardingData.hiringCategories.find(
+                  (value) => typeof value === 'string' && value.trim()
+                )
+              : null
+          ) || 'Design'
+        : null;
 
     const topVerifiedGigs = user.role === 'CLIENT'
       ? await prisma.gig.findMany({
