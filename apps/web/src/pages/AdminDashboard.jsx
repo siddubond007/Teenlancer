@@ -98,10 +98,13 @@ export default function AdminDashboard({ currentUser }) {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetchAdminData();
-    }
+    API.get('/auth/me')
+      .then(res => {
+        if (res.data.user?.role === 'ADMIN') {
+          fetchAdminData();
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleAdminLogin = async (e) => {
@@ -119,7 +122,6 @@ export default function AdminDashboard({ currentUser }) {
         return;
       }
 
-      localStorage.setItem('token', res.data.token);
       confetti();
       setIsAdminLoggedIn(true);
       fetchAdminData();
