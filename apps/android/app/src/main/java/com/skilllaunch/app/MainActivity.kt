@@ -285,8 +285,9 @@ private fun SkillLaunchRoot(
             }
 
             state.isAuthenticated && state.user != null -> {
-                AuthenticatedAppShell(
-                    user = state.user!!,
+                androidx.compose.runtime.key(state.user!!.id) {
+                    AuthenticatedAppShell(
+                        user = state.user!!,
                     profileRepository = profileRepository,
                     gigRepository = gigRepository,
                     homeRepository = homeRepository,
@@ -299,8 +300,9 @@ private fun SkillLaunchRoot(
                     },
                     profileRefreshVersion = profileRefreshVersion,
                     themeState = themeState,
-                    onToggleTheme = onToggleTheme
-                )
+                        onToggleTheme = onToggleTheme
+                    )
+                }
             }
 
             showSignup.value -> {
