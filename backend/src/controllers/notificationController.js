@@ -2,27 +2,34 @@ const prisma = require('../config/db');
 
 exports.getMyNotifications = async (req, res) => {
   try {
-    const notifications = await prisma.notification.findMany({
-      where: {
-        userId: req.user.id
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 100
-    });
-
-    const unreadCount = notifications.filter(n => !n.isRead).length;
-
-    const stats = {
-      total: notifications.length,
-      unread: unreadCount,
-      read: notifications.length - unreadCount
-    };
+    const [notifications, total, unread] = await Promise.all([
+      prisma.notification.findMany({
+        where: {
+          userId: req.user.id
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: 100
+      }),
+      prisma.notification.count({
+        where: { userId: req.user.id }
+      }),
+      prisma.notification.count({
+        where: {
+          userId: req.user.id,
+          isRead: false
+        }
+      })
+    ]);
 
     res.json({
       notifications,
-      stats
+      stats: {
+        total,
+        unread,
+        read: total - unread
+      }
     });
   } catch (err) {
     res.status(500).json({ error: 'Request could not be completed.' });
