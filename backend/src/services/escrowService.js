@@ -1,8 +1,15 @@
 const Razorpay = require('razorpay');
 
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+
+if (!razorpayKeyId || !razorpayKeySecret) {
+  throw new Error('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be configured.');
+}
+
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key_for_dev',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret'
+  key_id: razorpayKeyId,
+  key_secret: razorpayKeySecret
 });
 
 async function releaseTransfer(transferRecord) {
@@ -27,13 +34,19 @@ async function releaseTransfer(transferRecord) {
     };
   }
 
-  await razorpay.transfers.edit(
-    transferRecord.razorpayTransferId,
-    { on_hold: false }
+  const remoteTransfer = await razorpay.transfers.fetch(
+    transferRecord.razorpayTransferId
   );
 
+  if (remoteTransfer?.on_hold === true) {
+    await razorpay.transfers.edit(
+      transferRecord.razorpayTransferId,
+      { on_hold: false }
+    );
+  }
+
   return {
-    released: true,
+    released: remoteTransfer?.on_hold !== true,
     razorpayTransferId: transferRecord.razorpayTransferId
   };
 }
