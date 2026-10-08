@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const authController = require('../controllers/authController');
 const { requireAuth } = require('../middlewares/authMiddleware');
 const prisma = require('../config/db');
+const { setAuthCookie, clearAuthCookie } = require('../utils/authCookie');
 
 async function createAdminLoginLog(adminId, email, ipAddress, userAgent, loginStatus) {
   try {
@@ -24,6 +25,7 @@ async function createAdminLoginLog(adminId, email, ipAddress, userAgent, loginSt
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/logout', authController.logout);
 router.get('/me', requireAuth, authController.getMe);
 
 // Direct Master Admin Unlock with Master Key
@@ -93,11 +95,21 @@ router.post('/admin-login', async (req, res) => {
       }
     });
 
-    const { passwordHash: _passwordHash, ...safeAdminUser } = adminUser;
+    setAuthCookie(res, token);
+
+    const safeAdminUser = {
+      id: adminUser.id,
+      username: adminUser.username,
+      email: adminUser.email,
+      firstName: adminUser.firstName,
+      lastName: adminUser.lastName,
+      fullName: adminUser.fullName,
+      role: adminUser.role
+    };
 
     res.json({
       message: 'Master Admin Access Granted',
-      token,
+      ...(req.get('X-SkillLaunch-Client') === 'web' ? {} : { token }),
       user: safeAdminUser
     });
   } catch (err) {
