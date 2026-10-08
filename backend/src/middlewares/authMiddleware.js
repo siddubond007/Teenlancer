@@ -14,8 +14,20 @@ exports.requireAuth = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({ error: 'Authentication required. Please sign in.' });
     }
-    if (!token) {
-      return res.status(401).json({ error: 'Invalid token format.' });
+
+    const usingCookieSession = !(
+      typeof req.headers.authorization === 'string' &&
+      req.headers.authorization.startsWith('Bearer ')
+    );
+
+    if (
+      usingCookieSession &&
+      ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) &&
+      req.get('X-SkillLaunch-Client') !== 'web'
+    ) {
+      return res.status(403).json({
+        error: 'Web session validation header required.'
+      });
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
@@ -69,10 +81,6 @@ exports.optionalAuth = async (req, res, next) => {
     const token = getAuthToken(req);
 
     // Public requests remain anonymous and continue normally.
-    if (!token) {
-      req.user = null;
-      return next();
-    }
     if (!token) {
       req.user = null;
       return next();
