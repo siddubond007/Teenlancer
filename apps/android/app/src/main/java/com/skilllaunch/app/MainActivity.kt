@@ -41,6 +41,7 @@ import com.skilllaunch.app.data.repository.auth.AuthRepository
 import com.skilllaunch.app.data.repository.gig.GigRepository
 import com.skilllaunch.app.data.repository.home.HomeRepository
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
+import com.skilllaunch.app.data.repository.notification.NotificationRepository
 import com.skilllaunch.app.feature.auth.AuthViewModel
 import com.skilllaunch.app.feature.auth.LoginScreen
 import com.skilllaunch.app.feature.auth.SignupScreen
@@ -142,6 +143,10 @@ private fun SkillLaunchRoot(
         ApiClient.uploadApi(sessionStore)
     }
 
+    val notificationApi = remember(sessionStore) {
+        ApiClient.notificationApi(sessionStore)
+    }
+
     val authRepository = remember(authApi, sessionStore) {
         AuthRepository(
             authApi = authApi,
@@ -165,6 +170,12 @@ private fun SkillLaunchRoot(
     val homeRepository = remember(homeApi) {
         HomeRepository(
             homeApi = homeApi
+        )
+    }
+
+    val notificationRepository = remember(notificationApi) {
+        NotificationRepository(
+            api = notificationApi
         )
     }
 
@@ -291,6 +302,7 @@ private fun SkillLaunchRoot(
                     profileRepository = profileRepository,
                     gigRepository = gigRepository,
                     homeRepository = homeRepository,
+                    notificationRepository = notificationRepository,
                     onLogout = authViewModel::logout,
                     onOpenOnboarding = {
                         val role = state.user?.role
