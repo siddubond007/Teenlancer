@@ -469,21 +469,31 @@ exports.completePayoutRequest = async (req, res) => {
       });
     }
 
-    const payout = await prisma.payoutRequest.findUnique({
-      where: { id: payoutId }
-    });
+    const result = await prisma.$transaction(async (tx) => {
+      const lockedPayouts = await tx.$queryRaw`
+        SELECT * FROM "PayoutRequest"
+        WHERE id = ${payoutId}
+        FOR UPDATE
+      `;
 
-    if (!payout) {
-      return res.status(404).json({ error: 'Payout request not found.' });
-    }
+      if (!lockedPayouts || lockedPayouts.length === 0) {
+        throw new Error('NOT_FOUND: Payout request not found.');
+      }
 
-    if (payout.status !== 'APPROVED_PROCESSING') {
-      return res.status(409).json({
-        error: 'Only a payout approved for processing can be completed.'
+      const payout = lockedPayouts[0];
+
+      if (payout.status !== 'APPROVED_PROCESSING') {
+        throw new Error('CONFLICT: Only a payout approved for processing can be completed.');
+      }
+
+      const wallet = await tx.wallet.findUnique({
+        where: { userId: payout.userId }
       });
-    }
 
-    const updatedPayout = await prisma.$transaction(async (tx) => {
+      if (!wallet || wallet.pendingBalance < payout.amount) {
+        throw new Error('CONFLICT: The wallet pending balance cannot cover this payout.');
+      }
+
       const updated = await tx.payoutRequest.update({
         where: { id: payoutId },
         data: {
@@ -503,25 +513,40 @@ exports.completePayoutRequest = async (req, res) => {
         }
       });
 
-      return updated;
+      return {
+        payout: updated,
+        userId: payout.userId,
+        amount: payout.amount
+      };
     });
 
     await createAuditLog(
       req.user.id,
       "COMPLETE_PAYOUT",
-      payout.userId,
-      `Payout of ${payout.amount} completed with provider reference ${providerReference}.`
+      result.userId,
+      `Payout of ${result.amount} completed with provider reference ${providerReference}.`
     );
 
     return res.json({
       message: 'Payout marked as completed and the pending wallet balance was reconciled.',
-      payout: updatedPayout
+      payout: result.payout
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err.message?.startsWith('NOT_FOUND:')) {
+      return res.status(404).json({
+        error: err.message.replace('NOT_FOUND: ', '')
+      });
+    }
+
+    if (err.message?.startsWith('CONFLICT:')) {
+      return res.status(409).json({
+        error: err.message.replace('CONFLICT: ', '')
+      });
+    }
+
+    res.status(500).json({ error: 'Failed to complete payout.' });
   }
 };
-
 exports.rejectPayoutRequest = async (req, res) => {
   try {
     const { payoutId } = req.params;
