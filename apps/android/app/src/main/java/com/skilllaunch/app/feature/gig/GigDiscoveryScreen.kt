@@ -24,10 +24,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +66,23 @@ fun GigDiscoveryScreen(
 
     val gigViewModel: GigViewModel = viewModel(factory = factory)
     val uiState by gigViewModel.uiState.collectAsStateWithLifecycleCompat()
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedCategory by rememberSaveable { mutableStateOf("All") }
+
+    val filteredGigs = remember(uiState.gigs, searchQuery, selectedCategory) {
+        val query = searchQuery.trim()
+        uiState.gigs.filter { gig ->
+            val matchesQuery = query.isBlank() || listOfNotNull(
+                gig.title,
+                gig.description,
+                gig.category,
+                gig.seller?.fullName
+            ).any { value -> value.contains(query, ignoreCase = true) }
+            val matchesCategory = selectedCategory == "All" ||
+                (gig.category?.contains(selectedCategory, ignoreCase = true) == true)
+            matchesQuery && matchesCategory
+        }
+    }
 
     LaunchedEffect(Unit) {
         gigViewModel.loadGigs()
@@ -178,36 +201,14 @@ fun GigDiscoveryScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
-                                Surface(
+                                OutlinedTextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = 14.dp)
-                                        .clip(RoundedCornerShape(18.dp)),
-                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
-                                    border = BorderStroke(
-                                        1.dp,
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                                    )
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(
-                                            horizontal = 15.dp,
-                                            vertical = 13.dp
-                                        ),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "⌕",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.titleLarge
-                                        )
-                                        Text(
-                                            text = "Search gigs, skills, categories...",
-                                            modifier = Modifier.padding(start = 10.dp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    }
+                                        .padding(top = 14.dp),
+                                    singleLine = true,
+                                    label = { Text("Search gigs, skills, categories") }
                                 }
 
                                 Row(
@@ -216,29 +217,54 @@ fun GigDiscoveryScreen(
                                         .padding(top = 12.dp),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    ExploreChip(text = "All")
-                                    ExploreChip(text = "Design")
-                                    ExploreChip(text = "Development")
-                                    ExploreChip(text = "AI / ML")
+                                    listOf("All", "Design", "Development", "AI / ML").forEach { category ->
+                                        FilterChip(
+                                            selected = selectedCategory == category,
+                                            onClick = { selectedCategory = category },
+                                            label = { Text(category) }
+                                        )
+                                    }
                                 }
                             }
                         }
 
                         item {
                             Text(
-                                text = uiState.gigs.size.toString() +
-                                    " published service" +
-                                    if (uiState.gigs.size == 1) "" else "s",
+                                text = filteredGigs.size.toString() +
+                                    " matching service" +
+                                    if (filteredGigs.size == 1) "" else "s",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.labelLarge
                             )
                         }
 
-                        items(
-                            items = uiState.gigs,
-                            key = { gig -> gig.id ?: gig.title.orEmpty() }
-                        ) { gig ->
-                            GigCard(gig)
+                        if (filteredGigs.isEmpty()) {
+                            item {
+                                OutlinedCard(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(18.dp)
+                                ) {
+                                    Column(Modifier.padding(16.dp)) {
+                                        Text(
+                                            "No matching gigs",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            "Try a different search or category.",
+                                            Modifier.padding(top = 4.dp),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            items(
+                                items = filteredGigs,
+                                key = { gig -> gig.id ?: gig.title.orEmpty() }
+                            ) { gig ->
+                                GigCard(gig)
+                            }
                         }
 
                         item {
