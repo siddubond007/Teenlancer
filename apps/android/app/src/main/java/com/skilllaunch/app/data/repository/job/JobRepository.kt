@@ -3,6 +3,8 @@ package com.skilllaunch.app.data.repository.job
 import com.google.gson.Gson
 import com.skilllaunch.app.data.api.JobApi
 import com.skilllaunch.app.data.model.auth.ApiErrorResponse
+import com.skilllaunch.app.data.model.job.CreateJobRequest
+import com.skilllaunch.app.data.model.job.CreateJobResponse
 import com.skilllaunch.app.data.model.job.JobListResponse
 import com.skilllaunch.app.data.model.job.SubmitBidRequest
 import com.skilllaunch.app.data.model.job.SubmitBidResponse
@@ -18,6 +20,13 @@ class JobRepository(
             api.getJobs(query = query?.trim()?.ifBlank { null })
         }.recoverCatching {
             throw mapError(it, "Unable to load available projects.")
+        }
+
+    suspend fun createJob(request: CreateJobRequest): Result<CreateJobResponse> =
+        runCatching {
+            api.createJob(request)
+        }.recoverCatching {
+            throw mapError(it, "Unable to create the project.")
         }
 
     suspend fun submitBid(
