@@ -158,9 +158,7 @@ exports.createReview = async (req, res) => {
     return res.status(201).json(review);
 
   } catch (err) {
-    return res.status(500).json({
-      error: err.message
-    });
+    return res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -188,8 +186,6 @@ exports.getUserReviews = async (req, res) => {
     res.json(reviews);
 
   } catch (err) {
-    res.status(500).json({
-      error: err.message
-    });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
