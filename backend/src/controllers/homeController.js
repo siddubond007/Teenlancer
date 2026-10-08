@@ -180,9 +180,13 @@ exports.getHomeState = async (req, res) => {
       ? {
           id: activeOrder.id,
           title:
-            activeOrder.job?.title ||
-            activeOrder.gig?.title ||
-            'Active project',
+            user.role === 'CLIENT'
+              ? activeOrder.gig?.title ||
+                activeOrder.job?.title ||
+                'Active project'
+              : activeOrder.job?.title ||
+                activeOrder.gig?.title ||
+                'Active project',
           counterpartName:
             user.role === 'STUDENT_FREELANCER'
               ? activeOrder.client?.fullName || 'Client'
