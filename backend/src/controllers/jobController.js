@@ -239,7 +239,15 @@ exports.getJobs = async (req, res) => {
     // Base constraints
     let where = {
       isOpen: true,
-      status: { in: ['OPEN', 'PUBLISHED', 'published'] }
+      status: { in: ['OPEN', 'PUBLISHED', 'published'] },
+      client: {
+        is: {
+          role: 'CLIENT',
+          isBanned: false,
+          isSuspended: false,
+          isDeleted: false
+        }
+      }
     };
 
     // Full-Text Search
@@ -422,8 +430,18 @@ exports.getMyProjects = async (req, res) => {
 exports.getJobById = async (req, res) => {
   try {
     const { jobId } = req.params;
-    const job = await prisma.job.findUnique({
-      where: { id: jobId },
+    const job = await prisma.job.findFirst({
+      where: {
+        id: jobId,
+        client: {
+          is: {
+            role: 'CLIENT',
+            isBanned: false,
+            isSuspended: false,
+            isDeleted: false
+          }
+        }
+      },
       include: {
         client: { select: { id: true, fullName: true, email: true } },
         bids: {
