@@ -7,6 +7,7 @@ import com.skilllaunch.app.data.api.GigApi
 import com.skilllaunch.app.data.api.HomeApi
 import com.skilllaunch.app.data.api.JobApi
 import com.skilllaunch.app.data.api.NotificationApi
+import com.skilllaunch.app.data.api.OrderApi
 import com.skilllaunch.app.data.api.UserApi
 import com.skilllaunch.app.data.api.UploadApi
 import okhttp3.OkHttpClient
@@ -51,6 +52,11 @@ object ApiClient {
     fun jobApi(sessionStore: SessionStore): JobApi {
         return createRetrofit(sessionStore)
             .create(JobApi::class.java)
+    }
+
+    fun orderApi(sessionStore: SessionStore): OrderApi {
+        return createRetrofit(sessionStore)
+            .create(OrderApi::class.java)
     }
 
     private fun createRetrofit(sessionStore: SessionStore): Retrofit {
