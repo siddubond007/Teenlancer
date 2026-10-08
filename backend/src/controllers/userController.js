@@ -120,7 +120,7 @@ exports.getFreelancers = async (req, res) => {
 
     res.json(safeFreelancers);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -159,7 +159,7 @@ exports.getMyProfile = async (req, res) => {
 
     return res.json(user);
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -203,7 +203,7 @@ exports.getUserProfile = async (req, res) => {
 
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -272,7 +272,7 @@ exports.updateProfile = async (req, res) => {
 
     res.json({ message: 'Profile updated successfully!', profile: updatedProfile });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -495,7 +495,7 @@ exports.addPortfolioItem = async (req, res) => {
 
     res.status(201).json({ message: 'Portfolio item added successfully!', portfolioItems: updatedItems });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
 
@@ -547,6 +547,6 @@ exports.submitVerification = async (req, res) => {
     });
   } catch (err) {
     console.error('Submit verification error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Request could not be completed.' });
   }
 };
