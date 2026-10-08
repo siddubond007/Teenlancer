@@ -138,7 +138,6 @@ export default function AdminDashboard({ currentUser }) {
 
     try {
       const res = await API.post('/auth/admin-login', { masterKey });
-      localStorage.setItem('token', res.data.token);
       confetti();
       setIsAdminLoggedIn(true);
       fetchAdminData();
