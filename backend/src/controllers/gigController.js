@@ -105,9 +105,7 @@ exports.getGigById = async (req, res) => {
             },
             verification: {
               select: {
-                status: true,
-                collegeIdStatus: true,
-                govtIdStatus: true
+                status: true
               }
             }
           }
