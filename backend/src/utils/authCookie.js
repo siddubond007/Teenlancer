@@ -11,7 +11,13 @@ function getAuthTokenFromCookieHeader(cookieHeader) {
     const [rawName, ...rawValue] = item.trim().split('=');
     if (rawName === AUTH_COOKIE_NAME) {
       const value = rawValue.join('=').trim();
-      return value ? decodeURIComponent(value) : null;
+      if (!value) return null;
+
+      try {
+        return decodeURIComponent(value);
+      } catch {
+        return null;
+      }
     }
   }
 
