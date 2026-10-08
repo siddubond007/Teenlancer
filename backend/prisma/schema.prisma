@@ -357,7 +357,7 @@ model Job {
   screeningQuestions  String[]  @default([])
   ndaRequired         Boolean   @default(false)
   currentStep         Int       @default(1)
-  status              String    @default("published")
+  status              String    @default("OPEN")
   isOpen              Boolean   @default(true)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @default(now()) @updatedAt
