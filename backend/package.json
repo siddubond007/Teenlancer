@@ -7,7 +7,8 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "worker": "node src/workers/escrowReleaseWorker.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:stage4-profile-nudges": "node scripts/create-stage4-profile-nudge-test-user.js"
   },
   "keywords": [],
   "author": "",
