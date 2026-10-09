@@ -71,7 +71,7 @@ exports.getHomeState = async (req, res) => {
           }
         },
         wallet: { select: { availableBalance: true } },
-        verification: { select: { status: true } },
+        verification: { select: { id: true, status: true, rejectionReason: true } },
         _count: { select: { gigs: true, bidsPlaced: true } }
       }
     });
@@ -234,6 +234,9 @@ exports.getHomeState = async (req, res) => {
         }
       : null;
 
+    const actionQueueNow = new Date();
+    const actionQueueDeadline = new Date(actionQueueNow.getTime() + 24 * 60 * 60 * 1000);
+
     const actionQueueOrders = user.role === 'STUDENT_FREELANCER'
       ? await prisma.order.findMany({
           where: {
@@ -241,76 +244,42 @@ exports.getHomeState = async (req, res) => {
             status: {
               in: [
                 'REQUIREMENTS_SUBMITTED',
-                'IN_PROGRESS',
-                'REVISION_REQUESTED'
+                'IN_PROGRESS'
               ]
             },
             deadline: {
-              gt: new Date(),
-              lte: new Date(Date.now() + 24 * 60 * 60 * 1000)
+              gt: actionQueueNow,
+              lte: actionQueueDeadline
             }
           },
           include: {
-            job: {
-              select: {
-                id: true,
-                title: true
-              }
-            },
-            gig: {
-              select: {
-                id: true,
-                title: true
-              }
-            }
+            job: { select: { id: true, title: true } },
+            gig: { select: { id: true, title: true } }
           },
-          orderBy: {
-            deadline: 'asc'
-          },
+          orderBy: { deadline: 'asc' },
           take: 3
         })
       : await prisma.order.findMany({
           where: {
             clientId: user.id,
             status: 'DELIVERED',
-            autoApproveAt: {
-              gt: new Date()
-            },
+            autoApproveAt: { gt: actionQueueNow },
             deliverables: {
-              some: {
-                reviewStatus: 'PENDING_REVIEW'
-              }
+              some: { reviewStatus: 'PENDING_REVIEW' }
             }
           },
           include: {
-            seller: {
-              select: {
-                id: true,
-                fullName: true
-              }
-            },
-            job: {
-              select: {
-                id: true,
-                title: true
-              }
-            },
-            gig: {
-              select: {
-                id: true,
-                title: true
-              }
-            }
+            seller: { select: { id: true, fullName: true } },
+            job: { select: { id: true, title: true } },
+            gig: { select: { id: true, title: true } }
           },
-          orderBy: {
-            autoApproveAt: 'asc'
-          },
+          orderBy: { autoApproveAt: 'asc' },
           take: 3
         });
 
-    const actionQueue = actionQueueOrders.map((order) => {
+    let actionQueue = actionQueueOrders.map((order) => {
       if (user.role === 'STUDENT_FREELANCER') {
-        const hours = formatHoursUntil(order.deadline, new Date());
+        const hours = formatHoursUntil(order.deadline, actionQueueNow);
         return {
           id: order.id,
           orderId: order.id,
@@ -322,7 +291,7 @@ exports.getHomeState = async (req, res) => {
         };
       }
 
-      const days = formatDaysUntil(order.autoApproveAt, new Date());
+      const days = formatDaysUntil(order.autoApproveAt, actionQueueNow);
       const sellerName = order.seller?.fullName || 'Student freelancer';
 
       return {
@@ -335,6 +304,88 @@ exports.getHomeState = async (req, res) => {
         dueAt: order.autoApproveAt
       };
     });
+
+    if (user.role === 'STUDENT_FREELANCER') {
+      const revisionOrders = await prisma.order.findMany({
+        where: {
+          sellerId: user.id,
+          status: 'REVISION_REQUESTED'
+        },
+        include: {
+          job: { select: { id: true, title: true } },
+          gig: { select: { id: true, title: true } }
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 2
+      });
+
+      const revisionActions = revisionOrders.map((order) => ({
+        id: order.id,
+        orderId: order.id,
+        type: 'REVISION_REQUESTED',
+        title: 'Changes requested on your work',
+        subtitle: getOrderTitle(order),
+        actionLabel: 'Resubmit Work',
+        dueAt: order.deadline
+      }));
+
+      // Revisions need immediate attention, so place them before upcoming deadlines.
+      actionQueue = [...revisionActions, ...actionQueue];
+
+      const verificationStatus = user.verification?.status;
+      if (verificationStatus === 'PENDING' || verificationStatus === 'REJECTED') {
+        actionQueue.push({
+          id: 'verification-' + user.verification.id,
+          orderId: null,
+          type: verificationStatus === 'REJECTED'
+            ? 'VERIFICATION_REJECTED'
+            : 'VERIFICATION_PENDING',
+          title: verificationStatus === 'REJECTED'
+            ? 'Identity verification needs an update'
+            : 'Identity verification is pending',
+          subtitle: verificationStatus === 'REJECTED'
+            ? user.verification.rejectionReason ||
+              'Review and update your identity verification details.'
+            : 'Check the current status of your verification request.',
+          actionLabel: verificationStatus === 'REJECTED'
+            ? 'Update Verification'
+            : 'Check Verification',
+          dueAt: null
+        });
+      }
+
+      // Keep a small, useful queue while allowing deadlines, revisions, and
+      // account verification to appear together.
+      actionQueue = actionQueue.slice(0, 6);
+    } else {
+      const pendingFundingOrders = await prisma.order.findMany({
+        where: {
+          clientId: user.id,
+          status: 'PENDING_PAYMENT',
+          customOffer: {
+            is: { status: 'ACCEPTED' }
+          }
+        },
+        include: {
+          job: { select: { id: true, title: true } },
+          gig: { select: { id: true, title: true } }
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 3
+      });
+
+      const fundingActions = pendingFundingOrders.map((order) => ({
+        id: order.id,
+        orderId: order.id,
+        type: 'FUND_ESCROW',
+        title: 'Fund your accepted custom offer',
+        subtitle: getOrderTitle(order),
+        actionLabel: 'Fund Escrow',
+        dueAt: order.createdAt
+      }));
+
+      actionQueue = [...actionQueue, ...fundingActions].slice(0, 6);
+    }
 
     const studentSkills = Array.isArray(onboardingData.selectedSkills)
       ? onboardingData.selectedSkills.filter(
