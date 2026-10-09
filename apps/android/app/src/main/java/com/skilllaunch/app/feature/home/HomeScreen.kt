@@ -28,13 +28,9 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.BusinessCenter
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.NotificationsNone
-import androidx.compose.material.icons.outlined.PersonOutline
-import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -670,88 +666,6 @@ private data class JourneyStepData(
     val complete: Boolean
 )
 
-@Composable
-private fun StudentJourneyCard(
-    state: HomeState,
-    accent: Color,
-    onOpenProfile: () -> Unit
-) {
-    val steps = listOf(
-        JourneyStepData(
-            Icons.Outlined.PersonOutline,
-            "Complete profile",
-            if (state.profileComplete) "Your skills, bio, and availability are ready."
-            else "Complete your skills, bio, and availability.",
-            state.profileComplete
-        ),
-        JourneyStepData(
-            Icons.Outlined.Image,
-            "Upload proof of work",
-            if (state.proofOfWorkComplete) "A portfolio link or sample is already attached."
-            else "Show clients what you can do with a real project.",
-            state.proofOfWorkComplete
-        ),
-        JourneyStepData(
-            Icons.Outlined.Storefront,
-            "Create your first Gig",
-            if (state.hasGig) "You have already created a Gig."
-            else "Package a skill into a fixed-price service.",
-            state.hasGig
-        ),
-        JourneyStepData(
-            Icons.AutoMirrored.Outlined.Send,
-            "Submit your first Proposal",
-            if (state.hasProposal) "Your first proposal is already submitted."
-            else "Find a great fit and introduce your approach.",
-            state.hasProposal
-        )
-    )
-
-    val completed = steps.count { it.complete }
-    val progress = completed / steps.size.toFloat()
-
-    Surface(
-        Modifier.fillMaxWidth(),
-        RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    completed.toString() + " of " + steps.size.toString() + " complete",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Spacer(Modifier.weight(1f))
-                LinearProgressIndicator(
-                    progress = { progress },
-                    Modifier.width(80.dp).height(8.dp).clip(RoundedCornerShape(50)),
-                    color = accent,
-                    trackColor = accent.copy(alpha = 0.10f)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    (progress * 100).toInt().toString() + "%",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Column(Modifier.padding(top = 13.dp)) {
-                steps.forEachIndexed { index, step ->
-                    JourneyStep(
-                        step = step,
-                        accent = accent,
-                        last = index == steps.lastIndex,
-                        onOpenProfile = onOpenProfile
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun JourneyStep(
@@ -1586,68 +1500,6 @@ private fun String?.toDisplayStatus(): String =
     }
 
 @Composable
-private fun EscrowEducationCard(accent: Color) {
-    Surface(
-        Modifier.fillMaxWidth(),
-        RoundedCornerShape(22.dp),
-        color = Color(0xFF101827),
-        contentColor = Color.White
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Surface(
-                Modifier.size(42.dp),
-                RoundedCornerShape(13.dp),
-                color = accent
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Outlined.Lock,
-                        null,
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-            Text(
-                "How Escrow Works",
-                Modifier.padding(top = 12.dp),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold
-            )
-            Text(
-                "Client funds are secured before you start. Payment is released when approved, so your work stays protected.",
-                Modifier.padding(top = 7.dp),
-                color = Color.White.copy(alpha = 0.78f),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Row(
-                Modifier.padding(top = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Outlined.Lock,
-                    null,
-                    Modifier.size(16.dp),
-                    tint = accent
-                )
-                Text(
-                    "Learn how you're protected",
-                    Modifier.padding(start = 7.dp),
-                    color = accent,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    " →",
-                    color = accent,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
-@Composable
 private fun ClientHome(
     state: HomeState,
     modifier: Modifier,
@@ -1757,80 +1609,6 @@ private fun ClientHome(
 }
 
 @Composable
-private fun TrustSafetyCard(accent: Color) {
-    Surface(
-        Modifier.fillMaxWidth(),
-        RoundedCornerShape(22.dp),
-        color = accent,
-        contentColor = Color.White
-    ) {
-        Box(Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .size(116.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 38.dp, y = (-26).dp)
-                    .background(Color.White.copy(alpha = 0.08f), CircleShape)
-            )
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .align(Alignment.CenterEnd)
-                    .offset(x = (-6).dp, y = 10.dp)
-                    .background(Color.White.copy(alpha = 0.10f), CircleShape)
-            )
-
-            Column(Modifier.padding(16.dp)) {
-                Surface(
-                    Modifier.size(42.dp),
-                    RoundedCornerShape(14.dp),
-                    color = Color.White.copy(alpha = 0.14f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Outlined.Shield,
-                            null,
-                            Modifier.size(24.dp),
-                            tint = Color.White
-                        )
-                    }
-                }
-                Text(
-                    "Hire with total confidence",
-                    Modifier.padding(top = 14.dp),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Text(
-                    "100% upfront escrow protection. You only pay for the work you approve.",
-                    Modifier.padding(top = 7.dp),
-                    color = Color.White.copy(alpha = 0.88f),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Row(
-                    Modifier.padding(top = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Outlined.Lock,
-                        null,
-                        Modifier.size(16.dp),
-                        tint = Color.White.copy(alpha = 0.92f)
-                    )
-                    Text(
-                        "Protected by Teenlancer Escrow",
-                        Modifier.padding(start = 7.dp),
-                        color = Color.White.copy(alpha = 0.88f),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-    }
-}
-@Composable
 private fun ClientBriefCard(
     accent: Color,
     onPostJob: () -> Unit
@@ -1933,90 +1711,7 @@ private fun SafetyPoint(text: String, accent: Color) {
 
 
 
-@Composable
-private fun ClientSupportCard(accent: Color) {
-    Surface(
-        Modifier.fillMaxWidth(),
-        RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.10f))
-    ) {
-        Row(
-            Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                Modifier.size(40.dp),
-                RoundedCornerShape(12.dp),
-                color = Color(0xFFFFFBEB)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Outlined.AutoAwesome,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = Color(0xFFB45309)
-                    )
-                }
-            }
-            Column(
-                Modifier.padding(start = 12.dp).weight(1f)
-            ) {
-                Text(
-                    "Built for first-time hiring",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Text(
-                    "Clear milestones and support at every step.",
-                    Modifier.padding(top = 3.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            Icon(
-                Icons.AutoMirrored.Outlined.ArrowForward,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(19.dp)
-            )
-        }
-    }
-}
 
-@Composable
-private fun HomeIntro(
-    accent: Color,
-    eyebrow: String,
-    title: String,
-    description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
-) {
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, Modifier.size(17.dp), tint = accent)
-            Text(
-                eyebrow.uppercase(Locale.US),
-                Modifier.padding(start = 7.dp),
-                color = accent,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.ExtraBold
-            )
-        }
-        Text(
-            title,
-            Modifier.padding(top = 8.dp),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.ExtraBold
-        )
-        Text(
-            description,
-            Modifier.padding(top = 6.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
-}
 
 @Composable
 private fun HomeLoading(modifier: Modifier) {
