@@ -911,7 +911,7 @@ private fun MarketplaceIntelligenceSection(
                         modifier = Modifier.weight(1f),
                         label = "CLICKS",
                         value = formatAnalyticsCount(analytics.totals.clicks),
-                        detail = "Purchase actions",
+                        detail = "Gig card taps",
                         accent = accent
                     )
                     PremiumMetricCard(
@@ -967,7 +967,7 @@ private fun MarketplaceIntelligenceSection(
                                         style = MaterialTheme.typography.bodySmall
                                     )
                                     Text(
-                                        "${formatAnalyticsCount(gig.clicks)} clicks · ${formatAnalyticsCount(gig.orders)} orders",
+                                        "${formatAnalyticsCount(gig.clicks)} card taps · ${formatAnalyticsCount(gig.orders)} orders",
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         style = MaterialTheme.typography.bodySmall
                                     )
