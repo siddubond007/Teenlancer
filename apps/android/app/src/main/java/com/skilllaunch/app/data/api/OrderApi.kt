@@ -19,6 +19,17 @@ interface OrderApi {
         @Path("orderId") orderId: String
     ): OrderSummary
 
+    @GET("orders/{orderId}/checkout-config")
+    suspend fun getCheckoutConfig(
+        @Path("orderId") orderId: String
+    ): com.skilllaunch.app.data.model.order.OrderCheckoutConfig
+
+    @POST("orders/{orderId}/verify-payment")
+    suspend fun verifyPayment(
+        @Path("orderId") orderId: String,
+        @Body request: Map<String, String>
+    ): OrderActionResponse
+
     @POST("orders/{orderId}/deliver")
     suspend fun submitDeliverable(
         @Path("orderId") orderId: String,
