@@ -16,7 +16,7 @@ lifecycleViewModelCompose = "2.11.0"
 coil = "3.3.0"
 media3 = "1.11.1"
 razorpayCheckout = "1.6.41"
-razorpayStandardCore = "1.7.18"
+razorpayStandardCore = "1.7.19"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
