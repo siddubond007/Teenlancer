@@ -150,6 +150,8 @@ app.use('/api/payouts', payoutRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/client/dashboard', clientDashboardRoutes);
 app.use('/api/home', homeRoutes);
+// Versioned Home APIs for the native mobile discovery and profile-nudge flows.
+app.use('/api/v1/home', homeRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Marketplace API running smoothly.' });
