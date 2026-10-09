@@ -261,6 +261,7 @@ exports.getHomeDiscovery = async (req, res) => {
       return res.json({
         role: user.role,
         discoveryCategory: null,
+        discoveryCategories: [],
         recommendedJobs: jobs.slice(0, 6).map(toRecommendedJob),
         topVerifiedGigs: []
       });
@@ -333,9 +334,8 @@ exports.getHomeDiscovery = async (req, res) => {
 
     return res.json({
       role: user.role,
-      discoveryCategory: hiringCategories.length > 1
-        ? null
-        : categories[0]?.name || hiringCategories[0] || null,
+      discoveryCategory: categories[0]?.name || hiringCategories[0] || null,
+      discoveryCategories: hiringCategories,
       recommendedJobs: [],
       topVerifiedGigs: gigs.map(toVerifiedGig)
     });
