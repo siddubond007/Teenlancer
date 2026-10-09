@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -33,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +48,10 @@ import coil3.compose.AsyncImage
 import com.skilllaunch.app.core.common.collectAsStateWithLifecycleCompat
 import com.skilllaunch.app.data.model.gig.Gig
 import com.skilllaunch.app.data.repository.gig.GigRepository
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.Locale
+import java.util.UUID
 
 @Composable
 fun GigDiscoveryScreen(
@@ -67,6 +72,9 @@ fun GigDiscoveryScreen(
     val uiState by gigViewModel.uiState.collectAsStateWithLifecycleCompat()
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedCategory by rememberSaveable { mutableStateOf("All") }
+    val listState = rememberLazyListState()
+    // Count each gig at most once per Explore screen session; backend event IDs make retries safe.
+    val reportedImpressions = remember { mutableSetOf<String>() }
 
     val filteredGigs = remember(uiState.gigs, searchQuery, selectedCategory) {
         val query = searchQuery.trim()
@@ -85,6 +93,36 @@ fun GigDiscoveryScreen(
 
     LaunchedEffect(Unit) {
         gigViewModel.loadGigs()
+    }
+
+    LaunchedEffect(listState, filteredGigs) {
+        // The first two LazyColumn items are the header and result count; gig cards follow.
+        val firstGigItemIndex = 2
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo.map { it.index }
+        }
+            .distinctUntilChanged()
+            .collect { visibleIndexes ->
+                visibleIndexes
+                    .asSequence()
+                    .filter { index ->
+                        index >= firstGigItemIndex &&
+                            index < firstGigItemIndex + filteredGigs.size
+                    }
+                    .mapNotNull { index -> filteredGigs.getOrNull(index - firstGigItemIndex)?.id }
+                    .distinct()
+                    .forEach { gigId ->
+                        if (reportedImpressions.add(gigId)) {
+                            val result = gigViewModel.recordAnalyticsEvent(
+                                gigId = gigId,
+                                type = "IMPRESSION",
+                                eventId = UUID.randomUUID().toString()
+                            )
+                            // Allow a later viewport update to retry if the event could not be sent.
+                            if (result.isFailure) reportedImpressions.remove(gigId)
+                        }
+                    }
+            }
     }
 
     Surface(
@@ -178,6 +216,7 @@ fun GigDiscoveryScreen(
 
                 else -> {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = 16.dp,
