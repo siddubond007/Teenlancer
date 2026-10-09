@@ -97,6 +97,7 @@ test('student discovery filters open jobs using saved skills', async () => {
   assert.deepEqual(capturedJobQuery.where.bids, {
     none: { studentId: 'student-1' }
   });
+  assert.equal(capturedJobQuery.where.visibility, 'PUBLIC');
   assert.equal(capturedJobQuery.take, 24);
 });
 
