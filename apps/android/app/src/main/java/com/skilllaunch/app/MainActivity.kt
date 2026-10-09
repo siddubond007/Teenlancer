@@ -61,6 +61,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        runCatching { Checkout.preload(applicationContext) }
 
         setContent {
             val systemDarkTheme = isSystemInDarkTheme()
