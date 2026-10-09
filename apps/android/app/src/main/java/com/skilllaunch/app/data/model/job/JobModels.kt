@@ -17,6 +17,8 @@ data class Job(
     val locationPreferences: String? = null,
     val languagePreferences: String? = null,
     val createdAt: String? = null,
+    val status: String? = null,
+    val isOpen: Boolean? = null,
     val client: JobClient? = null,
     val bids: List<JobBidCount> = emptyList(),
     val viewerBid: JobViewerBid? = null
@@ -28,7 +30,45 @@ data class JobClient(
 )
 
 data class JobBidCount(
-    val id: String? = null
+    val id: String? = null,
+    val studentId: String? = null,
+    val proposedAmount: Double? = null,
+    val deliveryDays: Int? = null,
+    val coverLetter: String? = null,
+    val status: String? = null,
+    val createdAt: String? = null,
+    val student: JobBidStudent? = null
+)
+
+data class JobBidStudent(
+    val id: String? = null,
+    val username: String? = null,
+    val fullName: String? = null,
+    val averageRating: Double? = null,
+    val totalReviews: Int = 0,
+    val profile: JobBidStudentProfile? = null,
+    val verification: JobBidStudentVerification? = null
+)
+
+data class JobBidStudentProfile(
+    val avatarUrl: String? = null,
+    val tagline: String? = null,
+    val category: String? = null,
+    val college: String? = null,
+    val hourlyRate: Double? = null,
+    val skills: List<String> = emptyList()
+)
+
+data class JobBidStudentVerification(
+    val status: String? = null,
+    val collegeIdStatus: String? = null,
+    val govtIdStatus: String? = null
+)
+
+data class JobBidActionResponse(
+    val success: Boolean = false,
+    val message: String? = null,
+    val bid: JobBidCount? = null
 )
 
 data class JobViewerBid(

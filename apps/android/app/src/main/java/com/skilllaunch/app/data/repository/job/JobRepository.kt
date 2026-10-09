@@ -30,6 +30,27 @@ class JobRepository(
             throw mapError(it, "Unable to load this project.")
         }
 
+    suspend fun getClientProject(jobId: String): Result<Job> =
+        runCatching {
+            api.getClientProject(jobId)
+        }.recoverCatching {
+            throw mapError(it, "Unable to load this project and its proposals.")
+        }
+
+    suspend fun shortlistBid(jobId: String, bidId: String): Result<String> =
+        runCatching {
+            api.shortlistBid(jobId, bidId).message ?: "Proposal shortlisted."
+        }.recoverCatching {
+            throw mapError(it, "Unable to shortlist this proposal.")
+        }
+
+    suspend fun rejectBid(jobId: String, bidId: String): Result<String> =
+        runCatching {
+            api.rejectBid(jobId, bidId).message ?: "Proposal rejected."
+        }.recoverCatching {
+            throw mapError(it, "Unable to reject this proposal.")
+        }
+
     suspend fun createJob(request: CreateJobRequest): Result<CreateJobResponse> =
         runCatching {
             api.createJob(request)

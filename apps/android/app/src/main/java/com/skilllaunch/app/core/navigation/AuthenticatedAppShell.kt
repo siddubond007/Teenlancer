@@ -59,6 +59,7 @@ import com.skilllaunch.app.data.repository.job.JobRepository
 import com.skilllaunch.app.data.repository.order.OrderRepository
 import com.skilllaunch.app.feature.job.JobDiscoveryScreen
 import com.skilllaunch.app.feature.job.JobDetailsScreen
+import com.skilllaunch.app.feature.job.ClientProjectDetailsScreen
 import com.skilllaunch.app.feature.job.PostJobScreen
 import com.skilllaunch.app.feature.order.OrdersScreen
 
@@ -67,6 +68,7 @@ sealed interface AppDestination : NavKey {
     data object Explore : AppDestination
     data class GigDetails(val gigId: String) : AppDestination
     data class JobDetails(val jobId: String) : AppDestination
+    data class ClientProjectDetails(val jobId: String) : AppDestination
     data object PostJob : AppDestination
     data object Orders : AppDestination
     data class OrderWorkspace(val orderId: String) : AppDestination
@@ -264,6 +266,13 @@ fun AuthenticatedAppShell(
                         )
                     }
 
+                    is AppDestination.ClientProjectDetails -> NavEntry(key) {
+                        ClientProjectDetailsScreen(
+                            jobId = key.jobId,
+                            repository = jobRepository
+                        )
+                    }
+
                     AppDestination.PostJob -> NavEntry(key) {
                         PostJobScreen(
                             repository = jobRepository,
@@ -354,6 +363,7 @@ private fun destinationTitle(destination: AppDestination): String = when (destin
     AppDestination.Explore -> "Explore"
     is AppDestination.GigDetails -> "Gig"
     is AppDestination.JobDetails -> "Project"
+    is AppDestination.ClientProjectDetails -> "Project proposals"
     AppDestination.PostJob -> "Post Job"
     AppDestination.Orders -> "Orders"
     is AppDestination.OrderWorkspace -> "Workspace"
@@ -367,6 +377,7 @@ private fun destinationIcon(destination: AppDestination): androidx.compose.ui.gr
     AppDestination.Explore -> Icons.Outlined.Explore
     is AppDestination.GigDetails -> Icons.Outlined.BusinessCenter
     is AppDestination.JobDetails -> Icons.Outlined.BusinessCenter
+    is AppDestination.ClientProjectDetails -> Icons.Outlined.BusinessCenter
     AppDestination.PostJob -> Icons.Outlined.BusinessCenter
     AppDestination.Orders -> Icons.Outlined.ReceiptLong
     is AppDestination.OrderWorkspace -> Icons.Outlined.ReceiptLong

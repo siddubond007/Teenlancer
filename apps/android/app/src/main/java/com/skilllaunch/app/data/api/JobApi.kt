@@ -3,6 +3,7 @@ package com.skilllaunch.app.data.api
 import com.skilllaunch.app.data.model.job.CreateJobRequest
 import com.skilllaunch.app.data.model.job.CreateJobResponse
 import com.skilllaunch.app.data.model.job.Job
+import com.skilllaunch.app.data.model.job.JobBidActionResponse
 import com.skilllaunch.app.data.model.job.JobListResponse
 import com.skilllaunch.app.data.model.job.SubmitBidRequest
 import com.skilllaunch.app.data.model.job.SubmitBidResponse
@@ -33,6 +34,23 @@ interface JobApi {
     suspend fun getPublicJob(
         @Path("jobId") jobId: String
     ): Job
+
+    @GET("jobs/{jobId}")
+    suspend fun getClientProject(
+        @Path("jobId") jobId: String
+    ): Job
+
+    @POST("jobs/{jobId}/shortlist-bid/{bidId}")
+    suspend fun shortlistBid(
+        @Path("jobId") jobId: String,
+        @Path("bidId") bidId: String
+    ): JobBidActionResponse
+
+    @POST("jobs/{jobId}/reject-bid/{bidId}")
+    suspend fun rejectBid(
+        @Path("jobId") jobId: String,
+        @Path("bidId") bidId: String
+    ): JobBidActionResponse
 
     @POST("jobs/{jobId}/bid")
     suspend fun submitBid(

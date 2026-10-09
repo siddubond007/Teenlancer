@@ -168,7 +168,7 @@ fun HomeScreen(
                     onOpenDestination(AppDestination.OrderWorkspace(id))
                 },
                 onOpenDashboardJob = { id ->
-                    onOpenDestination(AppDestination.JobDetails(id))
+                    onOpenDestination(AppDestination.ClientProjectDetails(id))
                 },
                 onActionQueueItem = handleActionQueueItem,
                 onOpenGig = { gigId ->
