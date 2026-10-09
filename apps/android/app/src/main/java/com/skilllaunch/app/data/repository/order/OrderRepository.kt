@@ -26,6 +26,31 @@ class OrderRepository(
                 throw mapError(it, "Unable to load this workspace.")
             }
 
+    suspend fun getCheckoutConfig(orderId: String): Result<com.skilllaunch.app.data.model.order.OrderCheckoutConfig> =
+        runCatching { api.getCheckoutConfig(orderId) }
+            .recoverCatching {
+                throw mapError(it, "Unable to prepare escrow checkout.")
+            }
+
+    suspend fun verifyPayment(
+        orderId: String,
+        razorpayOrderId: String,
+        razorpayPaymentId: String,
+        razorpaySignature: String
+    ): Result<OrderActionResponse> =
+        runCatching {
+            api.verifyPayment(
+                orderId,
+                mapOf(
+                    "razorpay_order_id" to razorpayOrderId,
+                    "razorpay_payment_id" to razorpayPaymentId,
+                    "razorpay_signature" to razorpaySignature
+                )
+            )
+        }.recoverCatching {
+            throw mapError(it, "Payment succeeded but escrow verification could not be completed.")
+        }
+
     suspend fun submitDeliverable(
         orderId: String,
         request: SubmitDeliverableRequest
