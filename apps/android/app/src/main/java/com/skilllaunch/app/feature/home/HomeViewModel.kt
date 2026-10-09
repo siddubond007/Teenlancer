@@ -10,6 +10,7 @@ import com.skilllaunch.app.data.model.home.HomeRecommendedJob
 import com.skilllaunch.app.data.model.home.HomeState
 import com.skilllaunch.app.data.model.home.ClientDashboardState
 import com.skilllaunch.app.data.repository.home.HomeRepository
+import retrofit2.HttpException
 import com.skilllaunch.app.data.repository.home.ClientDashboardRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,12 +23,14 @@ data class HomeUiState(
     val clientDashboard: ClientDashboardState? = null,
     val isClientDashboardLoading: Boolean = false,
     val clientDashboardErrorMessage: String? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isShowingCachedHome: Boolean = false
 )
 
 class HomeViewModel(
     private val repository: HomeRepository,
-    private val clientDashboardRepository: ClientDashboardRepository
+    private val clientDashboardRepository: ClientDashboardRepository,
+    private val userId: String
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -71,14 +74,26 @@ class HomeViewModel(
         }
 
         viewModelScope.launch {
-            _uiState.value = if (forceRefresh) {
-                HomeUiState(isLoading = true)
-            } else {
-                _uiState.value.copy(isLoading = true, errorMessage = null)
+            val currentHome = _uiState.value.home
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                isShowingCachedHome = currentHome != null && _uiState.value.isShowingCachedHome
+            )
+
+            // Render Room data immediately, then revalidate against the API.
+            if (currentHome == null) {
+                repository.getCachedHomeState(userId)?.let { cachedHome ->
+                    _uiState.value = _uiState.value.copy(
+                        home = cachedHome,
+                        isShowingCachedHome = true
+                    )
+                }
             }
 
-            repository.getHomeState()
-                .onSuccess { loadedHome ->
+            repository.getHomeState(userId)
+                .onSuccess { loadResult ->
+                    val loadedHome = loadResult.state
                     val isClient = loadedHome.role?.equals("CLIENT", ignoreCase = true) == true
                     val isStudent = loadedHome.role?.equals("STUDENT_FREELANCER", ignoreCase = true) == true
 
@@ -89,9 +104,13 @@ class HomeViewModel(
                         topVerifiedGigs = emptyList(),
                         discoveryCategory = null
                     )
-                    _uiState.value = HomeUiState(
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
                         home = home,
-                        isClientDashboardLoading = isClient
+                        isShowingCachedHome = loadResult.fromCache,
+                        isClientDashboardLoading = isClient,
+                        clientDashboardErrorMessage = null,
+                        errorMessage = null
                     )
 
                     _discoveryLoading.value = true
@@ -120,11 +139,30 @@ class HomeViewModel(
                     }
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isClientDashboardLoading = false,
-                        errorMessage = error.message ?: "Unable to load your Home right now."
-                    )
+                    val rejectedResponse = generateSequence(error) { it.cause }
+                        .filterIsInstance<HttpException>()
+                        .firstOrNull()
+                    if (rejectedResponse?.code() == 401 || rejectedResponse?.code() == 403) {
+                        // Do not leave cached account data on screen after the API rejects access.
+                        repository.clearCachedHomeState(userId)
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            home = null,
+                            isShowingCachedHome = false,
+                            isClientDashboardLoading = false,
+                            errorMessage = error.message ?: "Your session is no longer authorized."
+                        )
+                    } else {
+                        val hasSnapshot = _uiState.value.home != null
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            isClientDashboardLoading = false,
+                            isShowingCachedHome = hasSnapshot,
+                            errorMessage = if (hasSnapshot) null else {
+                                error.message ?: "Unable to load your Home right now."
+                            }
+                        )
+                    }
                 }
         }
     }
@@ -174,12 +212,13 @@ class HomeViewModel(
     companion object {
         fun factory(
             repository: HomeRepository,
-            clientDashboardRepository: ClientDashboardRepository
+            clientDashboardRepository: ClientDashboardRepository,
+            userId: String
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return HomeViewModel(repository, clientDashboardRepository) as T
+                    return HomeViewModel(repository, clientDashboardRepository, userId) as T
                 }
             }
     }
