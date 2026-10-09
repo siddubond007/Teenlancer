@@ -86,10 +86,6 @@ fun HomeScreen(
 ) {
     val viewModel: HomeViewModel = viewModel(
         key = "home-${user.id ?: "unknown"}",
-        factory = remember(homeRepository) { HomeViewModel.factory(homeRepository) }
-    )
-    val viewModel: HomeViewModel = viewModel(
-        key = "home-${user.id ?: "unknown"}",
         factory = remember(homeRepository, clientDashboardRepository) {
             HomeViewModel.factory(homeRepository, clientDashboardRepository)
         }
