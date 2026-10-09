@@ -186,18 +186,19 @@ private fun HomeTopBar(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp),
-        color = MaterialTheme.colorScheme.surface
+            .height(78.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 4.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
                 onClick = onOpenProfile,
-                modifier = Modifier.size(40.dp).clip(CircleShape),
+                modifier = Modifier.size(42.dp).clip(CircleShape),
                 shape = CircleShape,
                 color = accent
             ) {
@@ -967,10 +968,10 @@ private fun ActionQueueCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(24.dp))
             .background(background)
-            .border(1.dp, border, RoundedCornerShape(20.dp))
-            .padding(14.dp)
+            .border(1.dp, border, RoundedCornerShape(24.dp))
+            .padding(16.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1020,8 +1021,8 @@ private fun ActionQueueCard(
                     onClick = onAction,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 11.dp)
-                        .height(34.dp),
+                        .padding(top = 12.dp)
+                        .height(38.dp),
                     shape = RoundedCornerShape(10.dp),
                     color = Color.Transparent
                 ) {
@@ -1205,9 +1206,10 @@ private fun ClientActiveProjectCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(26.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
+        shadowElevation = 7.dp,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.20f))
     ) {
         if (workspace == null) {
             Stage2UnavailableCard(
