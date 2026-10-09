@@ -65,7 +65,7 @@ exports.getHomeAnalytics = async (req, res) => {
         gte: periodStart,
         lte: periodEnd
       },
-      type: { in: ['IMPRESSION', 'VIEW', 'PURCHASE_CLICK'] }
+      type: { in: ['IMPRESSION', 'VIEW', 'CLICK'] }
     };
     const orderWhere = {
       gigId: { in: gigIds },
@@ -100,7 +100,7 @@ exports.getHomeAnalytics = async (req, res) => {
 
       if (group.type === 'IMPRESSION') metrics.impressions = count;
       if (group.type === 'VIEW') metrics.views = count;
-      if (group.type === 'PURCHASE_CLICK') metrics.clicks = count;
+      if (group.type === 'CLICK') metrics.clicks = count;
     }
 
     const ordersByGig = new Map(
