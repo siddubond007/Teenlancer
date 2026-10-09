@@ -1842,7 +1842,7 @@ private fun ClientHome(
                 eyebrow = "VERIFIED TALENT",
                 title = discoveryCategory?.takeIf { it.isNotBlank() }?.let {
                     "Top talent in $it"
-                } ?: "Top verified freelancers",
+                } ?: "Top verified talent for your categories",
                 onViewAll = onOpenExplore
             )
         }
