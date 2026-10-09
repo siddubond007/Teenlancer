@@ -60,7 +60,7 @@ function buildSyntheticEvents(gigId, createdAtMillis) {
   const definitions = [
     { type: 'IMPRESSION', count: 24, intervalHours: 3, offsetHours: 1 },
     { type: 'VIEW', count: 8, intervalHours: 8, offsetHours: 2 },
-    { type: 'PURCHASE_CLICK', count: 3, intervalHours: 24, offsetHours: 3 }
+    { type: 'CLICK', count: 3, intervalHours: 24, offsetHours: 3 }
   ];
 
   return definitions.flatMap(({ type, count, intervalHours, offsetHours }) =>
@@ -265,7 +265,7 @@ async function main() {
       where: {
         gigId: gig.id,
         createdAt: { gte: periodStart },
-        type: { in: ['IMPRESSION', 'VIEW', 'PURCHASE_CLICK'] }
+        type: { in: ['IMPRESSION', 'VIEW', 'CLICK'] }
       },
       _count: { _all: true }
     });
@@ -283,7 +283,7 @@ async function main() {
     console.log('Rolling seven-day counts (includes database records in that window):');
     console.log('  Impressions: ' + (metrics.IMPRESSION || 0));
     console.log('  Views:       ' + (metrics.VIEW || 0));
-    console.log('  Clicks:      ' + (metrics.PURCHASE_CLICK || 0));
+    console.log('  Clicks:      ' + (metrics.CLICK || 0));
     console.log('\nIMPORTANT: these events are explicitly tagged synthetic test telemetry, not real client activity.');
     console.log('The script creates/updates only the dedicated Stage 5 test gig for this existing student.');
     console.log('After UI testing, run: npm run cleanup:stage5-analytics-gig');
