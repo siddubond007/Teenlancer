@@ -14,8 +14,7 @@ import java.io.IOException
 
 data class HomeStateLoadResult(
     val state: HomeState,
-    val fromCache: Boolean,
-    val cachedAtEpochMillis: Long? = null
+    val fromCache: Boolean
 )
 
 class HomeRepository(
@@ -117,8 +116,7 @@ class HomeRepository(
 
             HomeStateLoadResult(
                 state = state,
-                fromCache = true,
-                cachedAtEpochMillis = row.cachedAtEpochMillis
+                fromCache = true
             )
         } catch (_: Exception) {
             null
