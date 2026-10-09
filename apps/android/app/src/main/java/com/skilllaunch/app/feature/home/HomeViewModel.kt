@@ -10,9 +10,9 @@ import com.skilllaunch.app.data.model.home.HomeProfileNudge
 import com.skilllaunch.app.data.model.home.HomeRecommendedJob
 import com.skilllaunch.app.data.model.home.HomeState
 import com.skilllaunch.app.data.model.home.ClientDashboardState
+import com.skilllaunch.app.data.repository.home.ClientDashboardRepository
 import com.skilllaunch.app.data.repository.home.HomeRepository
 import retrofit2.HttpException
-import com.skilllaunch.app.data.repository.home.ClientDashboardRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,9 +26,7 @@ data class HomeUiState(
     val clientDashboardErrorMessage: String? = null,
     val errorMessage: String? = null,
     val isShowingCachedHome: Boolean = false,
-    val marketplaceAnalytics: HomeAnalyticsResponse? = null,
-    val isMarketplaceAnalyticsLoading: Boolean = false,
-    val marketplaceAnalyticsErrorMessage: String? = null
+    val marketplaceAnalytics: HomeAnalyticsResponse? = null
 )
 
 class HomeViewModel(
@@ -202,23 +200,11 @@ class HomeViewModel(
     }
 
     private suspend fun loadMarketplaceAnalytics() {
-        _uiState.value = _uiState.value.copy(
-            isMarketplaceAnalyticsLoading = true,
-            marketplaceAnalyticsErrorMessage = null
-        )
+        // If analytics fail to load, do not render a fabricated/zero-filled section.
         repository.getHomeAnalytics()
             .onSuccess { analytics ->
                 _uiState.value = _uiState.value.copy(
-                    marketplaceAnalytics = analytics,
-                    isMarketplaceAnalyticsLoading = false,
-                    marketplaceAnalyticsErrorMessage = null
-                )
-            }
-            .onFailure { error ->
-                _uiState.value = _uiState.value.copy(
-                    isMarketplaceAnalyticsLoading = false,
-                    marketplaceAnalyticsErrorMessage = error.message
-                        ?: "Marketplace analytics are temporarily unavailable."
+                    marketplaceAnalytics = analytics
                 )
             }
     }
