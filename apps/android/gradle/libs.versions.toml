@@ -16,6 +16,7 @@ lifecycleViewModelCompose = "2.11.0"
 coil = "3.3.0"
 media3 = "1.11.1"
 razorpayCheckout = "1.6.41"
+razorpayStandardCore = "1.7.18"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,6 +48,7 @@ androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", versi
 androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
 androidx-media3-ui-compose-material3 = { module = "androidx.media3:media3-ui-compose-material3", version.ref = "media3" }
 razorpay-checkout = { module = "com.razorpay:checkout", version.ref = "razorpayCheckout" }
+razorpay-standard-core = { module = "com.razorpay:standard-core", version.ref = "razorpayStandardCore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
