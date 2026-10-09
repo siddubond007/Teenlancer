@@ -64,6 +64,7 @@ import com.skilllaunch.app.core.common.collectAsStateWithLifecycleCompat
 import com.skilllaunch.app.core.navigation.AppDestination
 import com.skilllaunch.app.data.model.auth.AuthUser
 import com.skilllaunch.app.data.model.home.HomeActionQueueItem
+import com.skilllaunch.app.data.model.home.HomeAnalyticsResponse
 import com.skilllaunch.app.data.model.home.HomeGigRecommendation
 import com.skilllaunch.app.data.model.home.HomeProfileNudge
 import com.skilllaunch.app.data.model.home.HomeRecommendedJob
@@ -198,6 +199,7 @@ fun HomeScreen(
             role == "STUDENT_FREELANCER" -> StudentHome(
                 state = home,
                 showOfflineBanner = uiState.isShowingCachedHome,
+                marketplaceAnalytics = uiState.marketplaceAnalytics,
                 matchedJobs = matchedJobs,
                 discoveryLoading = discoveryLoading,
                 discoveryError = discoveryError,
@@ -669,6 +671,7 @@ private fun PremiumMetricCard(
 private fun StudentHome(
     state: HomeState,
     showOfflineBanner: Boolean,
+    marketplaceAnalytics: HomeAnalyticsResponse?,
     matchedJobs: List<HomeRecommendedJob>,
     discoveryLoading: Boolean,
     discoveryError: String?,
@@ -794,6 +797,16 @@ private fun StudentHome(
                 onOpenWorkspace = onOpenWorkspace
             )
         }
+
+        if ((marketplaceAnalytics?.publishedGigCount ?: 0) > 0) {
+            item {
+                MarketplaceIntelligenceSection(
+                    analytics = marketplaceAnalytics,
+                    accent = StudentAccent
+                )
+            }
+        }
+
         if (profileNudges.isNotEmpty() || !profileNudgesError.isNullOrBlank()) {
             item {
                 Stage2SectionTitle(
@@ -824,6 +837,162 @@ private fun StudentHome(
         }
     }
 }
+
+
+@Composable
+private fun MarketplaceIntelligenceSection(
+    analytics: HomeAnalyticsResponse,
+    accent: Color
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Stage2SectionTitle(
+            accent = accent,
+            eyebrow = "YOUR PUBLISHED GIGS",
+            title = "Marketplace Intelligence"
+        )
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 4.dp,
+            border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "CONVERSION RATE",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            String.format(Locale.US, "%.2f%%", analytics.totals.conversionRate),
+                            modifier = Modifier.padding(top = 3.dp),
+                            color = accent,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                    WorkspaceStatusPill(
+                        text = "${analytics.publishedGigCount} published",
+                        accent = accent
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    PremiumMetricCard(
+                        modifier = Modifier.weight(1f),
+                        label = "IMPRESSIONS",
+                        value = formatAnalyticsCount(analytics.totals.impressions),
+                        detail = "Gig cards shown",
+                        accent = accent
+                    )
+                    PremiumMetricCard(
+                        modifier = Modifier.weight(1f),
+                        label = "VIEWS",
+                        value = formatAnalyticsCount(analytics.totals.views),
+                        detail = "Gig details opened",
+                        accent = accent
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    PremiumMetricCard(
+                        modifier = Modifier.weight(1f),
+                        label = "CLICKS",
+                        value = formatAnalyticsCount(analytics.totals.clicks),
+                        detail = "Purchase actions",
+                        accent = accent
+                    )
+                    PremiumMetricCard(
+                        modifier = Modifier.weight(1f),
+                        label = "ORDERS",
+                        value = formatAnalyticsCount(analytics.totals.orders),
+                        detail = "Completed",
+                        accent = accent
+                    )
+                }
+
+                if (analytics.gigs.isNotEmpty()) {
+                    Text(
+                        "PUBLISHED GIG BREAKDOWN",
+                        color = accent,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(horizontal = 1.dp)
+                    ) {
+                        items(
+                            items = analytics.gigs,
+                            key = { it.gigId }
+                        ) { gig ->
+                            Surface(
+                                modifier = Modifier.width(250.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                                border = BorderStroke(1.dp, accent.copy(alpha = 0.14f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(13.dp),
+                                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Text(
+                                        gig.title.ifBlank { "Untitled gig" },
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        maxLines = 2
+                                    )
+                                    if (!gig.category.isNullOrBlank()) {
+                                        Text(
+                                            gig.category,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                    Text(
+                                        "${formatAnalyticsCount(gig.impressions)} impressions · ${formatAnalyticsCount(gig.views)} views",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        "${formatAnalyticsCount(gig.clicks)} clicks · ${formatAnalyticsCount(gig.orders)} orders",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        String.format(Locale.US, "%.2f%% conversion", gig.conversionRate),
+                                        color = accent,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Text(
+                    "Based on the last ${analytics.periodDays.coerceAtLeast(1)} days of recorded activity.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
+    }
+}
+
+private fun formatAnalyticsCount(value: Int): String =
+    NumberFormat.getIntegerInstance(Locale.US).format(value.coerceAtLeast(0))
 
 
 @Composable
