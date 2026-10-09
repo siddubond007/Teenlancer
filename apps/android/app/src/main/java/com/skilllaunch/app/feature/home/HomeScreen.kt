@@ -366,10 +366,10 @@ private fun PremiumHomeOverview(
     } else {
         "Find your next great collaborator"
     }
-    val supportingText = when {
-        isStudent -> foundationCount.toString() + " of 4 foundations completed"
-        workspace != null -> "Your active project is ready for its next milestone."
-        else -> state.topVerifiedGigs.size.toString() + " verified services in your talent radar"
+    val supportingText = if (isStudent) {
+        foundationCount.toString() + " of 4 foundations completed"
+    } else {
+        state.topVerifiedGigs.size.toString() + " verified services available to explore"
     }
 
     Surface(
@@ -1133,7 +1133,11 @@ private fun StudentActiveOrderCard(
                         )
                     }
                     WorkspaceStatusPill(
-                        text = workspace.escrowStatus ?: workspace.status.toDisplayStatus(),
+                        text = workspace.status
+                            ?.takeIf(String::isNotBlank)
+                            ?.toDisplayStatus()
+                            ?: workspace.escrowStatus?.takeIf(String::isNotBlank)
+                            ?: "Active",
                         accent = accent
                     )
                 }
