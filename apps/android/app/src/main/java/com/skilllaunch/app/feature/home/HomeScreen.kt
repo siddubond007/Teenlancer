@@ -476,7 +476,7 @@ private fun PremiumHomeOverview(
                         PremiumProgressRing(
                             progress = progress,
                             accent = accent,
-                            caption = if (workspace != null) "COMPLETE" else "READY"
+                            caption = if (workspace != null) "PROJECT" else "SETUP"
                         )
                     } else {
                         Surface(
