@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.skilllaunch.app.data.model.home.HomeState
+import com.skilllaunch.app.data.model.home.ClientDashboardState
 import com.skilllaunch.app.data.repository.home.HomeRepository
 import com.skilllaunch.app.data.repository.home.ClientDashboardRepository
 import kotlinx.coroutines.flow.MutableStateFlow
