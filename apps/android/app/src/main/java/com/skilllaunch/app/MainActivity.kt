@@ -359,7 +359,7 @@ private fun SkillLaunchRoot(
                 }
                 val matchingHomeSnapshot = cachedHome != null &&
                     cachedHome.id == userId &&
-                    cachedHome.role.equals(state.user?.role, ignoreCase = true) &&
+                    cachedHome.role?.equals(state.user?.role, ignoreCase = true) == true &&
                     cachedHome.role?.uppercase() in setOf("STUDENT_FREELANCER", "CLIENT")
 
                 if (matchingHomeSnapshot) {
