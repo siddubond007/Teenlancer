@@ -867,6 +867,7 @@ private fun ActionQueueSection(
     onAction: (HomeActionQueueItem) -> Unit
 ) {
     val accent = if (isStudent) Color(0xFFFBBF24) else Color(0xFFFDA48D)
+    val labelAccent = if (isStudent) Color(0xFF92400E) else Color(0xFFB9384A)
     val border = if (isStudent) {
         Color(0xFFF59E0B).copy(alpha = 0.38f)
     } else {
@@ -897,12 +898,12 @@ private fun ActionQueueSection(
                 modifier = Modifier
                     .width(13.dp)
                     .height(1.dp)
-                    .background(accent)
+                    .background(labelAccent)
             )
             Text(
                 if (isStudent) "NEEDS ATTENTION" else "ACTION REQUIRED",
                 modifier = Modifier.padding(start = 6.dp),
-                color = accent,
+                color = labelAccent,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.ExtraBold
             )
@@ -910,13 +911,13 @@ private fun ActionQueueSection(
             Surface(
                 modifier = Modifier.size(17.dp),
                 shape = CircleShape,
-                color = accent.copy(alpha = 0.10f),
-                border = BorderStroke(1.dp, accent.copy(alpha = 0.35f))
+                color = labelAccent.copy(alpha = 0.08f),
+                border = BorderStroke(1.dp, labelAccent.copy(alpha = 0.35f))
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         items.size.toString(),
-                        color = accent,
+                        color = labelAccent,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.ExtraBold
                     )
