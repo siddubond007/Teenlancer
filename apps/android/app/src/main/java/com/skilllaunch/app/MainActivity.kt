@@ -44,6 +44,7 @@ import com.skilllaunch.app.core.payment.PaymentCoordinator
 import com.skilllaunch.app.core.session.SessionStore
 import com.skilllaunch.app.data.repository.auth.AuthRepository
 import com.skilllaunch.app.data.repository.gig.GigRepository
+import com.skilllaunch.app.data.local.home.HomeCacheDatabase
 import com.skilllaunch.app.data.repository.home.HomeRepository
 import com.skilllaunch.app.data.repository.home.ClientDashboardRepository
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
@@ -245,9 +246,14 @@ private fun SkillLaunchRoot(
         )
     }
 
-    val homeRepository = remember(homeApi) {
+    val homeCacheDao = remember(context) {
+        HomeCacheDatabase.getInstance(context.applicationContext).homeCacheDao()
+    }
+
+    val homeRepository = remember(homeApi, homeCacheDao) {
         HomeRepository(
-            homeApi = homeApi
+            homeApi = homeApi,
+            cacheDao = homeCacheDao
         )
     }
 
