@@ -4,6 +4,7 @@ const orderController = require('../controllers/orderController');
 const { requireAuth } = require('../middlewares/authMiddleware');
 
 router.get('/', requireAuth, orderController.getMyOrders);
+router.get('/:orderId/checkout-config', requireAuth, orderController.getCheckoutConfig);
 router.get('/:orderId', requireAuth, orderController.getOrderById);
 router.post('/gig-purchase', requireAuth, orderController.createGigOrder);
 router.post('/:orderId/verify-payment', requireAuth, orderController.verifyPayment);
