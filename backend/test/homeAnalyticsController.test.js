@@ -69,10 +69,10 @@ test('Home analytics aggregates a rolling seven-day window across published stud
       return [
         { gigId: 'gig-1', type: 'IMPRESSION', _count: { _all: 100 } },
         { gigId: 'gig-1', type: 'VIEW', _count: { _all: 30 } },
-        { gigId: 'gig-1', type: 'PURCHASE_CLICK', _count: { _all: 10 } },
+        { gigId: 'gig-1', type: 'CLICK', _count: { _all: 10 } },
         { gigId: 'gig-2', type: 'IMPRESSION', _count: { _all: 50 } },
         { gigId: 'gig-2', type: 'VIEW', _count: { _all: 8 } },
-        { gigId: 'gig-2', type: 'PURCHASE_CLICK', _count: { _all: 5 } }
+        { gigId: 'gig-2', type: 'CLICK', _count: { _all: 5 } }
       ];
     }],
     ['order', 'groupBy', async (query) => {
@@ -113,7 +113,7 @@ test('Home analytics aggregates a rolling seven-day window across published stud
   assert.equal(capturedGigQuery.where.status, 'PUBLISHED');
   assert.equal(capturedGigQuery.where.isDeleted, false);
   assert.deepEqual(capturedEventQuery.where.gigId, { in: ['gig-1', 'gig-2'] });
-  assert.deepEqual(capturedEventQuery.where.type.in, ['IMPRESSION', 'VIEW', 'PURCHASE_CLICK']);
+  assert.deepEqual(capturedEventQuery.where.type.in, ['IMPRESSION', 'VIEW', 'CLICK']);
   assert.equal(capturedOrderQuery.where.status, 'COMPLETED');
 
   const periodStart = capturedEventQuery.where.createdAt.gte;
@@ -162,6 +162,63 @@ test('Home analytics returns honest empty metrics when the student has no publis
   });
   assert.deepEqual(response.body.gigs, []);
   assert.equal(aggregateCalls, 0);
+});
+
+test('Home analytics counts Explore card taps and excludes purchase-click events', async () => {
+  const response = createResponse();
+
+  await withPrismaStubs([
+    ['gig', 'findMany', async () => [
+      { id: 'gig-clicks', title: 'Card Click Test', category: 'Design' }
+    ]],
+    ['gigAnalyticsEvent', 'groupBy', async ({ where }) => {
+      assert.deepEqual(where.type.in, ['IMPRESSION', 'VIEW', 'CLICK']);
+      return [
+        { gigId: 'gig-clicks', type: 'IMPRESSION', _count: { _all: 20 } },
+        { gigId: 'gig-clicks', type: 'VIEW', _count: { _all: 6 } },
+        { gigId: 'gig-clicks', type: 'CLICK', _count: { _all: 3 } }
+      ];
+    }],
+    ['order', 'groupBy', async () => []]
+  ], async () => {
+    await getHomeAnalytics({
+      user: { id: 'student-clicks', role: 'STUDENT_FREELANCER' }
+    }, response);
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.totals.impressions, 20);
+  assert.equal(response.body.totals.views, 6);
+  assert.equal(response.body.totals.clicks, 3);
+  assert.equal(response.body.totals.orders, 0);
+  assert.equal(response.body.gigs[0].clicks, 3);
+});
+
+test('gig analytics event recorder accepts explicit CLICK events', async () => {
+  const response = createResponse();
+  let createdEvent;
+
+  await withPrismaStubs([
+    ['gig', 'findFirst', async () => ({ id: 'gig-public', sellerId: 'seller-1' })],
+    ['gigAnalyticsEvent', 'create', async ({ data }) => {
+      createdEvent = data;
+      return data;
+    }]
+  ], async () => {
+    await recordGigAnalytics({
+      params: { gigId: 'gig-public' },
+      body: {
+        type: 'CLICK',
+        eventId: 'explore-card-click-event-001'
+      },
+      user: { id: 'client-1', role: 'CLIENT' }
+    }, response);
+  });
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(response.body.recorded, true);
+  assert.equal(createdEvent.type, 'CLICK');
+  assert.equal(createdEvent.gigId, 'gig-public');
 });
 
 test('gig analytics event recorder accepts explicit impression events', async () => {
