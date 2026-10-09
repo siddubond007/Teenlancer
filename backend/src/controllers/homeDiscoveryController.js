@@ -202,6 +202,7 @@ exports.getHomeDiscovery = async (req, res) => {
               }
             },
             status: { in: ['OPEN', 'PUBLISHED', 'published'] },
+            visibility: 'PUBLIC',
             isOpen: true,
             isDeleted: false,
             orders: {
