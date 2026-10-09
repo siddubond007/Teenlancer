@@ -41,6 +41,9 @@ class HomeViewModel(
     private val _discoveryCategory = MutableStateFlow<String?>(null)
     val discoveryCategory: StateFlow<String?> = _discoveryCategory.asStateFlow()
 
+    private val _discoveryCategories = MutableStateFlow<List<String>>(emptyList())
+    val discoveryCategories: StateFlow<List<String>> = _discoveryCategories.asStateFlow()
+
     private val _discoveryLoading = MutableStateFlow(false)
     val discoveryLoading: StateFlow<Boolean> = _discoveryLoading.asStateFlow()
 
@@ -60,6 +63,7 @@ class HomeViewModel(
             _matchedJobs.value = emptyList()
             _matchedGigs.value = emptyList()
             _discoveryCategory.value = null
+            _discoveryCategories.value = emptyList()
             _discoveryError.value = null
             _discoveryLoading.value = false
             _profileNudges.value = emptyList()
@@ -131,6 +135,7 @@ class HomeViewModel(
                 _matchedJobs.value = discovery.recommendedJobs
                 _matchedGigs.value = discovery.topVerifiedGigs
                 _discoveryCategory.value = discovery.discoveryCategory
+                _discoveryCategories.value = discovery.discoveryCategories
                 _discoveryError.value = null
 
                 val currentState = _uiState.value
@@ -146,6 +151,7 @@ class HomeViewModel(
                 _matchedJobs.value = emptyList()
                 _matchedGigs.value = emptyList()
                 _discoveryCategory.value = null
+                _discoveryCategories.value = emptyList()
                 _discoveryError.value = error.message
                     ?: "Personalized discovery is temporarily unavailable."
             }
