@@ -2,6 +2,9 @@ package com.skilllaunch.app
 
 import android.app.Activity
 import android.os.Bundle
+import com.razorpay.Checkout
+import com.razorpay.PaymentData
+import com.razorpay.PaymentResultWithDataListener
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -32,10 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.skilllaunch.app.core.common.collectAsStateWithLifecycleCompat
 import com.skilllaunch.app.core.navigation.AuthenticatedAppShell
 import com.skilllaunch.app.core.network.ApiClient
+import com.skilllaunch.app.core.payment.PaymentCoordinator
 import com.skilllaunch.app.core.session.SessionStore
 import com.skilllaunch.app.data.repository.auth.AuthRepository
 import com.skilllaunch.app.data.repository.gig.GigRepository
@@ -52,7 +57,7 @@ import com.skilllaunch.app.ui.theme.SkillLaunchTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -363,6 +368,63 @@ private fun SkillLaunchRoot(
                 )
             }
         }
+    }
+
+    override fun onPaymentSuccess(razorpayPaymentId: String?, paymentData: PaymentData?) {
+        val localOrderId = PaymentCoordinator.takePendingOrderId() ?: return
+        val checkoutOrderId = paymentData?.orderId
+        val signature = paymentData?.signature
+
+        if (
+            razorpayPaymentId.isNullOrBlank() ||
+            checkoutOrderId.isNullOrBlank() ||
+            signature.isNullOrBlank()
+        ) {
+            PaymentCoordinator.publishVerificationResult(
+                orderId = localOrderId,
+                success = false,
+                message = "Razorpay returned incomplete payment details. Your order remains awaiting payment."
+            )
+            return
+        }
+
+        lifecycleScope.launch {
+            val repository = OrderRepository(
+                ApiClient.orderApi(SessionStore(applicationContext))
+            )
+            repository.verifyPayment(
+                orderId = localOrderId,
+                razorpayOrderId = checkoutOrderId,
+                razorpayPaymentId = razorpayPaymentId,
+                razorpaySignature = signature
+            ).onSuccess { response ->
+                PaymentCoordinator.publishVerificationResult(
+                    orderId = localOrderId,
+                    success = true,
+                    message = response.message ?: "Escrow funded successfully."
+                )
+            }.onFailure { error ->
+                PaymentCoordinator.publishVerificationResult(
+                    orderId = localOrderId,
+                    success = false,
+                    message = error.message
+                        ?: "Payment returned successfully, but verification is incomplete. Refresh Orders before trying again."
+                )
+            }
+        }
+    }
+
+    override fun onPaymentError(
+        errorCode: Int,
+        response: String?,
+        paymentData: PaymentData?
+    ) {
+        val localOrderId = PaymentCoordinator.takePendingOrderId() ?: return
+        PaymentCoordinator.publishVerificationResult(
+            orderId = localOrderId,
+            success = false,
+            message = "Payment was not completed. Your order is still awaiting payment."
+        )
     }
 }
 
