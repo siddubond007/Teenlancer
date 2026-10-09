@@ -427,8 +427,7 @@ private fun SkillLaunchRoot(
             }
         }
     }
-
-
+}
 
 @Composable
 private fun SessionCheckingScreen() {
