@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.skilllaunch.app.data.model.home.HomeDiscoveryResponse
+import com.skilllaunch.app.data.model.home.HomeAnalyticsResponse
 import com.skilllaunch.app.data.model.home.HomeGigRecommendation
 import com.skilllaunch.app.data.model.home.HomeProfileNudge
 import com.skilllaunch.app.data.model.home.HomeRecommendedJob
@@ -24,7 +25,10 @@ data class HomeUiState(
     val isClientDashboardLoading: Boolean = false,
     val clientDashboardErrorMessage: String? = null,
     val errorMessage: String? = null,
-    val isShowingCachedHome: Boolean = false
+    val isShowingCachedHome: Boolean = false,
+    val marketplaceAnalytics: HomeAnalyticsResponse? = null,
+    val isMarketplaceAnalyticsLoading: Boolean = false,
+    val marketplaceAnalyticsErrorMessage: String? = null
 )
 
 class HomeViewModel(
@@ -118,6 +122,7 @@ class HomeViewModel(
 
                     if (isStudent) {
                         viewModelScope.launch { loadProfileNudges() }
+                        viewModelScope.launch { loadMarketplaceAnalytics() }
                     }
 
                     if (isClient) {
@@ -194,6 +199,28 @@ class HomeViewModel(
                     ?: "Personalized discovery is temporarily unavailable."
             }
         _discoveryLoading.value = false
+    }
+
+    private suspend fun loadMarketplaceAnalytics() {
+        _uiState.value = _uiState.value.copy(
+            isMarketplaceAnalyticsLoading = true,
+            marketplaceAnalyticsErrorMessage = null
+        )
+        repository.getHomeAnalytics()
+            .onSuccess { analytics ->
+                _uiState.value = _uiState.value.copy(
+                    marketplaceAnalytics = analytics,
+                    isMarketplaceAnalyticsLoading = false,
+                    marketplaceAnalyticsErrorMessage = null
+                )
+            }
+            .onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isMarketplaceAnalyticsLoading = false,
+                    marketplaceAnalyticsErrorMessage = error.message
+                        ?: "Marketplace analytics are temporarily unavailable."
+                )
+            }
     }
 
     private suspend fun loadProfileNudges() {
