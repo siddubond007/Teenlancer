@@ -76,6 +76,12 @@ private class GigDetailsViewModel(
         }
     }
 
+    suspend fun recordAnalyticsEvent(
+        gigId: String,
+        type: String,
+        eventId: String
+    ): Result<Boolean> = repository.recordAnalyticsEvent(gigId, type, eventId)
+
     companion object {
         fun factory(repository: GigRepository): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
