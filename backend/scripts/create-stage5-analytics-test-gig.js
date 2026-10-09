@@ -243,6 +243,17 @@ async function main() {
     }
 
     const events = buildSyntheticEvents(gig.id, Date.now());
+    const fixtureEventPrefix = 'stage5-test-' + gig.id + '-';
+
+    // Refresh only the clearly tagged fixture events so repeat runs always fall
+    // inside the current rolling seven-day window. Real events are untouched.
+    await prisma.gigAnalyticsEvent.deleteMany({
+      where: {
+        gigId: gig.id,
+        eventId: { startsWith: fixtureEventPrefix }
+      }
+    });
+
     const eventInsert = await prisma.gigAnalyticsEvent.createMany({
       data: events,
       skipDuplicates: true
