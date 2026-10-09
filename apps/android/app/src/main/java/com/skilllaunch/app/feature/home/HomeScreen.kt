@@ -360,19 +360,15 @@ private fun PremiumHomeOverview(
         state.hasGig,
         state.hasProposal
     ).count { it }
-    val progress = when {
-        workspace != null -> workspace.progressPercent.coerceIn(0, 100) / 100f
-        isStudent -> foundationCount / 4f
-        else -> null
-    }
-    val title = workspace?.title ?: if (isStudent) {
+    val progress = if (isStudent) foundationCount / 4f else null
+    val title = if (isStudent) {
         "Build your freelance momentum"
     } else {
         "Find your next great collaborator"
     }
     val supportingText = when {
-        workspace != null -> "Keep your project moving forward, one milestone at a time."
         isStudent -> foundationCount.toString() + " of 4 foundations completed"
+        workspace != null -> "Your active project is ready for its next milestone."
         else -> state.topVerifiedGigs.size.toString() + " verified services in your talent radar"
     }
 
@@ -448,11 +444,7 @@ private fun PremiumHomeOverview(
                             .padding(end = 12.dp)
                     ) {
                         Text(
-                            when {
-                                workspace != null -> if (isStudent) "PROJECT COMPLETION" else "PROJECT VELOCITY"
-                                isStudent -> "PROFILE READINESS"
-                                else -> "TALENT RADAR"
-                            },
+                            if (isStudent) "PROFILE READINESS" else "TALENT RADAR",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.ExtraBold
@@ -476,7 +468,7 @@ private fun PremiumHomeOverview(
                         PremiumProgressRing(
                             progress = progress,
                             accent = accent,
-                            caption = if (workspace != null) "PROJECT" else "SETUP"
+                            caption = "SETUP"
                         )
                     } else {
                         Surface(
@@ -605,14 +597,6 @@ private fun StudentHome(
         contentPadding = PaddingValues(18.dp, 15.dp, 18.dp, 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item {
-            PremiumHomeOverview(
-                state = state,
-                isStudent = true,
-                accent = StudentAccent
-            )
-        }
-
         if (state.actionQueue.isNotEmpty()) {
             item {
                 ActionQueueSection(
@@ -623,6 +607,14 @@ private fun StudentHome(
                     }
                 )
             }
+        }
+
+        item {
+            PremiumHomeOverview(
+                state = state,
+                isStudent = true,
+                accent = StudentAccent
+            )
         }
 
         item {
@@ -883,15 +875,15 @@ private fun ActionQueueSection(
     val background = if (isStudent) {
         Brush.linearGradient(
             listOf(
-                Color(0xFF78350F).copy(alpha = 0.42f),
-                Color(0xFF291A14).copy(alpha = 0.72f)
+                Color(0xFF6B430C),
+                Color(0xFF33220E)
             )
         )
     } else {
         Brush.linearGradient(
             listOf(
-                Color(0xFF662B32).copy(alpha = 0.43f),
-                Color(0xFF2B1A20).copy(alpha = 0.76f)
+                Color(0xFF713640),
+                Color(0xFF352027)
             )
         )
     }
@@ -1253,7 +1245,7 @@ private fun ClientActiveProjectCard(
                 WorkspaceDeadline(workspace.deadline, prefix = "Delivery expected")
                 Surface(
                     onClick = onOpenWorkspace,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     shape = RoundedCornerShape(12.dp),
                     color = accent
                 ) {
@@ -1674,14 +1666,6 @@ private fun ClientHome(
         contentPadding = PaddingValues(18.dp, 15.dp, 18.dp, 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item {
-            PremiumHomeOverview(
-                state = state,
-                isStudent = false,
-                accent = ClientAccent
-            )
-        }
-
         if (state.actionQueue.isNotEmpty()) {
             item {
                 ActionQueueSection(
@@ -1692,6 +1676,14 @@ private fun ClientHome(
                     }
                 )
             }
+        }
+
+        item {
+            PremiumHomeOverview(
+                state = state,
+                isStudent = false,
+                accent = ClientAccent
+            )
         }
 
         item {
