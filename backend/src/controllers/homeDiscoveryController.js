@@ -333,7 +333,9 @@ exports.getHomeDiscovery = async (req, res) => {
 
     return res.json({
       role: user.role,
-      discoveryCategory: categories[0]?.name || hiringCategories[0] || null,
+      discoveryCategory: hiringCategories.length > 1
+        ? null
+        : categories[0]?.name || hiringCategories[0] || null,
       recommendedJobs: [],
       topVerifiedGigs: gigs.map(toVerifiedGig)
     });
