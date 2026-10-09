@@ -554,10 +554,8 @@ exports.verifyPayment = async (req, res) => {
 };
 
 
-// Get a single Order Workspace
-// Return public checkout parameters for an existing accepted custom-offer order.
- // Payment orders are created on the server as part of the custom-offer flow. Never create
- // a Razorpay order or accept client-supplied amount/key details from the Android app here.
+// Return public checkout parameters for a server-created payment order.
+// Never create a Razorpay order or accept client-supplied amount/key details from the Android app here.
  exports.getCheckoutConfig = async (req, res) => {
    try {
      const { orderId } = req.params;
@@ -589,12 +587,9 @@ exports.verifyPayment = async (req, res) => {
        return res.status(403).json({ error: 'Only the purchasing client can fund this order.' });
      }
 
-     if (
-       order.status !== 'PENDING_PAYMENT' ||
-       order.customOffer?.status !== 'ACCEPTED'
-     ) {
+     if (order.status !== 'PENDING_PAYMENT') {
        return res.status(409).json({
-         error: 'This accepted custom offer is not awaiting payment.'
+         error: 'This order is not awaiting payment.'
        });
      }
 
