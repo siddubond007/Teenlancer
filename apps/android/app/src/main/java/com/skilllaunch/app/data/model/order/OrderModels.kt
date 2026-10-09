@@ -70,3 +70,18 @@ data class OrderMessage(
     val createdAt: String? = null,
     val sender: OrderPerson? = null
 )
+
+
+data class OrderCheckoutConfig(
+    val orderId: String = "",
+    val razorpayOrderId: String = "",
+    val keyId: String = "",
+    val amountPaise: Long = 0L,
+    val currency: String = "INR",
+    val name: String = "SkillLaunch",
+    val description: String = "Fund escrow for your accepted custom offer",
+    val isTestMode: Boolean = false,
+    val prefillName: String? = null,
+    val prefillEmail: String? = null,
+    val prefillContact: String? = null
+)
