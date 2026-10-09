@@ -6,6 +6,7 @@ import com.skilllaunch.app.data.local.home.HomeCacheDao
 import com.skilllaunch.app.data.local.home.HomeCacheEntity
 import com.skilllaunch.app.data.model.auth.ApiErrorResponse
 import com.skilllaunch.app.data.model.home.HomeDiscoveryResponse
+import com.skilllaunch.app.data.model.home.HomeAnalyticsResponse
 import com.skilllaunch.app.data.model.home.HomeProfileNudge
 import com.skilllaunch.app.data.model.home.HomeState
 import retrofit2.HttpException
@@ -92,6 +93,11 @@ class HomeRepository(
     suspend fun getHomeDiscovery(): Result<HomeDiscoveryResponse> =
         executeRequest("Personalized discovery is temporarily unavailable.") {
             homeApi.getHomeDiscovery()
+        }
+
+    suspend fun getHomeAnalytics(): Result<HomeAnalyticsResponse> =
+        executeRequest("Marketplace analytics are temporarily unavailable.") {
+            homeApi.getHomeAnalytics()
         }
 
     suspend fun getProfileNudges(): Result<List<HomeProfileNudge>> =
