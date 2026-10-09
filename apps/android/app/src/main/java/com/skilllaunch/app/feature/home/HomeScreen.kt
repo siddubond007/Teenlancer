@@ -309,6 +309,278 @@ private fun FinancialPill(state: HomeState, accent: Color) {
 }
 
 @Composable
+private fun PremiumProgressRing(
+    progress: Float,
+    accent: Color,
+    caption: String
+) {
+    val safeProgress = progress.coerceIn(0f, 1f)
+    Box(
+        modifier = Modifier.size(88.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            progress = { 1f },
+            modifier = Modifier.fillMaxSize(),
+            color = accent.copy(alpha = 0.16f),
+            strokeWidth = 7.dp
+        )
+        CircularProgressIndicator(
+            progress = { safeProgress },
+            modifier = Modifier.fillMaxSize(),
+            color = accent,
+            strokeWidth = 7.dp
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                (safeProgress * 100).toInt().toString() + "%",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                caption,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun PremiumHomeOverview(
+    state: HomeState,
+    isStudent: Boolean,
+    accent: Color
+) {
+    val workspace = state.activeWorkspace
+    val foundationCount = listOf(
+        state.profileComplete,
+        state.proofOfWorkComplete,
+        state.hasGig,
+        state.hasProposal
+    ).count { it }
+    val progress = when {
+        workspace != null -> workspace.progressPercent.coerceIn(0, 100) / 100f
+        isStudent -> foundationCount / 4f
+        else -> null
+    }
+    val title = workspace?.title ?: if (isStudent) {
+        "Build your freelance momentum"
+    } else {
+        "Find your next great collaborator"
+    }
+    val supportingText = when {
+        workspace != null -> "Keep your project moving forward, one milestone at a time."
+        isStudent -> foundationCount.toString() + " of 4 foundations completed"
+        else -> state.topVerifiedGigs.size.toString() + " verified services in your talent radar"
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.20f))
+    ) {
+        Box {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(156.dp)
+                    .offset(x = 62.dp, y = (-66).dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(
+                                accent.copy(alpha = 0.22f),
+                                accent.copy(alpha = 0.07f),
+                                Color.Transparent
+                            )
+                        ),
+                        CircleShape
+                    )
+            )
+            Column(Modifier.padding(18.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            if (isStudent) "YOUR MOMENTUM" else "YOUR COMMAND CENTER",
+                            color = accent,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            if (isStudent) "Make every project count" else "Bring your next idea to life",
+                            modifier = Modifier.padding(top = 4.dp),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Surface(
+                        modifier = Modifier.size(38.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        color = accent.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, accent.copy(alpha = 0.20f))
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Outlined.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = accent
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 12.dp)
+                    ) {
+                        Text(
+                            when {
+                                workspace != null -> if (isStudent) "PROJECT COMPLETION" else "PROJECT VELOCITY"
+                                isStudent -> "PROFILE READINESS"
+                                else -> "TALENT RADAR"
+                            },
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            title,
+                            modifier = Modifier.padding(top = 6.dp),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 2
+                        )
+                        Text(
+                            supportingText,
+                            modifier = Modifier.padding(top = 6.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    if (progress != null) {
+                        PremiumProgressRing(
+                            progress = progress,
+                            accent = accent,
+                            caption = if (workspace != null) "COMPLETE" else "READY"
+                        )
+                    } else {
+                        Surface(
+                            modifier = Modifier.size(88.dp),
+                            shape = CircleShape,
+                            color = accent.copy(alpha = 0.09f),
+                            border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    state.topVerifiedGigs.size.toString(),
+                                    color = accent,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Text(
+                                    "SERVICES",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(9.dp)
+    ) {
+        PremiumMetricCard(
+            modifier = Modifier.weight(1f),
+            label = if (isStudent) "WALLET" else "ESCROW",
+            value = "₹" + formatMoney(state.financialSummary),
+            detail = if (isStudent) "Available balance" else "Held for projects",
+            accent = accent
+        )
+        PremiumMetricCard(
+            modifier = Modifier.weight(1f),
+            label = if (isStudent) "TO DO" else "REVIEWS",
+            value = state.actionQueue.size.toString(),
+            detail = if (isStudent) "Needs attention" else "Awaiting review",
+            accent = if (state.actionQueue.isNotEmpty()) {
+                if (isStudent) Color(0xFFF59E0B) else Color(0xFFFB8B79)
+            } else accent
+        )
+        PremiumMetricCard(
+            modifier = Modifier.weight(1f),
+            label = if (isStudent) "JOBS" else "TALENT",
+            value = if (isStudent) state.recommendedJobs.size.toString()
+                else state.topVerifiedGigs.size.toString(),
+            detail = if (isStudent) "Recommended" else "Verified gigs",
+            accent = accent
+        )
+    }
+}
+
+@Composable
+private fun PremiumMetricCard(
+    modifier: Modifier,
+    label: String,
+    value: String,
+    detail: String,
+    accent: Color
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.15f))
+    ) {
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
+            Text(
+                label,
+                color = accent,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1
+            )
+            Text(
+                value,
+                modifier = Modifier.padding(top = 5.dp),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1
+            )
+            Text(
+                detail,
+                modifier = Modifier.padding(top = 3.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
 private fun StudentHome(
     state: HomeState,
     modifier: Modifier,
@@ -318,10 +590,28 @@ private fun StudentHome(
     onOpenExplore: () -> Unit
 ) {
     LazyColumn(
-        modifier.fillMaxSize(),
+        modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                        MaterialTheme.colorScheme.background
+                    )
+                )
+            ),
         contentPadding = PaddingValues(18.dp, 15.dp, 18.dp, 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        item {
+            PremiumHomeOverview(
+                state = state,
+                isStudent = true,
+                accent = StudentAccent
+            )
+        }
+
         if (state.actionQueue.isNotEmpty()) {
             item {
                 ActionQueueSection(
@@ -806,9 +1096,10 @@ private fun StudentActiveOrderCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(26.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
+        shadowElevation = 7.dp,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.20f))
     ) {
         if (workspace == null) {
             Stage2UnavailableCard(
@@ -997,11 +1288,12 @@ private fun RecommendedJobCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
-        Column(Modifier.padding(13.dp)) {
+        Column(Modifier.padding(15.dp)) {
             Text(
                 job.title ?: "Custom project",
                 style = MaterialTheme.typography.titleSmall,
@@ -1087,11 +1379,12 @@ private fun GigRecommendationCard(
     Surface(
         onClick = onClick,
         modifier = Modifier.width(176.dp),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 5.dp,
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.14f)
+            accent.copy(alpha = 0.18f)
         )
     ) {
         Column {
@@ -1365,10 +1658,28 @@ private fun ClientHome(
     onPostJob: () -> Unit
 ) {
     LazyColumn(
-        modifier.fillMaxSize(),
+        modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                        MaterialTheme.colorScheme.background
+                    )
+                )
+            ),
         contentPadding = PaddingValues(18.dp, 15.dp, 18.dp, 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        item {
+            PremiumHomeOverview(
+                state = state,
+                isStudent = false,
+                accent = ClientAccent
+            )
+        }
+
         if (state.actionQueue.isNotEmpty()) {
             item {
                 ActionQueueSection(
