@@ -62,6 +62,7 @@ import com.skilllaunch.app.feature.job.JobDetailsScreen
 import com.skilllaunch.app.feature.job.ClientProjectDetailsScreen
 import com.skilllaunch.app.feature.job.PostJobScreen
 import com.skilllaunch.app.feature.order.OrdersScreen
+import java.util.UUID
 
 sealed interface AppDestination : NavKey {
     data object Home : AppDestination
@@ -112,6 +113,16 @@ fun AuthenticatedAppShell(
             backStack.clear()
             backStack.add(AppDestination.Home)
         } else if (destination != current) {
+            // Every current Gig Details entry point is a gig-card tap (Explore or
+            // Home recommendations). Record one CLICK centrally to cover both paths
+            // without double-counting Explore and without cancelling on navigation.
+            if (destination is AppDestination.GigDetails) {
+                gigRepository.recordAnalyticsEventInBackground(
+                    gigId = destination.gigId,
+                    type = "CLICK",
+                    eventId = UUID.randomUUID().toString()
+                )
+            }
             backStack.clear()
             backStack.add(AppDestination.Home)
             backStack.add(destination)
