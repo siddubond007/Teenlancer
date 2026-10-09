@@ -9,6 +9,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.google.gson.Gson
+import com.skilllaunch.app.data.model.auth.AuthUser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -35,6 +37,14 @@ class SessionStore(
     @Volatile
     private var cachedAccessToken: String? = null
 
+    @Volatile
+    private var cachedUser: AuthUser? = null
+
+    @Volatile
+    private var hasLoadedCachedUser = false
+
+    private val gson = Gson()
+
     private companion object {
         const val KEYSTORE_PROVIDER = "AndroidKeyStore"
         const val KEY_ALIAS = "skilllaunch_access_token"
@@ -44,6 +54,8 @@ class SessionStore(
 
         val ACCESS_TOKEN: Preferences.Key<String> =
             stringPreferencesKey("access_token")
+        val CACHED_USER: Preferences.Key<String> =
+            stringPreferencesKey("cached_authenticated_user")
     }
 
     val accessToken: Flow<String?> =
@@ -104,11 +116,66 @@ class SessionStore(
         cachedAccessToken = token
     }
 
+    /**
+     * Persist token and identity atomically so offline restoration cannot pair a new
+     * account's token with a previous account's cached identity.
+     */
+    suspend fun saveSession(token: String, user: AuthUser) {
+        require(token.isNotBlank()) { "Access token cannot be blank" }
+        val encryptedToken = encryptToken(token)
+        val encryptedUser = encryptToken(gson.toJson(user))
+
+        context.skillLaunchSecureDataStore.edit { preferences ->
+            preferences[ACCESS_TOKEN] = encryptedToken
+            preferences[CACHED_USER] = encryptedUser
+        }
+        cachedAccessToken = token
+        cachedUser = user
+        hasLoadedCachedUser = true
+    }
+
+    suspend fun saveCachedUser(user: AuthUser) {
+        val encryptedUser = encryptToken(gson.toJson(user))
+        context.skillLaunchSecureDataStore.edit { preferences ->
+            preferences[CACHED_USER] = encryptedUser
+        }
+        cachedUser = user
+        hasLoadedCachedUser = true
+    }
+
+    suspend fun getCachedUser(): AuthUser? {
+        if (hasLoadedCachedUser) return cachedUser
+
+        val storedValue = context.skillLaunchSecureDataStore.data
+            .catch { exception ->
+                if (exception is IOException) {
+                    emit(emptyPreferences())
+                } else {
+                    throw exception
+                }
+            }
+            .map { preferences -> preferences[CACHED_USER] }
+            .first()
+
+        val user = storedValue
+            ?.let(::decryptStoredToken)
+            ?.let { json ->
+                runCatching { gson.fromJson(json, AuthUser::class.java) }.getOrNull()
+            }
+
+        cachedUser = user
+        hasLoadedCachedUser = true
+        return user
+    }
+
     suspend fun clearSession() {
         context.skillLaunchSecureDataStore.edit { preferences ->
             preferences.remove(ACCESS_TOKEN)
+            preferences.remove(CACHED_USER)
         }
         cachedAccessToken = null
+        cachedUser = null
+        hasLoadedCachedUser = true
     }
 
     suspend fun getOnboardingStep(
