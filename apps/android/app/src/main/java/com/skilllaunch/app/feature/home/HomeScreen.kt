@@ -92,6 +92,19 @@ fun HomeScreen(
 
     val home = uiState.home
     val role = home?.role?.trim()?.uppercase(Locale.US)
+    val handleActionQueueItem: (HomeActionQueueItem) -> Unit = { item ->
+        val actionType = item.type?.trim()?.uppercase(Locale.US).orEmpty()
+        if (actionType.contains("VERIFICATION") || actionType.contains("IDENTITY")) {
+            onOpenDestination(AppDestination.Profile)
+        } else {
+            val orderId = item.orderId?.takeIf(String::isNotBlank)
+            if (orderId != null) {
+                onOpenDestination(AppDestination.OrderWorkspace(orderId))
+            } else {
+                onOpenDestination(AppDestination.Orders)
+            }
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -127,9 +140,7 @@ fun HomeScreen(
                         onOpenDestination(AppDestination.OrderWorkspace(id))
                     }
                 },
-                onOpenActionOrder = { orderId ->
-                    onOpenDestination(AppDestination.OrderWorkspace(orderId))
-                },
+                onActionQueueItem = handleActionQueueItem,
                 onOpenJob = { jobId ->
                     onOpenDestination(AppDestination.JobDetails(jobId))
                 },
@@ -143,9 +154,7 @@ fun HomeScreen(
                         onOpenDestination(AppDestination.OrderWorkspace(id))
                     }
                 },
-                onOpenActionOrder = { orderId ->
-                    onOpenDestination(AppDestination.OrderWorkspace(orderId))
-                },
+                onActionQueueItem = handleActionQueueItem,
                 onOpenGig = { gigId ->
                     onOpenDestination(AppDestination.GigDetails(gigId))
                 },
@@ -574,7 +583,7 @@ private fun StudentHome(
     state: HomeState,
     modifier: Modifier,
     onOpenWorkspace: () -> Unit,
-    onOpenActionOrder: (String) -> Unit,
+    onActionQueueItem: (HomeActionQueueItem) -> Unit,
     onOpenJob: (String) -> Unit,
     onOpenExplore: () -> Unit
 ) {
@@ -599,7 +608,7 @@ private fun StudentHome(
                     items = state.actionQueue,
                     isStudent = true,
                     onAction = { item ->
-                        item.orderId?.let(onOpenActionOrder)
+                        onActionQueueItem(item)
                     }
                 )
             }
@@ -676,15 +685,15 @@ private fun ActionQueueSection(
     val background = if (isStudent) {
         Brush.linearGradient(
             listOf(
-                Color(0xFF6B430C),
-                Color(0xFF33220E)
+                Color(0xFFFFF1C6),
+                Color(0xFFFFD977)
             )
         )
     } else {
         Brush.linearGradient(
             listOf(
-                Color(0xFF713640),
-                Color(0xFF352027)
+                Color(0xFFFFE9E3),
+                Color(0xFFFFC2B5)
             )
         )
     }
@@ -725,15 +734,24 @@ private fun ActionQueueSection(
             }
         }
 
-        items.forEach { item ->
-            ActionQueueCard(
-                item = item,
-                isStudent = isStudent,
-                accent = accent,
-                border = border,
-                background = background,
-                onAction = { onAction(item) }
-            )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(horizontal = 2.dp)
+        ) {
+            items(
+                items = items,
+                key = { it.id ?: it.orderId ?: it.title.orEmpty() }
+            ) { item ->
+                ActionQueueCard(
+                    item = item,
+                    isStudent = isStudent,
+                    accent = accent,
+                    border = border,
+                    background = background,
+                    onAction = { onAction(item) },
+                    modifier = Modifier.width(300.dp)
+                )
+            }
         }
     }
 }
@@ -745,7 +763,8 @@ private fun ActionQueueCard(
     accent: Color,
     border: Color,
     background: Brush,
-    onAction: () -> Unit
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val buttonBackground = if (isStudent) {
         Brush.linearGradient(
@@ -758,8 +777,32 @@ private fun ActionQueueCard(
     }
     val buttonText = if (isStudent) Color(0xFF291603) else Color(0xFF2E1116)
 
+    val actionType = item.type?.trim()?.uppercase(Locale.US).orEmpty()
+    val actionIcon = when {
+        actionType.contains("VERIFICATION") || actionType.contains("IDENTITY") ->
+            Icons.Outlined.Shield
+        actionType.contains("REVISION") -> Icons.Outlined.Description
+        actionType.contains("PAYMENT") || actionType.contains("FUND") ||
+            actionType.contains("ESCROW") -> Icons.Outlined.Lock
+        actionType.contains("REVIEW") || actionType.contains("DELIVERED") ->
+            Icons.Outlined.Check
+        actionType.contains("DEADLINE") || actionType.contains("SUBMIT") ->
+            Icons.Outlined.AccessTime
+        else -> if (isStudent) Icons.Outlined.AccessTime else Icons.Outlined.Description
+    }
+    val fallbackActionLabel = when {
+        actionType.contains("VERIFICATION") || actionType.contains("IDENTITY") ->
+            "Check Verification"
+        actionType.contains("REVISION") -> "Resubmit Work"
+        actionType.contains("PAYMENT") || actionType.contains("FUND") ||
+            actionType.contains("ESCROW") -> "Fund Escrow"
+        actionType.contains("REVIEW") || actionType.contains("DELIVERED") ->
+            "Review Work"
+        else -> if (isStudent) "Submit Work" else "Review Work"
+    }
+
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
             .background(background)
@@ -773,19 +816,15 @@ private fun ActionQueueCard(
             Surface(
                 modifier = Modifier.size(42.dp),
                 shape = RoundedCornerShape(13.dp),
-                color = accent.copy(alpha = 0.13f),
-                border = BorderStroke(1.dp, accent.copy(alpha = 0.30f))
+                color = if (isStudent) Color(0xFFFFE08A) else Color(0xFFFFB8A7),
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.38f))
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = if (isStudent) {
-                            Icons.Outlined.AccessTime
-                        } else {
-                            Icons.Outlined.Description
-                        },
+                        imageVector = actionIcon,
                         contentDescription = null,
                         modifier = Modifier.size(21.dp),
-                        tint = accent
+                        tint = if (isStudent) Color(0xFF78350F) else Color(0xFF9F303D)
                     )
                 }
             }
@@ -797,7 +836,7 @@ private fun ActionQueueCard(
             ) {
                 Text(
                     item.title ?: if (isStudent) "Deliverable due soon" else "Review delivery",
-                    color = if (isStudent) Color(0xFFFFF7ED) else Color.White,
+                    color = if (isStudent) Color(0xFF3B2606) else Color(0xFF40191E),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.ExtraBold,
                     maxLines = 2
@@ -805,7 +844,7 @@ private fun ActionQueueCard(
                 Text(
                     item.subtitle ?: "Order workspace",
                     modifier = Modifier.padding(top = 4.dp),
-                    color = if (isStudent) Color(0xFFD8C4AD) else Color(0xFFE5B9AE),
+                    color = if (isStudent) Color(0xFF6B4E16) else Color(0xFF82444A),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2
@@ -830,7 +869,7 @@ private fun ActionQueueCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                item.actionLabel ?: if (isStudent) "Submit Work" else "Review Work",
+                                item.actionLabel ?: fallbackActionLabel,
                                 color = buttonText,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.ExtraBold
@@ -1390,7 +1429,7 @@ private fun ClientHome(
     state: HomeState,
     modifier: Modifier,
     onOpenWorkspace: () -> Unit,
-    onOpenActionOrder: (String) -> Unit,
+    onActionQueueItem: (HomeActionQueueItem) -> Unit,
     onOpenGig: (String) -> Unit,
     onPostJob: () -> Unit
 ) {
@@ -1415,7 +1454,7 @@ private fun ClientHome(
                     items = state.actionQueue,
                     isStudent = false,
                     onAction = { item ->
-                        item.orderId?.let(onOpenActionOrder)
+                        onActionQueueItem(item)
                     }
                 )
             }
