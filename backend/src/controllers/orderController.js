@@ -625,7 +625,7 @@ exports.verifyPayment = async (req, res) => {
 
      const gigTitle = order.gig?.title || 'accepted custom offer';
      const description = ('Fund escrow for ' + gigTitle)
-       .replace(/\\s+/g, ' ')
+       .replace(/\s+/g, ' ')
        .trim()
        .slice(0, 180);
 
