@@ -175,6 +175,7 @@ test('client discovery applies every saved hiring category', async () => {
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.topVerifiedGigs.length, 1);
+  assert.equal(response.body.discoveryCategory, null);
   assert.equal(response.body.topVerifiedGigs[0].startingPrice, 750);
   assert.ok(capturedGigQuery.where.OR.some((filter) =>
     filter.categoryId?.in?.includes('category-development')
