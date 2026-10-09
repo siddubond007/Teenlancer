@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
+import java.util.UUID
 
 data class GigDetailsUiState(
     val isLoading: Boolean = true,
@@ -100,6 +101,15 @@ fun GigDetailsScreen(
 
     LaunchedEffect(gigId) {
         viewModel.load(gigId)
+    }
+
+    LaunchedEffect(state.gig?.id) {
+        val loadedGigId = state.gig?.id ?: return@LaunchedEffect
+        viewModel.recordAnalyticsEvent(
+            gigId = loadedGigId,
+            type = "VIEW",
+            eventId = UUID.randomUUID().toString()
+        )
     }
 
     when {
