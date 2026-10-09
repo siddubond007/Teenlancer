@@ -304,7 +304,16 @@ fun GigDiscoveryScreen(
                             ) { gig ->
                                 GigCard(
                                     gig = gig,
-                                    onClick = { gig.id?.let(onOpenGig) }
+                                    onClick = {
+                                        gig.id?.let { gigId ->
+                                            gigViewModel.recordAnalyticsEventInBackground(
+                                                gigId = gigId,
+                                                type = "CLICK",
+                                                eventId = UUID.randomUUID().toString()
+                                            )
+                                            onOpenGig(gigId)
+                                        }
+                                    }
                                 )
                             }
                         }
