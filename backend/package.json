@@ -8,7 +8,9 @@
     "start": "node src/server.js",
     "worker": "node src/workers/escrowReleaseWorker.js",
     "test": "node --test",
-    "test:stage4-profile-nudges": "node scripts/create-stage4-profile-nudge-test-user.js"
+    "test:stage4-profile-nudges": "node scripts/create-stage4-profile-nudge-test-user.js",
+    "test:stage5-analytics-gig": "node scripts/create-stage5-analytics-test-gig.js",
+    "cleanup:stage5-analytics-gig": "node scripts/create-stage5-analytics-test-gig.js --cleanup"
   },
   "keywords": [],
   "author": "",
