@@ -247,7 +247,10 @@ fun AuthenticatedAppShell(
                             )
                         } else {
                             GigDiscoveryScreen(
-                                repository = gigRepository
+                                repository = gigRepository,
+                                onOpenGig = { gigId ->
+                                    openDestination(AppDestination.GigDetails(gigId))
+                                }
                             )
                         }
                     }
