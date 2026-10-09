@@ -595,7 +595,7 @@ exports.verifyPayment = async (req, res) => {
 
      if (!order.razorpayOrderId) {
        return res.status(409).json({
-         error: 'Payment order is not ready. Reopen the accepted custom offer and try again.'
+         error: 'Payment order is not ready. Reopen the order details and try again.'
        });
      }
 
