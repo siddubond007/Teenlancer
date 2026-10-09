@@ -31,6 +31,8 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
@@ -196,6 +198,7 @@ fun HomeScreen(
                 onOpenGig = { gigId ->
                     onOpenDestination(AppDestination.GigDetails(gigId))
                 },
+                onOpenExplore = { onOpenDestination(AppDestination.Explore) },
                 onPostJob = {
                     onOpenDestination(AppDestination.PostJob)
                 }
@@ -667,24 +670,19 @@ private fun StudentHome(
         }
 
         item {
-            Stage2SectionTitle(
+            DiscoverySearchBar(
                 accent = StudentAccent,
-                eyebrow = "YOUR WORKSPACE",
-                title = "Active Orders"
+                hint = "Search jobs, skills, or categories",
+                onClick = onOpenExplore
             )
         }
+
         item {
-            StudentActiveOrderCard(
-                workspace = state.activeWorkspace,
+            DiscoverySectionHeader(
                 accent = StudentAccent,
-                onOpenWorkspace = onOpenWorkspace
-            )
-        }
-        item {
-            Stage2SectionTitle(
-                accent = StudentAccent,
-                eyebrow = "OPPORTUNITY RADAR",
-                title = "Recommended Jobs for you"
+                eyebrow = "MATCHED TO YOUR SKILLS",
+                title = "Recommended jobs",
+                onViewAll = onOpenExplore
             )
         }
         if (discoveryLoading) {
@@ -709,19 +707,41 @@ private fun StudentHome(
                 )
             }
         } else {
-            items(
-                items = matchedJobs,
-                key = { it.id ?: it.title.orEmpty() }
-            ) { job ->
-                RecommendedJobCard(
-                    job = job,
-                    accent = StudentAccent,
-                    onOpenJob = {
-                        job.id?.let(onOpenJob)
-                    },
-                    onOpenExplore = onOpenExplore
-                )
+            item {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 1.dp)
+                ) {
+                    items(
+                        items = matchedJobs,
+                        key = { it.id ?: it.title.orEmpty() }
+                    ) { job ->
+                        RecommendedJobCard(
+                            job = job,
+                            accent = StudentAccent,
+                            onOpenJob = {
+                                job.id?.let(onOpenJob)
+                            },
+                            onOpenExplore = onOpenExplore
+                        )
+                    }
+                }
             }
+        }
+
+        item {
+            Stage2SectionTitle(
+                accent = StudentAccent,
+                eyebrow = "YOUR WORKSPACE",
+                title = "Active Orders"
+            )
+        }
+        item {
+            StudentActiveOrderCard(
+                workspace = state.activeWorkspace,
+                accent = StudentAccent,
+                onOpenWorkspace = onOpenWorkspace
+            )
         }
         if (profileNudges.isNotEmpty() || !profileNudgesError.isNullOrBlank()) {
             item {
@@ -1288,69 +1308,126 @@ private fun RecommendedJobCard(
     onOpenExplore: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.width(292.dp),
         shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 4.dp,
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.22f))
     ) {
-        Column(Modifier.padding(15.dp)) {
-            Text(
-                job.title ?: "Custom project",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 2
-            )
-            Text(
-                "Est. " + (job.budgetLabel ?: "Budget on request"),
-                modifier = Modifier.padding(top = 4.dp),
-                color = accent,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.ExtraBold
-            )
-            Row(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                job.skills.take(3).forEach { skill ->
-                    Surface(
-                        shape = RoundedCornerShape(7.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.055f)
-                    ) {
-                        Text(
-                            skill,
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    modifier = Modifier.size(42.dp),
+                    shape = RoundedCornerShape(13.dp),
+                    color = accent.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.16f))
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Outlined.BusinessCenter,
+                            contentDescription = null,
+                            modifier = Modifier.size(21.dp),
+                            tint = accent
                         )
                     }
                 }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 10.dp)
+                ) {
+                    Text(
+                        job.title ?: "Custom project",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 2
+                    )
+                    Text(
+                        "Est. " + (job.budgetLabel ?: "Budget on request"),
+                        modifier = Modifier.padding(top = 4.dp),
+                        color = accent,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1
+                    )
+                }
             }
+
+            if (job.skills.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    job.skills.take(3).forEach { skill ->
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = accent.copy(alpha = 0.09f)
+                        ) {
+                            Text(
+                                skill,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 9.dp),
+                    .padding(top = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Icon(
+                    Icons.Outlined.AccessTime,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Text(
                     relativePostedTime(job.createdAt),
+                    modifier = Modifier.padding(start = 5.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelSmall
                 )
                 Spacer(Modifier.weight(1f))
-                Surface(
-                    onClick = if (job.id.isNullOrBlank()) onOpenExplore else onOpenJob,
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color.Transparent,
-                    border = BorderStroke(1.dp, accent.copy(alpha = 0.85f))
+                Text(
+                    "Public project",
+                    color = accent,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Surface(
+                onClick = if (job.id.isNullOrBlank()) onOpenExplore else onOpenJob,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
+                    .height(39.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = accent
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        "Submit Proposal",
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
-                        color = accent,
-                        style = MaterialTheme.typography.labelSmall,
+                        "View opportunity",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.ExtraBold
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Outlined.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.padding(start = 7.dp).size(16.dp),
+                        tint = Color.White
                     )
                 }
             }
@@ -1439,6 +1516,117 @@ private fun GigRecommendationCard(
                         fontWeight = FontWeight.ExtraBold
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiscoverySearchBar(
+    accent: Color,
+    hint: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 13.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(21.dp)
+            )
+            Text(
+                hint,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 10.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1
+            )
+            Surface(
+                shape = RoundedCornerShape(11.dp),
+                color = accent,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Outlined.Tune,
+                        contentDescription = "Open discovery filters",
+                        tint = Color.White,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiscoverySectionHeader(
+    accent: Color,
+    eyebrow: String,
+    title: String,
+    onViewAll: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .width(13.dp)
+                        .height(1.dp)
+                        .background(accent)
+                )
+                Text(
+                    eyebrow,
+                    modifier = Modifier.padding(start = 6.dp),
+                    color = accent,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+            Text(
+                title,
+                modifier = Modifier.padding(top = 5.dp),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+        Surface(
+            onClick = onViewAll,
+            shape = RoundedCornerShape(12.dp),
+            color = accent.copy(alpha = 0.10f),
+            border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "View all",
+                    color = accent,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Icon(
+                    Icons.AutoMirrored.Outlined.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.padding(start = 5.dp).size(15.dp),
+                    tint = accent
+                )
             }
         }
     }
@@ -1604,6 +1792,7 @@ private fun ClientHome(
     onOpenDashboardJob: (String) -> Unit,
     onActionQueueItem: (HomeActionQueueItem) -> Unit,
     onOpenGig: (String) -> Unit,
+    onOpenExplore: () -> Unit,
     onPostJob: () -> Unit
 ) {
     LazyColumn(
@@ -1640,6 +1829,69 @@ private fun ClientHome(
         }
 
         item {
+            DiscoverySearchBar(
+                accent = ClientAccent,
+                hint = "Search verified talent, services, and skills",
+                onClick = onOpenExplore
+            )
+        }
+
+        item {
+            DiscoverySectionHeader(
+                accent = ClientAccent,
+                eyebrow = "VERIFIED TALENT",
+                title = discoveryCategory?.takeIf { it.isNotBlank() }?.let {
+                    "Top talent in $it"
+                } ?: "Top verified freelancers",
+                onViewAll = onOpenExplore
+            )
+        }
+        item {
+            if (discoveryLoading) {
+                Stage2UnavailableCard(
+                    title = "Finding verified talent",
+                    message = "We are matching published services to the hiring categories you selected."
+                )
+            } else if (!discoveryError.isNullOrBlank()) {
+                Stage2UnavailableCard(
+                    title = "Talent discovery unavailable",
+                    message = discoveryError
+                )
+            } else if (matchedGigs.isEmpty()) {
+                Stage2UnavailableCard(
+                    title = "No matching verified Gigs yet",
+                    message = discoveryCategory?.let {
+                        "Verified student services in $it will appear when they match your hiring preferences."
+                    } ?: "Select hiring categories during onboarding to see matching verified student services here."
+                )
+            } else {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 1.dp)
+                ) {
+                    items(
+                        items = matchedGigs,
+                        key = { it.id ?: it.title.orEmpty() }
+                    ) { gig ->
+                        GigRecommendationCard(
+                            gig = gig,
+                            accent = ClientAccent,
+                            onClick = { gig.id?.let(onOpenGig) }
+                        )
+                    }
+                }
+            }
+        }
+        item {
+            Stage2SectionTitle(
+                accent = ClientAccent,
+                eyebrow = "START A PROJECT",
+                title = "What do you need done?"
+            )
+        }
+        item { ClientBriefCard(ClientAccent, onPostJob = onPostJob) }
+
+        item {
             ClientDashboardSections(
                 dashboard = dashboard,
                 dashboardLoading = dashboardLoading,
@@ -1664,59 +1916,6 @@ private fun ClientHome(
                 onOpenWorkspace = onOpenWorkspace
             )
         }
-        item {
-            Stage2SectionTitle(
-                accent = ClientAccent,
-                eyebrow = "VERIFIED TALENT",
-                title = discoveryCategory?.takeIf { it.isNotBlank() }?.let {
-                    "Top Verified Freelancers in '$it'"
-                } ?: "Top Verified Freelancers"
-            )
-        }
-        item {
-            if (discoveryLoading) {
-                Stage2UnavailableCard(
-                    title = "Finding verified talent",
-                    message = "We are matching published services to the hiring categories you selected."
-                )
-            } else if (!discoveryError.isNullOrBlank()) {
-                Stage2UnavailableCard(
-                    title = "Talent discovery unavailable",
-                    message = discoveryError
-                )
-            } else if (matchedGigs.isEmpty()) {
-                Stage2UnavailableCard(
-                    title = "No matching verified Gigs yet",
-                    message = discoveryCategory?.let {
-                        "Verified student services in $it will appear when they match your hiring preferences."
-                    } ?: "Select hiring categories during onboarding to see matching verified student services here."
-                )
-            } else {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(horizontal = 1.dp)
-                ) {
-                    items(
-                        items = matchedGigs,
-                        key = { it.id ?: it.title.orEmpty() }
-                    ) { gig ->
-                        GigRecommendationCard(
-                            gig = gig,
-                            accent = ClientAccent,
-                            onClick = { gig.id?.let(onOpenGig) }
-                        )
-                    }
-                }
-            }
-        }
-        item {
-            Stage2SectionTitle(
-                accent = ClientAccent,
-                eyebrow = "START A PROJECT",
-                title = "What do you need done?"
-            )
-        }
-        item { ClientBriefCard(ClientAccent, onPostJob = onPostJob) }
     }
 }
 
