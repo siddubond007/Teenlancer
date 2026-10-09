@@ -413,9 +413,17 @@ private fun OrderWorkspace(
                     Modifier.padding(top = 6.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                order.deadline?.let { deadline ->
+                val isClientReview = !isStudent && order.status == "DELIVERED"
+                val deadlineLabel = when {
+                    isClientReview && order.autoApproveAt != null ->
+                        "Auto-approves " + relativeDeadline(order.autoApproveAt)
+                    order.deadline != null ->
+                        "Deadline: " + relativeDeadline(order.deadline)
+                    else -> null
+                }
+                deadlineLabel?.let { label ->
                     Text(
-                        "Deadline: " + relativeDeadline(deadline),
+                        label,
                         Modifier.padding(top = 4.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -646,11 +654,21 @@ private fun statusLabel(status: String?): String = when (status?.uppercase(Local
 
 private fun relativeDeadline(deadline: String): String =
     runCatching {
-        val hours = Duration.between(Instant.now(), Instant.parse(deadline)).toHours()
+        val duration = Duration.between(Instant.now(), Instant.parse(deadline))
+        val remainingMillis = duration.toMillis()
+        val hourMillis = Duration.ofHours(1).toMillis()
+        val dayMillis = Duration.ofDays(1).toMillis()
+
         when {
-            hours < 0 -> "overdue"
-            hours < 24 -> "in " + hours.coerceAtLeast(1) + " hours"
-            else -> "in " + ((hours + 23) / 24) + " days"
+            duration.isNegative -> "overdue"
+            remainingMillis < dayMillis -> {
+                val hours = ((remainingMillis + hourMillis - 1) / hourMillis).coerceAtLeast(1L)
+                "in " + hours + " hours"
+            }
+            else -> {
+                val days = ((remainingMillis + dayMillis - 1) / dayMillis).coerceAtLeast(1L)
+                "in " + days + if (days == 1L) " day" else " days"
+            }
         }
     }.getOrDefault("pending")
 
