@@ -59,4 +59,10 @@ class GigViewModel(
             errorMessage = null
         )
     }
+
+    suspend fun recordAnalyticsEvent(
+        gigId: String,
+        type: String,
+        eventId: String
+    ): Result<Boolean> = repository.recordAnalyticsEvent(gigId, type, eventId)
 }
