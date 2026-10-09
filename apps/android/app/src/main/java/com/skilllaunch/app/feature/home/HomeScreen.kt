@@ -798,14 +798,16 @@ private fun StudentHome(
             )
         }
 
-        if ((marketplaceAnalytics?.publishedGigCount ?: 0) > 0) {
-            item {
-                MarketplaceIntelligenceSection(
-                    analytics = marketplaceAnalytics,
-                    accent = StudentAccent
-                )
+        marketplaceAnalytics
+            ?.takeIf { it.publishedGigCount > 0 }
+            ?.let { analytics ->
+                item {
+                    MarketplaceIntelligenceSection(
+                        analytics = analytics,
+                        accent = StudentAccent
+                    )
+                }
             }
-        }
 
         if (profileNudges.isNotEmpty() || !profileNudgesError.isNullOrBlank()) {
             item {
