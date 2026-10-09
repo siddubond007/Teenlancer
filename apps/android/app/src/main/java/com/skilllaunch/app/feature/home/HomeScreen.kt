@@ -101,6 +101,7 @@ fun HomeScreen(
     val matchedJobs by viewModel.matchedJobs.collectAsStateWithLifecycleCompat()
     val matchedGigs by viewModel.matchedGigs.collectAsStateWithLifecycleCompat()
     val discoveryCategory by viewModel.discoveryCategory.collectAsStateWithLifecycleCompat()
+    val discoveryCategories by viewModel.discoveryCategories.collectAsStateWithLifecycleCompat()
     val discoveryLoading by viewModel.discoveryLoading.collectAsStateWithLifecycleCompat()
     val discoveryError by viewModel.discoveryError.collectAsStateWithLifecycleCompat()
     val profileNudges by viewModel.profileNudges.collectAsStateWithLifecycleCompat()
@@ -176,6 +177,7 @@ fun HomeScreen(
                 state = home,
                 matchedGigs = matchedGigs,
                 discoveryCategory = discoveryCategory,
+                discoveryCategories = discoveryCategories,
                 discoveryLoading = discoveryLoading,
                 discoveryError = discoveryError,
                 dashboard = uiState.clientDashboard,
@@ -1780,6 +1782,7 @@ private fun ClientHome(
     state: HomeState,
     matchedGigs: List<HomeGigRecommendation>,
     discoveryCategory: String?,
+    discoveryCategories: List<String>,
     discoveryLoading: Boolean,
     discoveryError: String?,
     dashboard: ClientDashboardState?,
@@ -1840,9 +1843,11 @@ private fun ClientHome(
             DiscoverySectionHeader(
                 accent = ClientAccent,
                 eyebrow = "VERIFIED TALENT",
-                title = discoveryCategory?.takeIf { it.isNotBlank() }?.let {
-                    "Top talent in $it"
-                } ?: "Top verified talent for your categories",
+                title = when {
+                    discoveryCategories.size > 1 -> "Top verified talent for your categories"
+                    !discoveryCategory.isNullOrBlank() -> "Top talent in $discoveryCategory"
+                    else -> "Top verified freelancers"
+                },
                 onViewAll = onOpenExplore
             )
         }
@@ -1860,9 +1865,14 @@ private fun ClientHome(
             } else if (matchedGigs.isEmpty()) {
                 Stage2UnavailableCard(
                     title = "No matching verified Gigs yet",
-                    message = discoveryCategory?.let {
-                        "Verified student services in $it will appear when they match your hiring preferences."
-                    } ?: "Select hiring categories during onboarding to see matching verified student services here."
+                    message = when {
+                        discoveryCategories.size > 1 ->
+                            "Verified student services matching ${discoveryCategories.joinToString(", ")} will appear here."
+                        !discoveryCategory.isNullOrBlank() ->
+                            "Verified student services in $discoveryCategory will appear when they match your hiring preferences."
+                        else ->
+                            "Select hiring categories during onboarding to see matching verified student services here."
+                    }
                 )
             } else {
                 LazyRow(
