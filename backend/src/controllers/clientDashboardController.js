@@ -81,9 +81,7 @@ exports.getClientDashboard = async (req, res) => {
             clientId,
             isDeleted: false
           },
-          status: {
-            in: ['PENDING', 'SHORTLISTED']
-          }
+          status: 'PENDING'
         },
         _count: { _all: true }
       }),
