@@ -7,6 +7,8 @@ espressoCore = "3.5.1"
 lifecycleRuntimeKtx = "2.11.0"
 activityCompose = "1.8.0"
 kotlin = "2.2.10"
+room = "2.8.5"
+ksp = "2.3.10"
 composeBom = "2026.02.01"
 nav3Core = "1.1.7"
 retrofit = "3.0.0"
@@ -40,6 +42,9 @@ retrofitConverterGson = { module = "com.squareup.retrofit2:converter-gson", vers
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttpLogging = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
 datastorePreferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewModelCompose" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
@@ -53,4 +58,5 @@ razorpay-standard-core = { module = "com.razorpay:standard-core", version.ref = 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 
