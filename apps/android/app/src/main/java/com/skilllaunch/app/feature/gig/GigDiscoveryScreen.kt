@@ -55,7 +55,8 @@ import java.util.UUID
 
 @Composable
 fun GigDiscoveryScreen(
-    repository: GigRepository
+    repository: GigRepository,
+    onOpenGig: (String) -> Unit
 ) {
     val factory = remember(repository) {
         object : ViewModelProvider.Factory {
@@ -301,7 +302,10 @@ fun GigDiscoveryScreen(
                                 items = filteredGigs,
                                 key = { gig -> gig.id ?: gig.title.orEmpty() }
                             ) { gig ->
-                                GigCard(gig)
+                                GigCard(
+                                    gig = gig,
+                                    onClick = { gig.id?.let(onOpenGig) }
+                                )
                             }
                         }
 
@@ -371,9 +375,11 @@ private fun ExploreChip(text: String) {
 
 @Composable
 private fun GigCard(
-    gig: Gig
+    gig: Gig,
+    onClick: () -> Unit
 ) {
     OutlinedCard(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.outlinedCardColors(
