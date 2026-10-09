@@ -26,7 +26,8 @@ class ProfileRepository(
             userApi.getUserProfile(userId)
         }.recoverCatching { error ->
             throw Exception(
-                apiErrorMessage(error, "Unable to load your profile right now")
+                apiErrorMessage(error, "Unable to load your profile right now"),
+                error
             )
         }
     }
