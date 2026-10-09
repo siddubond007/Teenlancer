@@ -65,4 +65,18 @@ class GigViewModel(
         type: String,
         eventId: String
     ): Result<Boolean> = repository.recordAnalyticsEvent(gigId, type, eventId)
+
+    /**
+     * Fire-and-forget analytics so a card tap can navigate immediately.
+     * The backend deduplicates retries by eventId and ignores seller-owned traffic.
+     */
+    fun recordAnalyticsEventInBackground(
+        gigId: String,
+        type: String,
+        eventId: String
+    ) {
+        viewModelScope.launch {
+            repository.recordAnalyticsEvent(gigId, type, eventId)
+        }
+    }
 }
