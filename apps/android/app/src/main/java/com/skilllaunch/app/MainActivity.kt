@@ -53,6 +53,8 @@ import com.skilllaunch.app.data.repository.job.JobRepository
 import com.skilllaunch.app.data.repository.order.OrderRepository
 import com.skilllaunch.app.feature.auth.AuthViewModel
 import com.skilllaunch.app.feature.auth.LoginScreen
+import retrofit2.HttpException
+import java.io.IOException
 import com.skilllaunch.app.feature.auth.SignupScreen
 import com.skilllaunch.app.feature.onboarding.OnboardingScreen
 import com.skilllaunch.app.ui.theme.SkillLaunchTheme
@@ -342,11 +344,34 @@ private fun SkillLaunchRoot(
                 profileResolutionFailed = false
                 onboardingResolvedForUser = true
             }
-            .onFailure {
-                // Do not treat an unknown profile state as "no onboarding required".
-                showOnboarding = false
-                profileResolutionFailed = true
-                onboardingResolvedForUser = false
+            .onFailure { error ->
+                val errorChain = generateSequence(error) { it.cause }.toList()
+                val networkUnavailable =
+                    errorChain.none { it is HttpException } &&
+                        errorChain.any { it is IOException }
+
+                // Only allow offline Home when a network failure blocks verification and
+                // an exact user/role-matching Home snapshot already exists locally.
+                val cachedHome = if (state.isOfflineSession && networkUnavailable) {
+                    homeRepository.getCachedHomeState(userId)
+                } else {
+                    null
+                }
+                val matchingHomeSnapshot = cachedHome != null &&
+                    cachedHome.id == userId &&
+                    cachedHome.role.equals(state.user?.role, ignoreCase = true) &&
+                    cachedHome.role?.uppercase() in setOf("STUDENT_FREELANCER", "CLIENT")
+
+                if (matchingHomeSnapshot) {
+                    showOnboarding = false
+                    profileResolutionFailed = false
+                    onboardingResolvedForUser = true
+                } else {
+                    // Do not treat an unknown profile state as "no onboarding required".
+                    showOnboarding = false
+                    profileResolutionFailed = true
+                    onboardingResolvedForUser = false
+                }
             }
     }
 
