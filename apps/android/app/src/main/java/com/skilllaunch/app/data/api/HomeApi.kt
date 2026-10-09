@@ -3,6 +3,7 @@ package com.skilllaunch.app.data.api
 import com.skilllaunch.app.data.model.home.HomeState
 import com.skilllaunch.app.data.model.home.HomeDiscoveryResponse
 import com.skilllaunch.app.data.model.home.HomeProfileNudge
+import com.skilllaunch.app.data.model.home.HomeAnalyticsResponse
 import retrofit2.http.GET
 
 interface HomeApi {
@@ -14,4 +15,7 @@ interface HomeApi {
 
     @GET("v1/home/profile-nudges")
     suspend fun getProfileNudges(): List<HomeProfileNudge>
+
+    @GET("v1/home/analytics")
+    suspend fun getHomeAnalytics(): HomeAnalyticsResponse
 }
