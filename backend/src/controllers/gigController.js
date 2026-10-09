@@ -154,7 +154,7 @@ exports.getGigById = async (req, res) => {
 };
 
 
-const GIG_ANALYTICS_EVENT_TYPES = new Set(['VIEW', 'PURCHASE_CLICK']);
+const GIG_ANALYTICS_EVENT_TYPES = new Set(['IMPRESSION', 'VIEW', 'PURCHASE_CLICK']);
 
 const normalizeEventId = (value) => {
   const eventId = String(value || '').trim();
