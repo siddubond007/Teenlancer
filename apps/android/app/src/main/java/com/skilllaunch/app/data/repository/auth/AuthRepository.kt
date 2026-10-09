@@ -75,7 +75,7 @@ class AuthRepository(
                     IllegalStateException("Authenticated user was not returned.")
                 )
 
-            sessionStore.saveAccessToken(token)
+            sessionStore.saveSession(token, user)
             Result.success(user)
         } catch (exception: HttpException) {
             val apiMessage = exception.response()?.errorBody()?.string()?.let { body ->
@@ -116,6 +116,7 @@ class AuthRepository(
                     IllegalStateException("Current user was not returned.")
                 )
 
+            sessionStore.saveCachedUser(user)
             Result.success(user)
         } catch (exception: Exception) {
             Result.failure(exception)
