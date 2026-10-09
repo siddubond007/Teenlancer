@@ -32,6 +32,8 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,6 +62,9 @@ import com.skilllaunch.app.core.common.collectAsStateWithLifecycleCompat
 import com.skilllaunch.app.core.navigation.AppDestination
 import com.skilllaunch.app.data.model.auth.AuthUser
 import com.skilllaunch.app.data.model.home.HomeActionQueueItem
+import com.skilllaunch.app.data.model.home.HomeGigRecommendation
+import com.skilllaunch.app.data.model.home.HomeProfileNudge
+import com.skilllaunch.app.data.model.home.HomeRecommendedJob
 import com.skilllaunch.app.data.model.home.HomeState
 import com.skilllaunch.app.data.model.home.ClientDashboardState
 import com.skilllaunch.app.data.repository.home.HomeRepository
@@ -91,6 +96,13 @@ fun HomeScreen(
         }
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycleCompat()
+    val matchedJobs by viewModel.matchedJobs.collectAsStateWithLifecycleCompat()
+    val matchedGigs by viewModel.matchedGigs.collectAsStateWithLifecycleCompat()
+    val discoveryCategory by viewModel.discoveryCategory.collectAsStateWithLifecycleCompat()
+    val discoveryLoading by viewModel.discoveryLoading.collectAsStateWithLifecycleCompat()
+    val discoveryError by viewModel.discoveryError.collectAsStateWithLifecycleCompat()
+    val profileNudges by viewModel.profileNudges.collectAsStateWithLifecycleCompat()
+    val profileNudgesError by viewModel.profileNudgesError.collectAsStateWithLifecycleCompat()
 
     LaunchedEffect(user.id) {
         viewModel.load(forceRefresh = true)
@@ -140,6 +152,12 @@ fun HomeScreen(
             )
             role == "STUDENT_FREELANCER" -> StudentHome(
                 state = home,
+                matchedJobs = matchedJobs,
+                discoveryLoading = discoveryLoading,
+                discoveryError = discoveryError,
+                profileNudges = profileNudges,
+                profileNudgesError = profileNudgesError,
+                onOpenProfile = { onOpenDestination(AppDestination.Profile) },
                 modifier = Modifier.padding(innerPadding),
                 onOpenWorkspace = {
                     home.activeWorkspace?.id?.let { id ->
@@ -154,6 +172,10 @@ fun HomeScreen(
             )
             role == "CLIENT" -> ClientHome(
                 state = home,
+                matchedGigs = matchedGigs,
+                discoveryCategory = discoveryCategory,
+                discoveryLoading = discoveryLoading,
+                discoveryError = discoveryError,
                 dashboard = uiState.clientDashboard,
                 dashboardLoading = uiState.isClientDashboardLoading,
                 dashboardErrorMessage = uiState.clientDashboardErrorMessage,
@@ -597,6 +619,12 @@ private fun PremiumMetricCard(
 @Composable
 private fun StudentHome(
     state: HomeState,
+    matchedJobs: List<HomeRecommendedJob>,
+    discoveryLoading: Boolean,
+    discoveryError: String?,
+    profileNudges: List<HomeProfileNudge>,
+    profileNudgesError: String?,
+    onOpenProfile: () -> Unit,
     modifier: Modifier,
     onOpenWorkspace: () -> Unit,
     onActionQueueItem: (HomeActionQueueItem) -> Unit,
@@ -659,16 +687,30 @@ private fun StudentHome(
                 title = "Recommended Jobs for you"
             )
         }
-        if (state.recommendedJobs.isEmpty()) {
+        if (discoveryLoading) {
             item {
                 Stage2UnavailableCard(
-                    title = "No recommended jobs yet",
-                    message = "New custom projects that match your marketplace activity will appear here."
+                    title = "Personalizing your opportunities",
+                    message = "We are matching open projects to the skills and categories saved on your profile."
+                )
+            }
+        } else if (!discoveryError.isNullOrBlank()) {
+            item {
+                Stage2UnavailableCard(
+                    title = "Opportunity discovery unavailable",
+                    message = discoveryError
+                )
+            }
+        } else if (matchedJobs.isEmpty()) {
+            item {
+                Stage2UnavailableCard(
+                    title = "No matching jobs yet",
+                    message = "New projects that match your saved skills or category will appear here."
                 )
             }
         } else {
             items(
-                items = state.recommendedJobs,
+                items = matchedJobs,
                 key = { it.id ?: it.title.orEmpty() }
             ) { job ->
                 RecommendedJobCard(
@@ -678,6 +720,111 @@ private fun StudentHome(
                         job.id?.let(onOpenJob)
                     },
                     onOpenExplore = onOpenExplore
+                )
+            }
+        }
+        if (profileNudges.isNotEmpty() || !profileNudgesError.isNullOrBlank()) {
+            item {
+                Stage2SectionTitle(
+                    accent = StudentAccent,
+                    eyebrow = "PROFILE & GROWTH",
+                    title = "Build a stronger reputation"
+                )
+            }
+            if (!profileNudgesError.isNullOrBlank()) {
+                item {
+                    Stage2UnavailableCard(
+                        title = "Growth suggestions unavailable",
+                        message = profileNudgesError
+                    )
+                }
+            } else {
+                items(
+                    items = profileNudges,
+                    key = { it.id ?: it.title.orEmpty() }
+                ) { nudge ->
+                    ProfileNudgeCard(
+                        nudge = nudge,
+                        accent = StudentAccent,
+                        onClick = onOpenProfile
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun ProfileNudgeCard(
+    nudge: HomeProfileNudge,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    val nudgeIcon = when (nudge.type?.uppercase(Locale.US)) {
+        "PORTFOLIO" -> Icons.Outlined.Description
+        "VERIFICATION" -> Icons.Outlined.Shield
+        else -> Icons.Outlined.AutoAwesome
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.16f))
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Surface(
+                    modifier = Modifier.size(44.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    color = accent.copy(alpha = 0.09f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = nudgeIcon,
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                            tint = accent
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 12.dp)
+                ) {
+                    Text(
+                        nudge.title ?: "Build a stronger profile",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        nudge.subtitle ?: "Small profile improvements can help clients understand your strengths.",
+                        modifier = Modifier.padding(top = 5.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            OutlinedButton(
+                onClick = onClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 14.dp),
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.65f)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
+            ) {
+                Text(
+                    nudge.actionLabel ?: "Update Profile",
+                    fontWeight = FontWeight.Bold
+                )
+                Icon(
+                    Icons.AutoMirrored.Outlined.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.padding(start = 7.dp).size(16.dp)
                 )
             }
         }
@@ -1443,6 +1590,10 @@ private fun String?.toDisplayStatus(): String =
 @Composable
 private fun ClientHome(
     state: HomeState,
+    matchedGigs: List<HomeGigRecommendation>,
+    discoveryCategory: String?,
+    discoveryLoading: Boolean,
+    discoveryError: String?,
     dashboard: ClientDashboardState?,
     dashboardLoading: Boolean,
     dashboardErrorMessage: String?,
@@ -1517,29 +1668,36 @@ private fun ClientHome(
             Stage2SectionTitle(
                 accent = ClientAccent,
                 eyebrow = "VERIFIED TALENT",
-                title = "Top Verified Freelancers in '" + (state.discoveryCategory ?: "Design") + "'"
+                title = discoveryCategory?.takeIf { it.isNotBlank() }?.let {
+                    "Top Verified Freelancers in '$it'"
+                } ?: "Top Verified Freelancers"
             )
         }
         item {
-            if (state.topVerifiedGigs.isEmpty()) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
-                ) {
-                    Stage2UnavailableCard(
-                        title = "No verified Gigs yet",
-                        message = "Verified student services in " + (state.discoveryCategory ?: "Design") + " will appear here."
-                    )
-                }
+            if (discoveryLoading) {
+                Stage2UnavailableCard(
+                    title = "Finding verified talent",
+                    message = "We are matching published services to the hiring categories you selected."
+                )
+            } else if (!discoveryError.isNullOrBlank()) {
+                Stage2UnavailableCard(
+                    title = "Talent discovery unavailable",
+                    message = discoveryError
+                )
+            } else if (matchedGigs.isEmpty()) {
+                Stage2UnavailableCard(
+                    title = "No matching verified Gigs yet",
+                    message = discoveryCategory?.let {
+                        "Verified student services in $it will appear when they match your hiring preferences."
+                    } ?: "Select hiring categories during onboarding to see matching verified student services here."
+                )
             } else {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(horizontal = 1.dp)
                 ) {
                     items(
-                        items = state.topVerifiedGigs,
+                        items = matchedGigs,
                         key = { it.id ?: it.title.orEmpty() }
                     ) { gig ->
                         GigRecommendationCard(
