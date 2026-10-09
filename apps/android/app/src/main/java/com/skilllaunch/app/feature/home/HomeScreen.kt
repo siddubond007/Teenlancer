@@ -82,6 +82,44 @@ private val StudentAccent = Color(0xFF047857)
 private val ClientAccent = Color(0xFF4338CA)
 
 @Composable
+private fun HomeOfflineBanner(isStudent: Boolean) {
+    val accent = if (isStudent) StudentAccent else ClientAccent
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = accent.copy(alpha = 0.09f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.20f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.AccessTime,
+                contentDescription = "Offline",
+                tint = accent,
+                modifier = Modifier.size(20.dp)
+            )
+            Column(Modifier.weight(1f).padding(start = 9.dp)) {
+                Text(
+                    "OFFLINE MODE",
+                    color = accent,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    "Showing saved Home data. It will refresh when you're online.",
+                    modifier = Modifier.padding(top = 2.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun HomeScreen(
     user: AuthUser,
     homeRepository: HomeRepository,
@@ -93,8 +131,12 @@ fun HomeScreen(
 ) {
     val viewModel: HomeViewModel = viewModel(
         key = "home-${user.id ?: "unknown"}",
-        factory = remember(homeRepository, clientDashboardRepository) {
-            HomeViewModel.factory(homeRepository, clientDashboardRepository)
+        factory = remember(homeRepository, clientDashboardRepository, user.id) {
+            HomeViewModel.factory(
+                repository = homeRepository,
+                clientDashboardRepository = clientDashboardRepository,
+                userId = user.id.orEmpty()
+            )
         }
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycleCompat()
@@ -155,6 +197,7 @@ fun HomeScreen(
             )
             role == "STUDENT_FREELANCER" -> StudentHome(
                 state = home,
+                showOfflineBanner = uiState.isShowingCachedHome,
                 matchedJobs = matchedJobs,
                 discoveryLoading = discoveryLoading,
                 discoveryError = discoveryError,
@@ -175,6 +218,7 @@ fun HomeScreen(
             )
             role == "CLIENT" -> ClientHome(
                 state = home,
+                showOfflineBanner = uiState.isShowingCachedHome,
                 matchedGigs = matchedGigs,
                 discoveryCategory = discoveryCategory,
                 discoveryCategories = discoveryCategories,
@@ -624,6 +668,7 @@ private fun PremiumMetricCard(
 @Composable
 private fun StudentHome(
     state: HomeState,
+    showOfflineBanner: Boolean,
     matchedJobs: List<HomeRecommendedJob>,
     discoveryLoading: Boolean,
     discoveryError: String?,
@@ -651,6 +696,10 @@ private fun StudentHome(
         contentPadding = PaddingValues(18.dp, 15.dp, 18.dp, 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        if (showOfflineBanner) {
+            item { HomeOfflineBanner(isStudent = true) }
+        }
+
         if (state.actionQueue.isNotEmpty()) {
             item {
                 ActionQueueSection(
@@ -1780,6 +1829,7 @@ private fun String?.toDisplayStatus(): String =
 @Composable
 private fun ClientHome(
     state: HomeState,
+    showOfflineBanner: Boolean,
     matchedGigs: List<HomeGigRecommendation>,
     discoveryCategory: String?,
     discoveryCategories: List<String>,
@@ -1813,6 +1863,10 @@ private fun ClientHome(
         contentPadding = PaddingValues(18.dp, 15.dp, 18.dp, 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        if (showOfflineBanner) {
+            item { HomeOfflineBanner(isStudent = false) }
+        }
+
         if (state.actionQueue.isNotEmpty()) {
             item {
                 ActionQueueSection(
