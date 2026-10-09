@@ -45,6 +45,7 @@ import com.skilllaunch.app.core.session.SessionStore
 import com.skilllaunch.app.data.repository.auth.AuthRepository
 import com.skilllaunch.app.data.repository.gig.GigRepository
 import com.skilllaunch.app.data.repository.home.HomeRepository
+import com.skilllaunch.app.data.repository.home.ClientDashboardRepository
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
 import com.skilllaunch.app.data.repository.notification.NotificationRepository
 import com.skilllaunch.app.data.repository.job.JobRepository
@@ -204,6 +205,10 @@ private fun SkillLaunchRoot(
         ApiClient.homeApi(sessionStore)
     }
 
+    val clientDashboardApi = remember(sessionStore) {
+        ApiClient.clientDashboardApi(sessionStore)
+    }
+
     val uploadApi = remember(sessionStore) {
         ApiClient.uploadApi(sessionStore)
     }
@@ -244,6 +249,10 @@ private fun SkillLaunchRoot(
         HomeRepository(
             homeApi = homeApi
         )
+    }
+
+    val clientDashboardRepository = remember(clientDashboardApi) {
+        ClientDashboardRepository(clientDashboardApi)
     }
 
     val notificationRepository = remember(notificationApi) {
@@ -387,6 +396,7 @@ private fun SkillLaunchRoot(
                     profileRepository = profileRepository,
                     gigRepository = gigRepository,
                     homeRepository = homeRepository,
+                    clientDashboardRepository = clientDashboardRepository,
                     notificationRepository = notificationRepository,
                     jobRepository = jobRepository,
                     orderRepository = orderRepository,

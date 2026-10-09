@@ -5,6 +5,7 @@ import com.skilllaunch.app.core.session.SessionStore
 import com.skilllaunch.app.data.api.AuthApi
 import com.skilllaunch.app.data.api.GigApi
 import com.skilllaunch.app.data.api.HomeApi
+import com.skilllaunch.app.data.api.ClientDashboardApi
 import com.skilllaunch.app.data.api.JobApi
 import com.skilllaunch.app.data.api.NotificationApi
 import com.skilllaunch.app.data.api.OrderApi
@@ -37,6 +38,11 @@ object ApiClient {
     fun homeApi(sessionStore: SessionStore): HomeApi {
         return createRetrofit(sessionStore)
             .create(HomeApi::class.java)
+    }
+
+    fun clientDashboardApi(sessionStore: SessionStore): ClientDashboardApi {
+        return createRetrofit(sessionStore)
+            .create(ClientDashboardApi::class.java)
     }
 
     fun uploadApi(sessionStore: SessionStore): UploadApi {

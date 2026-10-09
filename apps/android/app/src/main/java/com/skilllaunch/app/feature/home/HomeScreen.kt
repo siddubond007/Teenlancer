@@ -61,12 +61,14 @@ import com.skilllaunch.app.core.navigation.AppDestination
 import com.skilllaunch.app.data.model.auth.AuthUser
 import com.skilllaunch.app.data.model.home.HomeActionQueueItem
 import com.skilllaunch.app.data.model.home.HomeState
+import com.skilllaunch.app.data.model.home.ClientDashboardState
 import com.skilllaunch.app.data.repository.home.HomeRepository
 import java.text.NumberFormat
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalTime
 import java.util.Locale
+import kotlin.math.roundToInt
 
 private val StudentAccent = Color(0xFF047857)
 private val ClientAccent = Color(0xFF4338CA)
@@ -75,6 +77,7 @@ private val ClientAccent = Color(0xFF4338CA)
 fun HomeScreen(
     user: AuthUser,
     homeRepository: HomeRepository,
+    clientDashboardRepository: ClientDashboardRepository,
     onOpenDestination: (AppDestination) -> Unit,
     onLogout: () -> Unit,
     darkTheme: Boolean,
@@ -83,6 +86,12 @@ fun HomeScreen(
     val viewModel: HomeViewModel = viewModel(
         key = "home-${user.id ?: "unknown"}",
         factory = remember(homeRepository) { HomeViewModel.factory(homeRepository) }
+    )
+    val viewModel: HomeViewModel = viewModel(
+        key = "home-${user.id ?: "unknown"}",
+        factory = remember(homeRepository, clientDashboardRepository) {
+            HomeViewModel.factory(homeRepository, clientDashboardRepository)
+        }
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycleCompat()
 
@@ -148,11 +157,21 @@ fun HomeScreen(
             )
             role == "CLIENT" -> ClientHome(
                 state = home,
+                dashboard = uiState.clientDashboard,
+                dashboardLoading = uiState.isClientDashboardLoading,
+                dashboardErrorMessage = uiState.clientDashboardErrorMessage,
+                onRetryDashboard = { viewModel.load(forceRefresh = true) },
                 modifier = Modifier.padding(innerPadding),
                 onOpenWorkspace = {
                     home.activeWorkspace?.id?.let { id ->
                         onOpenDestination(AppDestination.OrderWorkspace(id))
                     }
+                },
+                onOpenDashboardOrder = { id ->
+                    onOpenDestination(AppDestination.OrderWorkspace(id))
+                },
+                onOpenDashboardJob = { id ->
+                    onOpenDestination(AppDestination.JobDetails(id))
                 },
                 onActionQueueItem = handleActionQueueItem,
                 onOpenGig = { gigId ->
@@ -1427,8 +1446,14 @@ private fun String?.toDisplayStatus(): String =
 @Composable
 private fun ClientHome(
     state: HomeState,
+    dashboard: ClientDashboardState?,
+    dashboardLoading: Boolean,
+    dashboardErrorMessage: String?,
+    onRetryDashboard: () -> Unit,
     modifier: Modifier,
     onOpenWorkspace: () -> Unit,
+    onOpenDashboardOrder: (String) -> Unit,
+    onOpenDashboardJob: (String) -> Unit,
     onActionQueueItem: (HomeActionQueueItem) -> Unit,
     onOpenGig: (String) -> Unit,
     onPostJob: () -> Unit
@@ -1453,9 +1478,7 @@ private fun ClientHome(
                 ActionQueueSection(
                     items = state.actionQueue,
                     isStudent = false,
-                    onAction = { item ->
-                        onActionQueueItem(item)
-                    }
+                    onAction = { item -> onActionQueueItem(item) }
                 )
             }
         }
@@ -1469,10 +1492,21 @@ private fun ClientHome(
         }
 
         item {
+            ClientDashboardSections(
+                dashboard = dashboard,
+                dashboardLoading = dashboardLoading,
+                dashboardErrorMessage = dashboardErrorMessage,
+                onRetry = onRetryDashboard,
+                onOpenOrder = onOpenDashboardOrder,
+                onOpenJob = onOpenDashboardJob
+            )
+        }
+
+        item {
             Stage2SectionTitle(
                 accent = ClientAccent,
                 eyebrow = "PROJECT VELOCITY",
-                title = "Active Projects"
+                title = "Active Order"
             )
         }
         item {
@@ -1514,9 +1548,7 @@ private fun ClientHome(
                         GigRecommendationCard(
                             gig = gig,
                             accent = ClientAccent,
-                            onClick = {
-                                gig.id?.let(onOpenGig)
-                            }
+                            onClick = { gig.id?.let(onOpenGig) }
                         )
                     }
                 }
@@ -1530,6 +1562,379 @@ private fun ClientHome(
             )
         }
         item { ClientBriefCard(ClientAccent, onPostJob = onPostJob) }
+    }
+}
+
+private data class ClientDashboardHomeAction(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val detail: String? = null,
+    val orderId: String? = null,
+    val jobId: String? = null,
+    val actionLabel: String
+)
+
+@Composable
+private fun ClientDashboardSections(
+    dashboard: ClientDashboardState?,
+    dashboardLoading: Boolean,
+    dashboardErrorMessage: String?,
+    onRetry: () -> Unit,
+    onOpenOrder: (String) -> Unit,
+    onOpenJob: (String) -> Unit
+) {
+    val accent = ClientAccent
+    if (dashboard == null) {
+        if (dashboardLoading) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = accent,
+                        strokeWidth = 2.dp
+                    )
+                    Text(
+                        "Loading your live project dashboard…",
+                        modifier = Modifier.padding(start = 12.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        } else if (!dashboardErrorMessage.isNullOrBlank()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Project dashboard unavailable",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        dashboardErrorMessage,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    AssistChip(
+                        onClick = onRetry,
+                        label = { Text("Retry") }
+                    )
+                }
+            }
+        }
+        return
+    }
+
+    val summary = dashboard.summary
+    val metrics = listOf(
+        "Active Projects" to summary.activeProjects.toString(),
+        "Pending Proposals" to summary.pendingProposals.toString(),
+        "Completed" to summary.completedProjects.toString(),
+        "Total Spend" to "₹" + formatMoney(summary.totalSpend.roundToInt())
+    )
+
+    val actions = buildList {
+        dashboard.attention.deliveryApprovalItems.forEach { item ->
+            val orderId = item.orderId?.takeIf(String::isNotBlank) ?: return@forEach
+            add(
+                ClientDashboardHomeAction(
+                    id = "delivery-$orderId",
+                    title = "Delivery awaiting review",
+                    subtitle = (item.projectTitle ?: "Project") + " · " + (item.studentName ?: "Student"),
+                    detail = "₹" + formatMoney(item.amount.roundToInt()),
+                    orderId = orderId,
+                    actionLabel = "Review delivery"
+                )
+            )
+        }
+        dashboard.attention.paymentItems.forEach { item ->
+            val orderId = item.orderId?.takeIf(String::isNotBlank) ?: return@forEach
+            add(
+                ClientDashboardHomeAction(
+                    id = "payment-$orderId",
+                    title = "Payment awaiting action",
+                    subtitle = (item.projectTitle ?: "Project") + " · " + (item.studentName ?: "Student"),
+                    detail = "₹" + formatMoney(item.amount.roundToInt()),
+                    orderId = orderId,
+                    actionLabel = "Open order"
+                )
+            )
+        }
+        dashboard.attention.proposalJobs.forEach { item ->
+            val jobId = item.id?.takeIf(String::isNotBlank) ?: return@forEach
+            add(
+                ClientDashboardHomeAction(
+                    id = "proposal-$jobId",
+                    title = "Proposals need attention",
+                    subtitle = item.title ?: "Posted project",
+                    detail = item.pendingProposalCount.toString() + " pending",
+                    jobId = jobId,
+                    actionLabel = "Open project"
+                )
+            )
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Stage2SectionTitle(
+            accent = accent,
+            eyebrow = "YOUR WORK AT A GLANCE",
+            title = "Project snapshot"
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(horizontal = 1.dp)
+        ) {
+            items(metrics, key = { it.first }) { metric ->
+                Surface(
+                    modifier = Modifier.width(154.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.18f)),
+                    shadowElevation = 2.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(15.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Text(
+                            metric.first,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            metric.second,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = accent,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+
+        Stage2SectionTitle(
+            accent = accent,
+            eyebrow = "NEXT STEPS",
+            title = "Needs your attention"
+        )
+        if (actions.isEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, accent.copy(alpha = 0.14f))
+            ) {
+                Stage2UnavailableCard(
+                    title = "You're all caught up",
+                    message = "New proposals, payment actions and deliveries awaiting review will appear here."
+                )
+            }
+        } else {
+            actions.take(5).forEach { action ->
+                Surface(
+                    onClick = {
+                        action.orderId?.let(onOpenOrder)
+                            ?: action.jobId?.let(onOpenJob)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.16f)),
+                    shadowElevation = 2.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(15.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(42.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            color = accent.copy(alpha = 0.10f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    if (action.orderId != null) Icons.Outlined.Lock else Icons.Outlined.BusinessCenter,
+                                    contentDescription = null,
+                                    tint = accent,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f).padding(start = 11.dp, end = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(
+                                action.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Text(
+                                action.subtitle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 2
+                            )
+                            action.detail?.let {
+                                Text(
+                                    it,
+                                    color = accent,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                action.actionLabel,
+                                color = accent,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                maxLines = 1
+                            )
+                            Icon(
+                                Icons.AutoMirrored.Outlined.ArrowForward,
+                                contentDescription = null,
+                                tint = accent,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (dashboard.activeProjects.isNotEmpty()) {
+            Stage2SectionTitle(
+                accent = accent,
+                eyebrow = "POSTED BY YOU",
+                title = "Your projects"
+            )
+            dashboard.activeProjects.take(4).forEach { project ->
+                val jobId = project.id?.takeIf(String::isNotBlank)
+                Surface(
+                    onClick = { jobId?.let(onOpenJob) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.14f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(15.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Text(
+                            project.title ?: "Untitled project",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                (project.category ?: "Project") + " · " +
+                                    (project.status ?: "Active").replace('_', ' ').lowercase(Locale.US)
+                                        .replaceFirstChar { it.uppercase(Locale.US) },
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                "₹" + formatMoney(project.budget.roundToInt()),
+                                color = accent,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                        if (project.proposalCount > 0) {
+                            Text(
+                                project.proposalCount.toString() + " proposals received",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (dashboard.deadlines.isNotEmpty()) {
+            Stage2SectionTitle(
+                accent = accent,
+                eyebrow = "KEEP ON TRACK",
+                title = "Upcoming deadlines"
+            )
+            dashboard.deadlines.take(3).forEach { item ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.12f))
+                ) {
+                    Column(Modifier.padding(14.dp)) {
+                        Text(
+                            item.projectTitle ?: "Project deadline",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            listOfNotNull(item.studentName, item.status?.replace('_', ' ')).joinToString(" · "),
+                            modifier = Modifier.padding(top = 4.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        WorkspaceDeadline(item.deadline, prefix = "Deadline")
+                    }
+                }
+            }
+        }
+
+        if (dashboard.recentActivity.isNotEmpty()) {
+            Stage2SectionTitle(
+                accent = accent,
+                eyebrow = "LATEST UPDATES",
+                title = "Recent activity"
+            )
+            dashboard.recentActivity.take(3).forEach { activity ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.12f))
+                ) {
+                    Column(Modifier.padding(14.dp)) {
+                        Text(
+                            activity.projectTitle ?: "Project update",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            activity.message ?: "An update was recorded.",
+                            modifier = Modifier.padding(top = 4.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

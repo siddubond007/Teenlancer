@@ -47,6 +47,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.skilllaunch.app.data.model.auth.AuthUser
 import com.skilllaunch.app.data.repository.gig.GigRepository
 import com.skilllaunch.app.data.repository.home.HomeRepository
+import com.skilllaunch.app.data.repository.home.ClientDashboardRepository
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
 import com.skilllaunch.app.feature.gig.GigDiscoveryScreen
 import com.skilllaunch.app.feature.gig.GigDetailsScreen
@@ -89,6 +90,7 @@ fun AuthenticatedAppShell(
     profileRepository: ProfileRepository,
     gigRepository: GigRepository,
     homeRepository: HomeRepository,
+    clientDashboardRepository: ClientDashboardRepository,
     notificationRepository: NotificationRepository,
     jobRepository: JobRepository,
     orderRepository: OrderRepository,
@@ -228,6 +230,7 @@ fun AuthenticatedAppShell(
                         HomeScreen(
                             user = user,
                             homeRepository = homeRepository,
+                            clientDashboardRepository = clientDashboardRepository,
                             onOpenDestination = ::openDestination,
                             onLogout = onLogout,
                             darkTheme = themeState.value,
