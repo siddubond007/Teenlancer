@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import java.io.IOException
+import java.util.Locale
 
 data class AuthUiState(
     val isCheckingSession: Boolean = true,
@@ -18,7 +20,8 @@ data class AuthUiState(
     val isAuthenticated: Boolean = false,
     val user: AuthUser? = null,
     val errorMessage: String? = null,
-    val sessionRestoreError: String? = null
+    val sessionRestoreError: String? = null,
+    val isOfflineSession: Boolean = false
 )
 
 class AuthViewModel(
@@ -126,6 +129,12 @@ class AuthViewModel(
         restoreSession()
     }
 
+    private fun isNetworkUnavailable(error: Throwable): Boolean {
+        val causes = generateSequence(error) { it.cause }.toList()
+        if (causes.any { it is HttpException }) return false
+        return causes.any { it is IOException }
+    }
+
     private fun restoreSession() {
         viewModelScope.launch {
             val token = sessionStore.getAccessToken()
@@ -139,6 +148,7 @@ class AuthViewModel(
 
             repository.getCurrentUser()
                 .onSuccess { user ->
+                    sessionStore.saveCachedUser(user)
                     _uiState.value = AuthUiState(
                         isCheckingSession = false,
                         isAuthenticated = true,
@@ -146,11 +156,41 @@ class AuthViewModel(
                     )
                 }
                 .onFailure { exception ->
-                    if (exception is HttpException && exception.code() in 401..403) {
+                    val httpException = generateSequence(exception) { it.cause }
+                        .filterIsInstance<HttpException>()
+                        .firstOrNull()
+                    if (httpException != null && httpException.code() in 401..403) {
+                        // Explicit authorization failures must never be treated as an offline session.
                         repository.logout()
                         _uiState.value = AuthUiState(
                             isCheckingSession = false
                         )
+                    } else if (isNetworkUnavailable(exception)) {
+                        val cachedUser = runCatching {
+                            sessionStore.getCachedUser()
+                        }.getOrNull()
+                        val usableUser = cachedUser?.takeIf { cached ->
+                            !cached.id.isNullOrBlank() &&
+                                cached.role?.uppercase(Locale.US) in setOf(
+                                    "STUDENT_FREELANCER",
+                                    "CLIENT"
+                                )
+                        }
+
+                        if (usableUser != null) {
+                            _uiState.value = AuthUiState(
+                                isCheckingSession = false,
+                                isAuthenticated = true,
+                                user = usableUser,
+                                sessionRestoreError = null,
+                                isOfflineSession = true
+                            )
+                        } else {
+                            _uiState.value = AuthUiState(
+                                isCheckingSession = false,
+                                sessionRestoreError = "We couldn't verify your saved session. Check your connection and retry."
+                            )
+                        }
                     } else {
                         _uiState.value = AuthUiState(
                             isCheckingSession = false,
