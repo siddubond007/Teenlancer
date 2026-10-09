@@ -51,8 +51,10 @@ async function resolveCategories(values) {
     where: {
       OR: [
         { id: { in: preferences } },
-        ...(slugs.length ? [{ slug: { in: slugs, mode: 'insensitive' } }] : []),
-        { name: { in: preferences, mode: 'insensitive' } }
+        ...slugs.map((slug) => ({ slug })),
+        ...preferences.map((name) => ({
+          name: { equals: name, mode: 'insensitive' }
+        }))
       ]
     },
     select: {
@@ -174,7 +176,11 @@ exports.getHomeDiscovery = async (req, res) => {
         matchFilters.push({ skills: { hasSome: studentSkills } });
         matchFilters.push({
           taxonomySkills: {
-            some: { name: { in: studentSkills, mode: 'insensitive' } }
+            some: {
+              OR: studentSkills.map((skill) => ({
+                name: { equals: skill, mode: 'insensitive' }
+              }))
+            }
           }
         });
       }
@@ -272,9 +278,11 @@ exports.getHomeDiscovery = async (req, res) => {
     const categoryFilters = [];
     if (categoryIds.length) categoryFilters.push({ categoryId: { in: categoryIds } });
     if (legacyCategoryValues.length) {
-      categoryFilters.push({
-        category: { in: legacyCategoryValues, mode: 'insensitive' }
-      });
+      categoryFilters.push(
+        ...legacyCategoryValues.map((category) => ({
+          category: { equals: category, mode: 'insensitive' }
+        }))
+      );
     }
 
     let gigs = [];
@@ -409,7 +417,15 @@ exports.getProfileNudges = async (req, res) => {
     const hasCollege = meaningfulString(profile.college, ['College / University']);
     const hasCategory = meaningfulString(profile.category, [DEFAULT_CATEGORY]) ||
       meaningfulString(onboardingData.primaryDomain);
-    if (!profile.avatarUrl || !hasCustomTagline || !hasCustomBio || !hasCollege || !hasCategory) {
+    if (
+      profile.onboardingCompleted !== true ||
+      profile.onboardingStatus !== 'COMPLETED' ||
+      !profile.avatarUrl ||
+      !hasCustomTagline ||
+      !hasCustomBio ||
+      !hasCollege ||
+      !hasCategory
+    ) {
       nudges.push({
         id: 'profile-basics',
         type: 'PROFILE_BASICS',
