@@ -555,7 +555,100 @@ exports.verifyPayment = async (req, res) => {
 
 
 // Get a single Order Workspace
-exports.getOrderById = async (req, res) => {
+// Return public checkout parameters for an existing accepted custom-offer order.
+ // Payment orders are created on the server as part of the custom-offer flow. Never create
+ // a Razorpay order or accept client-supplied amount/key details from the Android app here.
+ exports.getCheckoutConfig = async (req, res) => {
+   try {
+     const { orderId } = req.params;
+     const order = await prisma.order.findUnique({
+       where: { id: orderId },
+       select: {
+         id: true,
+         clientId: true,
+         status: true,
+         totalAmount: true,
+         razorpayOrderId: true,
+         customOffer: { select: { status: true } },
+         gig: { select: { title: true } },
+         client: {
+           select: {
+             fullName: true,
+             email: true,
+             phone: true
+           }
+         }
+       }
+     });
+
+     if (!order) {
+       return res.status(404).json({ error: 'Order not found.' });
+     }
+
+     if (req.user.role !== 'CLIENT' || order.clientId !== req.user.id) {
+       return res.status(403).json({ error: 'Only the purchasing client can fund this order.' });
+     }
+
+     if (
+       order.status !== 'PENDING_PAYMENT' ||
+       order.customOffer?.status !== 'ACCEPTED'
+     ) {
+       return res.status(409).json({
+         error: 'This accepted custom offer is not awaiting payment.'
+       });
+     }
+
+     if (!order.razorpayOrderId) {
+       return res.status(409).json({
+         error: 'Payment order is not ready. Reopen the accepted custom offer and try again.'
+       });
+     }
+
+     const keyId = process.env.RAZORPAY_KEY_ID;
+     if (!keyId) {
+       return res.status(503).json({
+         error: 'Razorpay checkout is not configured.'
+       });
+     }
+
+     const isTestMode = keyId.startsWith('rzp_test_');
+     if (process.env.NODE_ENV !== 'production' && !isTestMode) {
+       return res.status(409).json({
+         error: 'Development checkout requires Razorpay test-mode keys.'
+       });
+     }
+
+     const amountPaise = Math.round(Number(order.totalAmount) * 100);
+     if (!Number.isSafeInteger(amountPaise) || amountPaise <= 0) {
+       return res.status(409).json({ error: 'This order has an invalid payment amount.' });
+     }
+
+     const gigTitle = order.gig?.title || 'accepted custom offer';
+     const description = ('Fund escrow for ' + gigTitle)
+       .replace(/\\s+/g, ' ')
+       .trim()
+       .slice(0, 180);
+
+     return res.json({
+       orderId: order.id,
+       razorpayOrderId: order.razorpayOrderId,
+       keyId,
+       amountPaise,
+       currency: 'INR',
+       name: 'SkillLaunch',
+       description: /^[a-z0-9]/i.test(description) ? description : 'Fund accepted custom offer',
+       isTestMode,
+       prefillName: order.client?.fullName || null,
+       prefillEmail: order.client?.email || null,
+       prefillContact: order.client?.phone || null
+     });
+   } catch (err) {
+     console.error('Get Escrow Checkout Config Error:', err);
+     return res.status(500).json({ error: 'Unable to prepare escrow checkout.' });
+   }
+ };
+
+ exports.getOrderById = async (req, res) => {
   try {
     const { orderId } = req.params;
 
