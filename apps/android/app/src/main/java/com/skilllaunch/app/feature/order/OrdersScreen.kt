@@ -1,5 +1,8 @@
 package com.skilllaunch.app.feature.order
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,7 +42,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.razorpay.Checkout
+import com.skilllaunch.app.BuildConfig
+import com.skilllaunch.app.core.payment.PaymentCoordinator
+import com.skilllaunch.app.data.model.order.OrderCheckoutConfig
+import org.json.JSONObject
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -62,7 +71,9 @@ data class OrdersUiState(
     val orders: List<OrderSummary> = emptyList(),
     val selectedOrder: OrderSummary? = null,
     val errorMessage: String? = null,
-    val actionMessage: String? = null
+    val actionMessage: String? = null,
+    val isPreparingCheckout: Boolean = false,
+    val checkoutConfig: OrderCheckoutConfig? = null
 )
 
 private class OrdersViewModel(
@@ -118,6 +129,85 @@ private class OrdersViewModel(
 
     fun clearSelection() {
         _state.value = _state.value.copy(selectedOrder = null, actionMessage = null)
+    }
+
+    fun prepareCheckout(orderId: String) {
+        if (orderId.isBlank()) {
+            checkoutLaunchFailed("This order cannot be funded because its ID is missing.")
+            return
+        }
+        viewModelScope.launch {
+            _state.value = _state.value.copy(
+                isPreparingCheckout = true,
+                checkoutConfig = null,
+                errorMessage = null,
+                actionMessage = null
+            )
+            repository.getCheckoutConfig(orderId)
+                .onSuccess { config ->
+                    if (
+                        config.orderId != orderId ||
+                        config.razorpayOrderId.isBlank() ||
+                        config.keyId.isBlank() ||
+                        config.amountPaise <= 0L
+                    ) {
+                        checkoutLaunchFailed("The server returned incomplete checkout details.")
+                    } else {
+                        _state.value = _state.value.copy(
+                            isPreparingCheckout = false,
+                            checkoutConfig = config
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    checkoutLaunchFailed(
+                        error.message ?: "Unable to prepare escrow checkout."
+                    )
+                }
+        }
+    }
+
+    fun consumeCheckoutConfig() {
+        _state.value = _state.value.copy(
+            checkoutConfig = null,
+            isPreparingCheckout = false
+        )
+    }
+
+    fun checkoutLaunchFailed(message: String) {
+        _state.value = _state.value.copy(
+            checkoutConfig = null,
+            isPreparingCheckout = false,
+            actionMessage = null,
+            errorMessage = message
+        )
+    }
+
+    fun handlePaymentVerification(event: com.skilllaunch.app.core.payment.PaymentVerificationEvent) {
+        if (!event.success) {
+            _state.value = _state.value.copy(
+                isPreparingCheckout = false,
+                checkoutConfig = null,
+                actionMessage = null,
+                errorMessage = event.message
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            val refreshedOrder = repository.getOrder(event.orderId).getOrNull()
+            val refreshedOrders = repository.getMyOrders().getOrNull()
+            val current = _state.value
+            _state.value = current.copy(
+                isLoading = false,
+                orders = refreshedOrders ?: current.orders,
+                selectedOrder = refreshedOrder ?: current.selectedOrder,
+                isPreparingCheckout = false,
+                checkoutConfig = null,
+                errorMessage = null,
+                actionMessage = event.message
+            )
+        }
     }
 
     fun approve(orderId: String) {
@@ -189,8 +279,70 @@ fun OrdersScreen(
         factory = remember(repository) { OrdersViewModel.factory(repository) }
     )
     val state by viewModel.state.collectAsStateWithLifecycleCompat()
+    val context = LocalContext.current
+    val paymentEvent by PaymentCoordinator.verificationEvent.collectAsStateWithLifecycleCompat()
     var revisionOrderId by remember { mutableStateOf<String?>(null) }
     var deliveryOrderId by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(paymentEvent?.eventId, state.selectedOrder?.id) {
+        val event = paymentEvent ?: return@LaunchedEffect
+        if (event.orderId == state.selectedOrder?.id) {
+            viewModel.handlePaymentVerification(event)
+            PaymentCoordinator.clearVerificationEvent(event.eventId)
+        }
+    }
+
+    val checkoutConfig = state.checkoutConfig
+    LaunchedEffect(checkoutConfig?.orderId) {
+        val config = checkoutConfig ?: return@LaunchedEffect
+        viewModel.consumeCheckoutConfig()
+
+        if (BuildConfig.DEBUG && !config.isTestMode) {
+            viewModel.checkoutLaunchFailed(
+                "Checkout is blocked in debug builds unless the backend uses Razorpay test-mode keys."
+            )
+            return@LaunchedEffect
+        }
+
+        val activity = context.findActivity()
+        if (activity == null) {
+            viewModel.checkoutLaunchFailed("Unable to open secure checkout from this screen.")
+            return@LaunchedEffect
+        }
+
+        try {
+            PaymentCoordinator.setPendingOrderId(config.orderId)
+            val checkout = Checkout()
+            checkout.setKeyID(config.keyId)
+
+            val options = JSONObject().apply {
+                put("key", config.keyId)
+                put("name", config.name)
+                put("description", config.description)
+                put("order_id", config.razorpayOrderId)
+                put("amount", config.amountPaise.toString())
+                put("currency", config.currency)
+                put("theme.color", "#4338CA")
+                put("retry", JSONObject().apply {
+                    put("enabled", true)
+                    put("max_count", 2)
+                })
+
+                val prefill = JSONObject()
+                config.prefillName?.takeIf { it.isNotBlank() }?.let { prefill.put("name", it) }
+                config.prefillEmail?.takeIf { it.isNotBlank() }?.let { prefill.put("email", it) }
+                config.prefillContact?.takeIf { it.isNotBlank() }?.let { prefill.put("contact", it) }
+                if (prefill.length() > 0) put("prefill", prefill)
+            }
+
+            checkout.open(activity, options)
+        } catch (error: Exception) {
+            PaymentCoordinator.clearPendingOrderId(config.orderId)
+            viewModel.checkoutLaunchFailed(
+                error.message ?: "Unable to open Razorpay checkout."
+            )
+        }
+    }
 
     LaunchedEffect(initialOrderId) {
         if (initialOrderId != null) {
@@ -207,10 +359,13 @@ fun OrdersScreen(
             user = user,
             order = selected,
             actionMessage = state.actionMessage,
+            errorMessage = state.errorMessage,
+            isPreparingCheckout = state.isPreparingCheckout,
             onBack = { viewModel.clearSelection() },
             onApprove = { viewModel.approve(selected.id.orEmpty()) },
             onRequestRevision = { revisionOrderId = selected.id },
-            onSubmitDelivery = { deliveryOrderId = selected.id }
+            onSubmitDelivery = { deliveryOrderId = selected.id },
+            onFundEscrow = { viewModel.prepareCheckout(selected.id.orEmpty()) }
         )
 
         revisionOrderId?.let { orderId ->
@@ -361,10 +516,13 @@ private fun OrderWorkspace(
     user: AuthUser,
     order: OrderSummary,
     actionMessage: String?,
+    errorMessage: String?,
+    isPreparingCheckout: Boolean,
     onBack: () -> Unit,
     onApprove: () -> Unit,
     onRequestRevision: () -> Unit,
-    onSubmitDelivery: () -> Unit
+    onSubmitDelivery: () -> Unit,
+    onFundEscrow: () -> Unit
 ) {
     val isStudent = user.role?.uppercase(Locale.US) == "STUDENT_FREELANCER"
     Column(
@@ -476,6 +634,41 @@ private fun OrderWorkspace(
                 Modifier.padding(top = 14.dp),
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        errorMessage?.takeIf { it.isNotBlank() }?.let {
+            Text(
+                it,
+                Modifier.padding(top = 10.dp),
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        if (!isStudent && order.status == "PENDING_PAYMENT") {
+            Button(
+                onClick = onFundEscrow,
+                enabled = !isPreparingCheckout,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 18.dp)
+            ) {
+                if (isPreparingCheckout) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Text("Preparing secure checkout", Modifier.padding(start = 10.dp))
+                } else {
+                    Text("Fund Escrow")
+                }
+            }
+            Text(
+                "Payment is verified by SkillLaunch before the order is activated.",
+                Modifier.padding(top = 8.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall
             )
         }
 
@@ -674,3 +867,10 @@ private fun relativeDeadline(deadline: String): String =
 
 private fun money(value: Double): String =
     NumberFormat.getIntegerInstance(Locale.forLanguageTag("en-IN")).format(value)
+
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
