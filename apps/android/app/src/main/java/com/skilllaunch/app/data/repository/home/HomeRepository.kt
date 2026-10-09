@@ -112,7 +112,7 @@ class HomeRepository(
             val state = gson.fromJson(row.snapshotJson, HomeState::class.java) ?: return null
 
             // A malformed or wrongly keyed snapshot must not be displayed for another account.
-            if (!state.id.isNullOrBlank() && state.id != userId) return null
+            if (state.id != userId) return null
 
             HomeStateLoadResult(
                 state = state,
