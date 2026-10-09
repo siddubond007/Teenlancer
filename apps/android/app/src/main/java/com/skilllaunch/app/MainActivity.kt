@@ -98,6 +98,63 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
             }
         }
     }
+
+    override fun onPaymentSuccess(razorpayPaymentId: String?, paymentData: PaymentData?) {
+        val localOrderId = PaymentCoordinator.takePendingOrderId() ?: return
+        val checkoutOrderId = paymentData?.orderId
+        val signature = paymentData?.signature
+
+        if (
+            razorpayPaymentId.isNullOrBlank() ||
+            checkoutOrderId.isNullOrBlank() ||
+            signature.isNullOrBlank()
+        ) {
+            PaymentCoordinator.publishVerificationResult(
+                orderId = localOrderId,
+                success = false,
+                message = "Razorpay returned incomplete payment details. Your order remains awaiting payment."
+            )
+            return
+        }
+
+        lifecycleScope.launch {
+            val repository = OrderRepository(
+                ApiClient.orderApi(SessionStore(applicationContext))
+            )
+            repository.verifyPayment(
+                orderId = localOrderId,
+                razorpayOrderId = checkoutOrderId,
+                razorpayPaymentId = razorpayPaymentId,
+                razorpaySignature = signature
+            ).onSuccess { response ->
+                PaymentCoordinator.publishVerificationResult(
+                    orderId = localOrderId,
+                    success = true,
+                    message = response.message ?: "Escrow funded successfully."
+                )
+            }.onFailure { error ->
+                PaymentCoordinator.publishVerificationResult(
+                    orderId = localOrderId,
+                    success = false,
+                    message = error.message
+                        ?: "Payment returned successfully, but verification is incomplete. Refresh Orders before trying again."
+                )
+            }
+        }
+    }
+
+    override fun onPaymentError(
+        errorCode: Int,
+        response: String?,
+        paymentData: PaymentData?
+    ) {
+        val localOrderId = PaymentCoordinator.takePendingOrderId() ?: return
+        PaymentCoordinator.publishVerificationResult(
+            orderId = localOrderId,
+            success = false,
+            message = "Payment was not completed. Your order is still awaiting payment."
+        )
+    }
 }
 
 @Composable
@@ -370,63 +427,7 @@ private fun SkillLaunchRoot(
         }
     }
 
-    override fun onPaymentSuccess(razorpayPaymentId: String?, paymentData: PaymentData?) {
-        val localOrderId = PaymentCoordinator.takePendingOrderId() ?: return
-        val checkoutOrderId = paymentData?.orderId
-        val signature = paymentData?.signature
 
-        if (
-            razorpayPaymentId.isNullOrBlank() ||
-            checkoutOrderId.isNullOrBlank() ||
-            signature.isNullOrBlank()
-        ) {
-            PaymentCoordinator.publishVerificationResult(
-                orderId = localOrderId,
-                success = false,
-                message = "Razorpay returned incomplete payment details. Your order remains awaiting payment."
-            )
-            return
-        }
-
-        lifecycleScope.launch {
-            val repository = OrderRepository(
-                ApiClient.orderApi(SessionStore(applicationContext))
-            )
-            repository.verifyPayment(
-                orderId = localOrderId,
-                razorpayOrderId = checkoutOrderId,
-                razorpayPaymentId = razorpayPaymentId,
-                razorpaySignature = signature
-            ).onSuccess { response ->
-                PaymentCoordinator.publishVerificationResult(
-                    orderId = localOrderId,
-                    success = true,
-                    message = response.message ?: "Escrow funded successfully."
-                )
-            }.onFailure { error ->
-                PaymentCoordinator.publishVerificationResult(
-                    orderId = localOrderId,
-                    success = false,
-                    message = error.message
-                        ?: "Payment returned successfully, but verification is incomplete. Refresh Orders before trying again."
-                )
-            }
-        }
-    }
-
-    override fun onPaymentError(
-        errorCode: Int,
-        response: String?,
-        paymentData: PaymentData?
-    ) {
-        val localOrderId = PaymentCoordinator.takePendingOrderId() ?: return
-        PaymentCoordinator.publishVerificationResult(
-            orderId = localOrderId,
-            success = false,
-            message = "Payment was not completed. Your order is still awaiting payment."
-        )
-    }
-}
 
 @Composable
 private fun SessionCheckingScreen() {
