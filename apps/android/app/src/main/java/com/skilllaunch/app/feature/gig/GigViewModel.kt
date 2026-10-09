@@ -66,15 +66,4 @@ class GigViewModel(
         eventId: String
     ): Result<Boolean> = repository.recordAnalyticsEvent(gigId, type, eventId)
 
-    /**
-     * Fire-and-forget analytics using the repository lifetime, which outlives
-     * the Explore ViewModel when a tap navigates to Gig Details.
-     */
-    fun recordAnalyticsEventInBackground(
-        gigId: String,
-        type: String,
-        eventId: String
-    ) {
-        repository.recordAnalyticsEventInBackground(gigId, type, eventId)
-    }
 }
