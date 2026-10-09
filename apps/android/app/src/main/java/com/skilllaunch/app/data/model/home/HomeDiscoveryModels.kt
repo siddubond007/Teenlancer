@@ -3,6 +3,7 @@ package com.skilllaunch.app.data.model.home
 data class HomeDiscoveryResponse(
     val role: String? = null,
     val discoveryCategory: String? = null,
+    val discoveryCategories: List<String> = emptyList(),
     val recommendedJobs: List<HomeRecommendedJob> = emptyList(),
     val topVerifiedGigs: List<HomeGigRecommendation> = emptyList()
 )
