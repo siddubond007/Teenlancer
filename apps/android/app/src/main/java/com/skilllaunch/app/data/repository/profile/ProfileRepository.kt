@@ -69,7 +69,7 @@ class ProfileRepository(
         if (causes.any { it is IOException }) return true
 
         val httpError = causes.filterIsInstance<HttpException>().firstOrNull()
-        return httpError?.code() == 429 || httpError?.code() in 500..599
+        return httpError != null && (httpError.code() == 429 || httpError.code() in 500..599)
     }
 
 
