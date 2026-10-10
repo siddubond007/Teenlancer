@@ -406,6 +406,16 @@ async function cleanupFixture(prisma) {
     }
 
     if (gig) {
+      const analyticsEventCount = await tx.gigAnalyticsEvent.count({
+        where: { gigId: gig.id }
+      });
+      if (analyticsEventCount > 0) {
+        throw new Error(
+          'Safety stop: the fixture gig has ' + analyticsEventCount +
+          ' analytics event(s). No data was deleted so test telemetry is preserved.'
+        );
+      }
+
       const otherGigOrders = await tx.order.count({
         where: { gigId: gig.id, ...(order ? { id: { not: order.id } } : {}) }
       });
@@ -464,8 +474,6 @@ async function cleanupFixture(prisma) {
 
     if (order) await tx.order.delete({ where: { id: order.id } });
     if (gig) {
-      // Analytics events attached to this uniquely test-only gig are also fixture-only.
-      await tx.gigAnalyticsEvent.deleteMany({ where: { gigId: gig.id } });
       await tx.gig.delete({ where: { id: gig.id } });
     }
     await tx.user.delete({ where: { id: student.id } });
