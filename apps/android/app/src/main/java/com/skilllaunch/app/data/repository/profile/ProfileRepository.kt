@@ -13,6 +13,9 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 import com.google.gson.Gson
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import java.io.IOException
 
 class ProfileRepository(
     private val userApi: UserApi,
@@ -33,13 +36,40 @@ class ProfileRepository(
     }
 
     suspend fun getMyProfile(): Result<ProfileUser> {
-        return runCatching {
-            userApi.getMyProfile()
-        }.recoverCatching { error ->
-            throw Exception(
-                apiErrorMessage(error, "Unable to load your profile right now")
-            )
+        val maxAttempts = 3
+        val fallbackMessage = "Unable to load your profile right now"
+
+        for (attempt in 0 until maxAttempts) {
+            try {
+                return Result.success(userApi.getMyProfile())
+            } catch (error: Exception) {
+                // Preserve structured cancellation instead of turning a navigation
+                // or lifecycle cancellation into an ordinary profile failure.
+                if (error is CancellationException) throw error
+
+                val retryable = isTransientProfileReadFailure(error)
+                if (retryable && attempt < maxAttempts - 1) {
+                    delay(250L * (attempt + 1))
+                    continue
+                }
+
+                // Keep the cause chain intact: MainActivity uses it to distinguish
+                // connectivity failures from authorization and server errors.
+                return Result.failure(
+                    Exception(apiErrorMessage(error, fallbackMessage), error)
+                )
+            }
         }
+
+        return Result.failure(IllegalStateException(fallbackMessage))
+    }
+
+    private fun isTransientProfileReadFailure(error: Throwable): Boolean {
+        val causes = generateSequence(error) { it.cause }.toList()
+        if (causes.any { it is IOException }) return true
+
+        val httpError = causes.filterIsInstance<HttpException>().firstOrNull()
+        return httpError?.code() == 429 || httpError?.code() in 500..599
     }
 
 
