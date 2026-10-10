@@ -456,7 +456,7 @@ async function cleanupFixture(prisma) {
       where: { requirements: FIXTURE_ORDER_MARKER },
       select: {
         id: true, clientId: true, sellerId: true, gigId: true, status: true,
-        razorpayOrderId: true, razorpayPaymentId: true, razorpayRefundId: true
+        razorpayOrderId: true, razorpayPaymentId: true
       }
     });
     if (orders.length > 1) throw new Error('Safety stop: multiple fixture orders found. No data was deleted.');
@@ -467,8 +467,7 @@ async function cleanupFixture(prisma) {
       order.sellerId !== student.id ||
       order.gigId !== gig?.id ||
       order.razorpayOrderId ||
-      order.razorpayPaymentId ||
-      order.razorpayRefundId
+      order.razorpayPaymentId
     )) {
       throw new Error('Safety stop: fixture order identity/payment fields do not match. No data was deleted.');
     }
