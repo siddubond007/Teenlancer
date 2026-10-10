@@ -10,7 +10,9 @@
     "test": "node --test",
     "test:stage4-profile-nudges": "node scripts/create-stage4-profile-nudge-test-user.js",
     "test:stage5-analytics-gig": "node scripts/create-stage5-analytics-test-gig.js",
-    "cleanup:stage5-analytics-gig": "node scripts/create-stage5-analytics-test-gig.js --cleanup"
+    "cleanup:stage5-analytics-gig": "node scripts/create-stage5-analytics-test-gig.js --cleanup",
+    "test:stage5-offline-order": "node scripts/create-stage5-offline-order-test-fixture.js",
+    "cleanup:stage5-offline-order": "node scripts/create-stage5-offline-order-test-fixture.js --cleanup"
   },
   "keywords": [],
   "author": "",
