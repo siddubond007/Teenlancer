@@ -131,14 +131,20 @@ async function getOrCreateFixtureUser(tx, expected, passwordHash) {
           skills: expected.role === 'STUDENT_FREELANCER' ? ['Testing', 'Development'] : [],
           onboardingCompleted: true,
           onboardingStatus: 'COMPLETED',
-          onboardingData: {
-            version: 1,
-            role: expected.role,
-            primaryDomain: expected.role === 'STUDENT_FREELANCER' ? 'Development' : undefined,
-            hiringCategories: expected.role === 'CLIENT' ? ['Development'] : undefined,
-            companyOrProjectName: expected.role === 'CLIENT' ? 'Stage 5 Test Studio' : undefined,
-            fixture: 'STAGE5_OFFLINE_ORDER_TEST'
-          }
+          onboardingData: expected.role === 'CLIENT'
+            ? {
+                version: 1,
+                role: 'CLIENT',
+                hiringCategories: ['Development'],
+                companyOrProjectName: 'Stage 5 Test Studio',
+                fixture: 'STAGE5_OFFLINE_ORDER_TEST'
+              }
+            : {
+                version: 1,
+                role: 'STUDENT_FREELANCER',
+                primaryDomain: 'Development',
+                fixture: 'STAGE5_OFFLINE_ORDER_TEST'
+              }
         }
       },
       wallet: {
