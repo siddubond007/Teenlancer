@@ -299,7 +299,12 @@ private fun SkillLaunchRoot(
         }
     }
 
-    LaunchedEffect(state.isAuthenticated, state.user?.id, profileResolutionRetryKey) {
+    LaunchedEffect(
+        state.isAuthenticated,
+        state.user?.id,
+        state.isNewlyRegistered,
+        profileResolutionRetryKey
+    ) {
         val userId = state.user?.id
 
         if (!state.isAuthenticated || userId.isNullOrBlank()) {
@@ -316,15 +321,26 @@ private fun SkillLaunchRoot(
         val canUseOnboarding =
             role == "STUDENT_FREELANCER" || role == "CLIENT"
 
-        onboardingStep = if (canUseOnboarding) {
+        onboardingStep = if (state.isNewlyRegistered || !canUseOnboarding) {
+            1
+        } else {
             sessionStore.getOnboardingStep(
                 userId = userId,
                 maxStep = if (role == "STUDENT_FREELANCER") 4 else 3
             )
-        } else {
-            1
         }
         onboardingStepOwnerId = userId
+
+        // Registration creates the user's profile with PENDING onboarding state
+        // on the server. Do not perform a second network request just to rediscover
+        // a state the registration contract already guarantees; it can transiently
+        // fail immediately after signup and block the onboarding UI.
+        if (state.isNewlyRegistered && canUseOnboarding) {
+            showOnboarding = true
+            profileResolutionFailed = false
+            onboardingResolvedForUser = true
+            return@LaunchedEffect
+        }
 
         // Use the authenticated user's own profile endpoint here. The public
         // users/{userId} endpoint intentionally sanitizes onboardingStatus and
