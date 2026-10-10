@@ -293,7 +293,6 @@ async function seedFixture(prisma) {
   });
 
   console.log('\nPASS: Stage 5 active-order offline-cache fixture is ready.');
-  console.log('Database target: ' + process.env.DATABASE_URL.replace(/\/\/([^:/@]+):([^@]+)@/, '//[credentials-redacted]@'));
   console.log('Student login: ' + STUDENT_EMAIL);
   console.log('Client login:  ' + CLIENT_EMAIL);
   console.log('Password for both test accounts: ' + TEST_PASSWORD);
@@ -445,13 +444,22 @@ async function cleanupFixture(prisma) {
       }
     }
 
+    const studentFixtureAnalyticsCount = gig
+      ? await tx.gigAnalyticsEvent.count({ where: { actorId: student.id, gigId: gig.id } })
+      : 0;
+    const clientFixtureAnalyticsCount = gig
+      ? await tx.gigAnalyticsEvent.count({ where: { actorId: client.id, gigId: gig.id } })
+      : 0;
+
     await assertNoUnexpectedAccountActivity(tx, student.id, {
       gigs: gig ? 1 : 0,
       ordersAsSeller: order ? 1 : 0,
-      activityEvents: order ? fixtureEventCount : 0
+      activityEvents: order ? fixtureEventCount : 0,
+      gigAnalyticsEvents: studentFixtureAnalyticsCount
     });
     await assertNoUnexpectedAccountActivity(tx, client.id, {
-      ordersAsClient: order ? 1 : 0
+      ordersAsClient: order ? 1 : 0,
+      gigAnalyticsEvents: clientFixtureAnalyticsCount
     });
 
     if (order) await tx.order.delete({ where: { id: order.id } });
