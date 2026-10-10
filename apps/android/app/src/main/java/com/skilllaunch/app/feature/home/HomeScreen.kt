@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Description
@@ -54,6 +55,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -605,7 +607,8 @@ private fun PremiumHomeOverview(
             label = if (isStudent) "WALLET" else "ESCROW",
             value = "₹" + formatMoney(state.financialSummary),
             detail = if (isStudent) "Available balance" else "Held for projects",
-            accent = accent
+            accent = accent,
+            icon = if (isStudent) Icons.Outlined.AccountBalanceWallet else null
         )
         PremiumMetricCard(
             modifier = Modifier.weight(1f),
@@ -614,7 +617,8 @@ private fun PremiumHomeOverview(
             detail = if (isStudent) "Needs attention" else "Awaiting review",
             accent = if (state.actionQueue.isNotEmpty()) {
                 if (isStudent) Color(0xFFF59E0B) else Color(0xFFFB8B79)
-            } else accent
+            } else accent,
+            icon = if (isStudent) Icons.Outlined.AccessTime else null
         )
         PremiumMetricCard(
             modifier = Modifier.weight(1f),
@@ -622,7 +626,8 @@ private fun PremiumHomeOverview(
             value = if (isStudent) state.recommendedJobs.size.toString()
                 else state.topVerifiedGigs.size.toString(),
             detail = if (isStudent) "Recommended" else "Verified gigs",
-            accent = accent
+            accent = accent,
+            icon = if (isStudent) Icons.Outlined.BusinessCenter else null
         )
     }
 }
@@ -633,7 +638,8 @@ private fun PremiumMetricCard(
     label: String,
     value: String,
     detail: String,
-    accent: Color
+    accent: Color,
+    icon: ImageVector? = null
 ) {
     Surface(
         modifier = modifier,
@@ -642,13 +648,35 @@ private fun PremiumMetricCard(
         border = BorderStroke(1.dp, accent.copy(alpha = 0.15f))
     ) {
         Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
-            Text(
-                label,
-                color = accent,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 1
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    label,
+                    color = accent,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1
+                )
+                if (icon != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(accent.copy(alpha = 0.10f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp),
+                            tint = accent
+                        )
+                    }
+                }
+            }
             Text(
                 value,
                 modifier = Modifier.padding(top = 5.dp),
