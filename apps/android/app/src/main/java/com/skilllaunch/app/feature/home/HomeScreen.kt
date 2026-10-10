@@ -842,6 +842,81 @@ private fun StudentHome(
 
 
 @Composable
+private fun GigPerformanceMiniChart(
+    impressions: Int,
+    views: Int,
+    clicks: Int,
+    orders: Int,
+    periodDays: Int,
+    accent: Color
+) {
+    val metrics = listOf(
+        "IMP" to impressions.coerceAtLeast(0),
+        "VIEWS" to views.coerceAtLeast(0),
+        "CLICKS" to clicks.coerceAtLeast(0),
+        "ORDERS" to orders.coerceAtLeast(0)
+    )
+    val scaleMaximum = metrics.maxOfOrNull { it.second }?.coerceAtLeast(1) ?: 1
+
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text(
+            "METRIC MIX · LAST ${periodDays.coerceAtLeast(1)} DAYS",
+            color = accent,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            metrics.forEach { (label, value) ->
+                val fraction = value.toFloat() / scaleMaximum.toFloat()
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Text(
+                        formatAnalyticsCount(value),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1
+                    )
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(38.dp),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .width(18.dp)
+                                .height((4f + 32f * fraction).dp),
+                            shape = RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp),
+                            color = accent.copy(
+                                alpha = if (value == 0) 0.16f else 0.28f + 0.62f * fraction
+                            )
+                        ) {}
+                    }
+                    Text(
+                        label,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+        Text(
+            "Bar height is relative to this gig's largest metric.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
+
+@Composable
 private fun MarketplaceIntelligenceSection(
     analytics: HomeAnalyticsResponse,
     accent: Color
@@ -961,6 +1036,14 @@ private fun MarketplaceIntelligenceSection(
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                     }
+                                    GigPerformanceMiniChart(
+                                        impressions = gig.impressions,
+                                        views = gig.views,
+                                        clicks = gig.clicks,
+                                        orders = gig.orders,
+                                        periodDays = analytics.periodDays,
+                                        accent = accent
+                                    )
                                     Text(
                                         "${formatAnalyticsCount(gig.impressions)} impressions · ${formatAnalyticsCount(gig.views)} views",
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
