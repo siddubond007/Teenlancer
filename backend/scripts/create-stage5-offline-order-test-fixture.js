@@ -24,6 +24,39 @@ const FIXTURE_ORDER_MARKER = '[STAGE5_OFFLINE_ORDER_FIXTURE] synthetic test data
 const FIXTURE_EVENT_SOURCE = 'STAGE5_OFFLINE_ORDER_TEST_FIXTURE';
 const TEST_PASSWORD = 'Stage5Offline!Test2026';
 
+
+function analyticsEventPrefixForGig(gigId) {
+  return FIXTURE_ANALYTICS_EVENT_PREFIX + gigId + '-';
+}
+
+function buildAnalyticsFixtureEvents(gigId) {
+  const now = Date.now();
+  const definitions = [
+    { type: 'IMPRESSION', count: 12, spacingHours: 8, offsetHours: 1 },
+    { type: 'VIEW', count: 6, spacingHours: 16, offsetHours: 2 },
+    { type: 'CLICK', count: 3, spacingHours: 32, offsetHours: 3 }
+  ];
+
+  return definitions.flatMap(({ type, count, spacingHours, offsetHours }) =>
+    Array.from({ length: count }, (_, index) => ({
+      gigId,
+      actorId: null,
+      type,
+      eventId:
+        analyticsEventPrefixForGig(gigId) + type + '-' +
+        String(index + 1).padStart(3, '0'),
+      metadata: {
+        source: FIXTURE_ANALYTICS_EVENT_SOURCE,
+        synthetic: true,
+        note: 'Development-only chart sample data; not real marketplace activity.'
+      },
+      createdAt: new Date(
+        now - (offsetHours + index * spacingHours) * 60 * 60 * 1000
+      )
+    }))
+  );
+}
+
 function assertSafeTestTarget() {
   if ((process.env.NODE_ENV || '').toLowerCase() === 'production') {
     throw new Error('Refusing to seed or delete Stage 5 test data when NODE_ENV=production.');
@@ -289,7 +322,29 @@ async function seedFixture(prisma) {
       });
     }
 
-    return { student, client, gig, order };
+    const analyticsPrefix = analyticsEventPrefixForGig(gig.id);
+    const existingAnalyticsEvents = await tx.gigAnalyticsEvent.findMany({
+      where: { gigId: gig.id },
+      select: { eventId: true, metadata: true }
+    });
+    const unexpectedAnalyticsEvents = existingAnalyticsEvents.filter((event) =>
+      !event.eventId.startsWith(analyticsPrefix) ||
+      event.metadata?.source !== FIXTURE_ANALYTICS_EVENT_SOURCE ||
+      event.metadata?.synthetic !== true
+    );
+    if (unexpectedAnalyticsEvents.length > 0) {
+      throw new Error(
+        'Safety stop: the dedicated test gig has ' + unexpectedAnalyticsEvents.length +
+        ' analytics event(s) that are not owned by this fixture. No additional data was changed.'
+      );
+    }
+
+    const analyticsInsert = await tx.gigAnalyticsEvent.createMany({
+      data: buildAnalyticsFixtureEvents(gig.id),
+      skipDuplicates: true
+    });
+
+    return { student, client, gig, order, analyticsInsertedCount: analyticsInsert.count };
   });
 
   console.log('\nPASS: Stage 5 active-order offline-cache fixture is ready.');
@@ -299,6 +354,8 @@ async function seedFixture(prisma) {
   console.log('Test order ID: ' + fixture.order.id);
   console.log('Order title:   ' + FIXTURE_GIG_TITLE);
   console.log('Order status:  ' + fixture.order.status);
+  console.log('Synthetic chart events inserted this run: ' + fixture.analyticsInsertedCount);
+  console.log('Chart sample: 12 impressions, 6 views, 3 clicks; completed orders remain 0.');
   console.log('Synthetic amount: INR 1500 (display/test data only; no payment or transfer exists).');
   console.log('\nUse either dedicated account in the Android app and open Home while online first.');
   console.log('After validation, run: npm run cleanup:stage5-offline-order');
@@ -405,14 +462,22 @@ async function cleanupFixture(prisma) {
       throw new Error('Safety stop: fixture order identity/payment fields do not match. No data was deleted.');
     }
 
+    let fixtureAnalyticsEvents = [];
     if (gig) {
-      const analyticsEventCount = await tx.gigAnalyticsEvent.count({
-        where: { gigId: gig.id }
+      const analyticsPrefix = analyticsEventPrefixForGig(gig.id);
+      fixtureAnalyticsEvents = await tx.gigAnalyticsEvent.findMany({
+        where: { gigId: gig.id },
+        select: { id: true, eventId: true, metadata: true }
       });
-      if (analyticsEventCount > 0) {
+      const unexpectedAnalyticsEvents = fixtureAnalyticsEvents.filter((event) =>
+        !event.eventId.startsWith(analyticsPrefix) ||
+        event.metadata?.source !== FIXTURE_ANALYTICS_EVENT_SOURCE ||
+        event.metadata?.synthetic !== true
+      );
+      if (unexpectedAnalyticsEvents.length > 0) {
         throw new Error(
-          'Safety stop: the fixture gig has ' + analyticsEventCount +
-          ' analytics event(s). No data was deleted so test telemetry is preserved.'
+          'Safety stop: the fixture gig has ' + unexpectedAnalyticsEvents.length +
+          ' analytics event(s) not owned by this fixture. No data was deleted.'
         );
       }
 
@@ -474,6 +539,13 @@ async function cleanupFixture(prisma) {
 
     if (order) await tx.order.delete({ where: { id: order.id } });
     if (gig) {
+      const analyticsPrefix = analyticsEventPrefixForGig(gig.id);
+      await tx.gigAnalyticsEvent.deleteMany({
+        where: {
+          gigId: gig.id,
+          eventId: { startsWith: analyticsPrefix }
+        }
+      });
       await tx.gig.delete({ where: { id: gig.id } });
     }
     await tx.user.delete({ where: { id: student.id } });
