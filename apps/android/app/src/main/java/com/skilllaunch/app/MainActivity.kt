@@ -326,9 +326,23 @@ private fun SkillLaunchRoot(
         }
         onboardingStepOwnerId = userId
 
-        profileRepository.getProfile(userId)
+        // Use the authenticated user's own profile endpoint here. The public
+        // users/{userId} endpoint intentionally sanitizes onboardingStatus and
+        // onboardingCompleted, which made new accounts appear already onboarded.
+        profileRepository.getMyProfile()
             .onSuccess { profile ->
-                val status = profile.profile?.onboardingStatus
+                // Never resolve onboarding from a profile response belonging to a
+                // different authenticated account.
+                if (profile.id != userId ||
+                    profile.role?.equals(role, ignoreCase = true) != true
+                ) {
+                    showOnboarding = false
+                    profileResolutionFailed = true
+                    onboardingResolvedForUser = false
+                    return@onSuccess
+                }
+
+                val status = profile.profile?.onboardingStatus?.trim()?.uppercase()
 
                 showOnboarding = if (!canUseOnboarding) {
                     false
@@ -337,7 +351,8 @@ private fun SkillLaunchRoot(
                         "SKIPPED" -> false
                         "COMPLETED" -> profile.profile?.onboardingCompleted == false
                         "NOT_STARTED", "PENDING", "IN_PROGRESS" -> true
-                        else -> profile.profile?.onboardingCompleted == false
+                        // Unknown/missing state is not proof that onboarding is done.
+                        else -> profile.profile?.onboardingCompleted != true
                     }
                 }
 
