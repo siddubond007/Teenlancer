@@ -755,10 +755,7 @@ private fun StudentHome(
             }
         } else if (matchedJobs.isEmpty()) {
             item {
-                Stage2UnavailableCard(
-                    title = "No matching jobs yet",
-                    message = "New projects that match your saved skills or category will appear here."
-                )
+                StudentJobsEmptyState(accent = StudentAccent)
             }
         } else {
             item {
@@ -1937,6 +1934,53 @@ private fun DiscoverySectionHeader(
     }
 }
 
+@Composable
+private fun StudentJobsEmptyState(accent: Color) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Surface(
+                modifier = Modifier.size(42.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = accent.copy(alpha = 0.10f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Outlined.BusinessCenter,
+                        contentDescription = null,
+                        modifier = Modifier.size(21.dp),
+                        tint = accent
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
+            ) {
+                Text(
+                    "No matching jobs yet",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    "New projects that match your saved skills or category will appear here.",
+                    modifier = Modifier.padding(top = 6.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
 @Composable
 private fun Stage2UnavailableCard(
     title: String,
