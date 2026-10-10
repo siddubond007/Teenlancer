@@ -22,6 +22,8 @@ const FIXTURE_GIG_DESCRIPTION =
   'SYNTHETIC TEST DATA ONLY. This gig exists solely to verify the Android Home active-order Room cache. Do not purchase.';
 const FIXTURE_ORDER_MARKER = '[STAGE5_OFFLINE_ORDER_FIXTURE] synthetic test data only';
 const FIXTURE_EVENT_SOURCE = 'STAGE5_OFFLINE_ORDER_TEST_FIXTURE';
+const FIXTURE_ANALYTICS_EVENT_SOURCE = 'STAGE5_OFFLINE_ANALYTICS_FIXTURE';
+const FIXTURE_ANALYTICS_EVENT_PREFIX = 'stage5-offline-chart-';
 const TEST_PASSWORD = 'Stage5Offline!Test2026';
 
 
