@@ -21,7 +21,8 @@ data class AuthUiState(
     val user: AuthUser? = null,
     val errorMessage: String? = null,
     val sessionRestoreError: String? = null,
-    val isOfflineSession: Boolean = false
+    val isOfflineSession: Boolean = false,
+    val isNewlyRegistered: Boolean = false
 )
 
 class AuthViewModel(
@@ -103,7 +104,13 @@ class AuthViewModel(
                 dob = dob
             )
                 .onSuccess { user ->
-                    _uiState.value = AuthUiState(isCheckingSession = false, isAuthenticated = true, user = user, sessionRestoreError = null)
+                    _uiState.value = AuthUiState(
+                        isCheckingSession = false,
+                        isAuthenticated = true,
+                        user = user,
+                        sessionRestoreError = null,
+                        isNewlyRegistered = true
+                    )
                 }
                 .onFailure { exception ->
                     _uiState.value = _uiState.value.copy(isCheckingSession = false, isLoading = false, sessionRestoreError = null, errorMessage = exception.message ?: "Unable to create your account. Please try again.")
