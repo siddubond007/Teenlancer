@@ -339,6 +339,15 @@ async function seedFixture(prisma) {
       );
     }
 
+    // Refresh only the uniquely tagged fixture events so repeat runs keep
+    // the chart sample inside the rolling seven-day analytics window.
+    await tx.gigAnalyticsEvent.deleteMany({
+      where: {
+        gigId: gig.id,
+        eventId: { startsWith: analyticsPrefix }
+      }
+    });
+
     const analyticsInsert = await tx.gigAnalyticsEvent.createMany({
       data: buildAnalyticsFixtureEvents(gig.id),
       skipDuplicates: true
