@@ -153,7 +153,8 @@ private class ChatViewModel(
 @Composable
 fun ChatScreen(
     user: AuthUser,
-    repository: OrderRepository
+    repository: OrderRepository,
+    refreshVersion: Int = 0
 ) {
     val viewModel: ChatViewModel = viewModel(
         factory = remember(repository) {
@@ -162,7 +163,7 @@ fun ChatScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycleCompat()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(refreshVersion) {
         viewModel.loadOrders()
     }
 
