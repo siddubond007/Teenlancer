@@ -40,6 +40,27 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.rounded.AccountBalance
+import androidx.compose.material.icons.rounded.Analytics
+import androidx.compose.material.icons.rounded.Architecture
+import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Campaign
+import androidx.compose.material.icons.rounded.CloudQueue
+import androidx.compose.material.icons.rounded.Computer
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Event
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.ShoppingCart
+import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.SupportAgent
+import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -135,10 +156,32 @@ private fun normalizedTokens(value: String): Set<String> =
         .filter { it.length >= 2 }
         .toSet()
 
+private fun sanitizeBudgetInput(value: String): String {
+    val filtered = value.filter { it.isDigit() || it == '.' }
+    val decimalIndex = filtered.indexOf('.')
+    return if (decimalIndex < 0) filtered
+    else filtered.take(decimalIndex + 1) + filtered.drop(decimalIndex + 1).replace(".", "")
+}
+
+private fun domainAccent(label: String): Color {
+    val value = label.lowercase(Locale.ROOT)
+    return when {
+        "web" in value || "software" in value -> Color(0xFF83B8FF)
+        "mobile" in value || "app" in value -> Color(0xFF78DCC8)
+        "data" in value || "ai" in value -> Color(0xFF9FC7FF)
+        "design" in value || "creative" in value -> Color(0xFFFF9BCB)
+        "business" in value || "finance" in value || "education" in value -> Color(0xFFFFC780)
+        "marketing" in value || "social" in value -> Color(0xFFFF91B8)
+        "admin" in value || "support" in value -> Color(0xFFC5B7FF)
+        else -> Color(0xFFB7A8FF)
+    }
+}
+
 private data class ActiveExploreFilter(
     val key: String,
     val label: String,
-    val onRemove: () -> Unit
+    val onRemove: () -> Unit,
+    val icon: ImageVector? = null
 )
 
 data class JobDiscoveryUiState(
@@ -255,6 +298,19 @@ fun JobDiscoveryScreen(
     var skillFilterSearch by rememberSaveable { mutableStateOf("") }
     var locationFilter by rememberSaveable { mutableStateOf("") }
     var languageFilter by rememberSaveable { mutableStateOf("") }
+
+    // Filter edits remain a draft until the user explicitly applies them.
+    var draftSortMode by rememberSaveable { mutableStateOf("Newest") }
+    var draftSelectedCategory by rememberSaveable { mutableStateOf("All") }
+    var draftMinBudget by rememberSaveable { mutableStateOf("") }
+    var draftMaxBudget by rememberSaveable { mutableStateOf("") }
+    var draftProjectTypes by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    var draftSkills by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    var draftSkillSearch by rememberSaveable { mutableStateOf("") }
+    var draftLocation by rememberSaveable { mutableStateOf("") }
+    var draftLanguage by rememberSaveable { mutableStateOf("") }
+    var returnToFiltersAfterDomainPicker by rememberSaveable { mutableStateOf(false) }
+
     var profileCategory by rememberSaveable { mutableStateOf("") }
     var profileSkills by remember { mutableStateOf<List<String>>(emptyList()) }
     var savedJobIds by remember {
@@ -291,9 +347,9 @@ fun JobDiscoveryScreen(
     val textPrimary = MaterialTheme.colorScheme.onBackground
     val textMuted = MaterialTheme.colorScheme.onSurfaceVariant
     val lavender = if (darkTheme) Color(0xFFB7A8FF) else Color(0xFF6757D9)
-    val pageBackground = if (darkTheme) Color(0xFF08090B) else Color(0xFFF9F7FC)
-    val cardBackground = if (darkTheme) Color(0xF0131518) else Color(0xF7FFFFFF)
-    val searchBackground = if (darkTheme) Color(0xF016181B) else Color(0xEFFFFFFF)
+    val pageBackground = if (darkTheme) Color(0xFF0D0F14) else Color(0xFFF9F7FC)
+    val cardBackground = if (darkTheme) Color(0xF5181B22) else Color(0xF7FFFFFF)
+    val searchBackground = if (darkTheme) Color(0xF71A1D25) else Color(0xEFFFFFFF)
 
     val allCategories = remember(state.jobs) {
         state.jobs.mapNotNull {
@@ -361,8 +417,18 @@ fun JobDiscoveryScreen(
             .take(3)
     }
 
-    val allJobSkills = remember(state.jobs) {
-        state.jobs.flatMap { it.skills }
+    val skillScopeCategory = if (showFilterDialog || returnToFiltersAfterDomainPicker) {
+        draftSelectedCategory
+    } else {
+        selectedCategory
+    }
+    val allJobSkills = remember(state.jobs, skillScopeCategory) {
+        state.jobs
+            .filter { job ->
+                skillScopeCategory == "All" ||
+                    job.category?.equals(skillScopeCategory, ignoreCase = true) == true
+            }
+            .flatMap { it.skills }
             .map(String::trim)
             .filter(String::isNotBlank)
             .distinctBy { it.lowercase(Locale.ROOT) }
@@ -406,7 +472,16 @@ fun JobDiscoveryScreen(
 
     val activeFilters = buildList {
         if (appliedSearch.isNotBlank()) add(ActiveExploreFilter("search", "Search: $appliedSearch") { search = ""; appliedSearch = ""; viewModel.load() })
-        if (selectedCategory != "All") add(ActiveExploreFilter("category", selectedCategory) { selectedCategory = "All" })
+        if (selectedCategory != "All") {
+            add(
+                ActiveExploreFilter(
+                    "category",
+                    displayCategoryLabel(selectedCategory),
+                    { selectedCategory = "All" },
+                    jobCategoryIcon(selectedCategory)
+                )
+            )
+        }
         if (minBudgetFilter.isNotBlank()) add(ActiveExploreFilter("minimum-budget", "Min ₹$minBudgetFilter") { minBudgetFilter = "" })
         if (maxBudgetFilter.isNotBlank()) add(ActiveExploreFilter("maximum-budget", "Max ₹$maxBudgetFilter") { maxBudgetFilter = "" })
         selectedProjectTypes.forEach { type -> add(ActiveExploreFilter("type:$type", type) { selectedProjectTypes = selectedProjectTypes - type }) }
@@ -426,8 +501,44 @@ fun JobDiscoveryScreen(
         search = ""; appliedSearch = ""; selectedCategory = "All"
         minBudgetFilter = ""; maxBudgetFilter = ""; selectedProjectTypes = emptyList()
         selectedSkills = emptyList(); locationFilter = ""; languageFilter = ""; sortMode = "Newest"
-        selectedFeedTab = "Explore"
         viewModel.load()
+    }
+
+    fun beginFilterEditing() {
+        draftSortMode = sortMode
+        draftSelectedCategory = selectedCategory
+        draftMinBudget = minBudgetFilter
+        draftMaxBudget = maxBudgetFilter
+        draftProjectTypes = selectedProjectTypes
+        draftSkills = selectedSkills
+        draftSkillSearch = ""
+        draftLocation = locationFilter
+        draftLanguage = languageFilter
+        showFilterDialog = true
+    }
+
+    fun applyDraftFilters() {
+        sortMode = draftSortMode
+        selectedCategory = draftSelectedCategory
+        minBudgetFilter = draftMinBudget
+        maxBudgetFilter = draftMaxBudget
+        selectedProjectTypes = draftProjectTypes
+        selectedSkills = draftSkills
+        locationFilter = draftLocation
+        languageFilter = draftLanguage
+        showFilterDialog = false
+    }
+
+    fun resetDraftFilters() {
+        draftSortMode = "Newest"
+        draftSelectedCategory = "All"
+        draftMinBudget = ""
+        draftMaxBudget = ""
+        draftProjectTypes = emptyList()
+        draftSkills = emptyList()
+        draftSkillSearch = ""
+        draftLocation = ""
+        draftLanguage = ""
     }
 
     Surface(
@@ -440,7 +551,7 @@ fun JobDiscoveryScreen(
                 .background(
                     Brush.verticalGradient(
                         colors = if (darkTheme) {
-                            listOf(Color(0xFF08090B), Color(0xFF101214), Color(0xFF08090B))
+                            listOf(Color(0xFF0D0F14), Color(0xFF191B27), Color(0xFF11141B), Color(0xFF0B0D12))
                         } else {
                             listOf(Color(0xFFFFFEFF), Color(0xFFF8F6FC), Color(0xFFF0EDFA))
                         }
@@ -490,11 +601,10 @@ fun JobDiscoveryScreen(
                         onSearch = {
                             selectedFeedTab = "Explore"
                             appliedSearch = search.trim()
-                            selectedCategory = "All"
                             viewModel.clearError()
                             viewModel.load(appliedSearch.takeIf { it.isNotBlank() })
                         },
-                        onOpenFilters = { showFilterDialog = true }
+                        onOpenFilters = { beginFilterEditing() }
                     )
                 }
 
@@ -511,7 +621,20 @@ fun JobDiscoveryScreen(
                                     FilterChip(
                                         selected = true,
                                         onClick = filter.onRemove,
-                                        label = { Text(filter.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                        label = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                filter.icon?.let { icon ->
+                                                    Icon(
+                                                        imageVector = icon,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(16.dp),
+                                                        tint = if (darkTheme) Color(0xFFD0C5FF) else lavender
+                                                    )
+                                                    Spacer(Modifier.width(5.dp))
+                                                }
+                                                Text(filter.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            }
+                                        },
                                         trailingIcon = { Icon(Icons.Outlined.Close, contentDescription = "Remove ${filter.label}", modifier = Modifier.size(14.dp)) }
                                     )
                                 }
@@ -527,9 +650,9 @@ fun JobDiscoveryScreen(
                                 "RECOMMENDED DOMAINS",
                                 color = textMuted,
                                 fontFamily = RationaleFontFamily,
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.15.sp
+                                letterSpacing = 1.0.sp
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -539,12 +662,27 @@ fun JobDiscoveryScreen(
                                 ExploreCategoryTile(
                                     label = "All",
                                     selected = selectedCategory == "All",
-                                    icon = Icons.Outlined.GridView,
+                                    icon = Icons.Rounded.GridView,
                                     darkTheme = darkTheme,
                                     index = 0,
                                     onClick = { selectedCategory = "All" }
                                 )
-                                featuredCategories.forEachIndexed { index, category ->
+                                if (
+                                    selectedCategory != "All" &&
+                                    featuredCategories.none { it.equals(selectedCategory, ignoreCase = true) }
+                                ) {
+                                    ExploreCategoryTile(
+                                        label = displayCategoryLabel(selectedCategory),
+                                        selected = true,
+                                        icon = jobCategoryIcon(selectedCategory),
+                                        darkTheme = darkTheme,
+                                        index = 0,
+                                        onClick = { /* The active domain is cleared from its filter chip. */ }
+                                    )
+                                }
+                                featuredCategories.filterNot {
+                                    selectedCategory != "All" && it.equals(selectedCategory, ignoreCase = true)
+                                }.forEachIndexed { index, category ->
                                     ExploreCategoryTile(
                                         label = displayCategoryLabel(category),
                                         selected = selectedCategory.equals(category, ignoreCase = true),
@@ -557,11 +695,12 @@ fun JobDiscoveryScreen(
                                 ExploreCategoryTile(
                                     label = "All domains",
                                     selected = showDomainPicker,
-                                    icon = Icons.Outlined.Tune,
+                                    icon = Icons.Rounded.Tune,
                                     darkTheme = darkTheme,
                                     index = 4,
                                     onClick = {
                                         domainSearch = ""
+                                        returnToFiltersAfterDomainPicker = false
                                         showDomainPicker = true
                                     }
                                 )
@@ -731,26 +870,32 @@ fun JobDiscoveryScreen(
 
     if (showFilterDialog) {
         JobFilterDialog(
-            sortMode = sortMode,
-            onSortModeChange = { sortMode = it },
-            selectedCategory = selectedCategory,
-            onOpenDomains = { showFilterDialog = false; domainSearch = ""; showDomainPicker = true },
-            minBudget = minBudgetFilter,
-            onMinBudgetChange = { minBudgetFilter = it.filter { ch -> ch.isDigit() || ch == '.' } },
-            maxBudget = maxBudgetFilter,
-            onMaxBudgetChange = { maxBudgetFilter = it.filter { ch -> ch.isDigit() || ch == '.' } },
-            selectedProjectTypes = selectedProjectTypes,
-            onToggleProjectType = { type -> selectedProjectTypes = if (type in selectedProjectTypes) selectedProjectTypes - type else selectedProjectTypes + type },
+            sortMode = draftSortMode,
+            onSortModeChange = { draftSortMode = it },
+            selectedCategory = draftSelectedCategory,
+            onOpenDomains = {
+                returnToFiltersAfterDomainPicker = true
+                showFilterDialog = false
+                domainSearch = ""
+                showDomainPicker = true
+            },
+            minBudget = draftMinBudget,
+            onMinBudgetChange = { draftMinBudget = sanitizeBudgetInput(it) },
+            maxBudget = draftMaxBudget,
+            onMaxBudgetChange = { draftMaxBudget = sanitizeBudgetInput(it) },
+            selectedProjectTypes = draftProjectTypes,
+            onToggleProjectType = { type -> draftProjectTypes = if (type in draftProjectTypes) draftProjectTypes - type else draftProjectTypes + type },
             allSkills = allJobSkills,
-            selectedSkills = selectedSkills,
-            skillSearch = skillFilterSearch,
-            onSkillSearchChange = { skillFilterSearch = it },
-            onToggleSkill = { skill -> selectedSkills = if (skill in selectedSkills) selectedSkills - skill else selectedSkills + skill },
-            locationFilter = locationFilter,
-            onLocationFilterChange = { locationFilter = it },
-            languageFilter = languageFilter,
-            onLanguageFilterChange = { languageFilter = it },
-            onReset = { resetAllFilters() },
+            selectedSkills = draftSkills,
+            skillSearch = draftSkillSearch,
+            onSkillSearchChange = { draftSkillSearch = it },
+            onToggleSkill = { skill -> draftSkills = if (skill in draftSkills) draftSkills - skill else draftSkills + skill },
+            locationFilter = draftLocation,
+            onLocationFilterChange = { draftLocation = it },
+            languageFilter = draftLanguage,
+            onLanguageFilterChange = { draftLanguage = it },
+            onReset = { resetDraftFilters() },
+            onApply = { applyDraftFilters() },
             onDismiss = { showFilterDialog = false },
             darkTheme = darkTheme,
             lavender = lavender,
@@ -762,17 +907,23 @@ fun JobDiscoveryScreen(
     if (showDomainPicker) {
         DomainPickerDialog(
             categories = allCategories,
-            selectedCategory = selectedCategory,
+            selectedCategory = if (returnToFiltersAfterDomainPicker) draftSelectedCategory else selectedCategory,
             query = domainSearch,
             onQueryChange = { domainSearch = it },
             onSelect = { category ->
-                selectedCategory = category
+                val returnToFilters = returnToFiltersAfterDomainPicker
+                if (returnToFilters) draftSelectedCategory = category else selectedCategory = category
                 showDomainPicker = false
                 domainSearch = ""
+                returnToFiltersAfterDomainPicker = false
+                if (returnToFilters) showFilterDialog = true
             },
             onDismiss = {
+                val returnToFilters = returnToFiltersAfterDomainPicker
                 showDomainPicker = false
                 domainSearch = ""
+                returnToFiltersAfterDomainPicker = false
+                if (returnToFilters) showFilterDialog = true
             },
             darkTheme = darkTheme,
             textPrimary = textPrimary,
@@ -1018,21 +1169,17 @@ private fun ExploreCategoryTile(
     index: Int,
     onClick: () -> Unit
 ) {
-    val accent = when (index % 5) {
-        0 -> Color(0xFF7562E9)
-        1 -> Color(0xFF2F6FB8)
-        2 -> Color(0xFF168B77)
-        3 -> Color(0xFFAA6A35)
-        else -> Color(0xFFC14C8F)
-    }
+    val accent = domainAccent(label)
     val shape = RoundedCornerShape(18.dp)
-    val selectedBackground = if (darkTheme) Color(0xFF493B86) else Color(0xFF8977F4)
-    val idleBackground = when (index % 5) {
-        0 -> if (darkTheme) Color(0xFF202225) else Color(0xFFE7E9FF)
-        1 -> if (darkTheme) Color(0xFF222426) else Color(0xFFE7F0FF)
-        2 -> if (darkTheme) Color(0xFF202321) else Color(0xFFE3F7F0)
-        3 -> if (darkTheme) Color(0xFF242321) else Color(0xFFFFEEE2)
-        else -> if (darkTheme) Color(0xFF242124) else Color(0xFFFFE9F3)
+    val idleBackground = if (darkTheme) {
+        Brush.linearGradient(listOf(Color(0xFF272A34), Color(0xFF1B1E26)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFFF4F1FF), Color(0xFFE8E4F7)))
+    }
+    val selectedBackground = if (darkTheme) {
+        Brush.linearGradient(listOf(Color(0xFF6E5BD3), Color(0xFF3B315F)))
+    } else {
+        Brush.linearGradient(listOf(Color(0xFF9A89FF), Color(0xFF6F5DDD)))
     }
 
     Column(
@@ -1050,8 +1197,8 @@ private fun ExploreCategoryTile(
                 .background(if (selected) selectedBackground else idleBackground)
                 .border(
                     1.dp,
-                    if (selected) accent.copy(alpha = 0.30f)
-                    else Color.White.copy(alpha = if (darkTheme) 0.05f else 0.65f),
+                    if (selected) accent.copy(alpha = 0.55f)
+                    else Color.White.copy(alpha = if (darkTheme) 0.10f else 0.65f),
                     shape
                 ),
             contentAlignment = Alignment.Center
@@ -1070,15 +1217,14 @@ private fun ExploreCategoryTile(
             } else {
                 if (darkTheme) Color(0xFFD5D4E1) else Color(0xFF38364B)
             },
-            fontFamily = RationaleFontFamily,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            letterSpacing = if (selected) 0.sp else (-0.1).sp,
-            lineHeight = 12.sp,
+            letterSpacing = 0.sp,
+            lineHeight = 13.sp,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().height(25.dp)
+            modifier = Modifier.fillMaxWidth().height(28.dp)
         )
     }
 }
@@ -1229,7 +1375,7 @@ private fun DomainPickerDialog(
                 Text("Close", color = lavender, fontWeight = FontWeight.Bold)
             }
         },
-        containerColor = if (darkTheme) Color(0xFF141619) else Color(0xFFFFFEFF)
+        containerColor = if (darkTheme) Color(0xFF171A21) else Color(0xFFFFFEFF)
     )
 }
 
@@ -1249,7 +1395,7 @@ private fun DomainPickerRow(
             .clip(RoundedCornerShape(14.dp))
             .background(
                 if (selected) {
-                    if (darkTheme) Color(0xFF252629) else Color(0xFFF0ECFF)
+                    if (darkTheme) Color(0xFF292C36) else Color(0xFFF0ECFF)
                 } else Color.Transparent
             )
             .clickable(onClick = onClick)
@@ -1312,6 +1458,7 @@ private fun JobFilterDialog(
     languageFilter: String,
     onLanguageFilterChange: (String) -> Unit,
     onReset: () -> Unit,
+    onApply: () -> Unit,
     onDismiss: () -> Unit,
     darkTheme: Boolean,
     lavender: Color,
@@ -1323,9 +1470,14 @@ private fun JobFilterDialog(
         else allSkills.filter { it.contains(skillSearch.trim(), ignoreCase = true) }.take(24)
         (selectedSkills + matching).distinctBy { it.lowercase(Locale.ROOT) }
     }
-    val invalidBudgetRange = minBudget.toDoubleOrNull()?.let { minimum ->
-        maxBudget.toDoubleOrNull()?.let { maximum -> maximum < minimum }
-    } == true
+    val invalidBudgetValue =
+        (minBudget.isNotBlank() && minBudget.toDoubleOrNull() == null) ||
+            (maxBudget.isNotBlank() && maxBudget.toDoubleOrNull() == null)
+    val invalidBudgetRange = invalidBudgetValue || (
+        minBudget.toDoubleOrNull()?.let { minimum ->
+            maxBudget.toDoubleOrNull()?.let { maximum -> maximum < minimum }
+        } == true
+    )
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -1337,9 +1489,9 @@ private fun JobFilterDialog(
         text = {
             Column(Modifier.fillMaxWidth().heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("DOMAIN", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                Surface(onClick = onOpenDomains, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), color = if (darkTheme) Color(0xFF202225) else Color(0xFFF5F2FC), border = BorderStroke(1.dp, lavender.copy(alpha = 0.28f))) {
+                Surface(onClick = onOpenDomains, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), color = if (darkTheme) Color(0xFF252832) else Color(0xFFF5F2FC), border = BorderStroke(1.dp, lavender.copy(alpha = 0.28f))) {
                     Row(Modifier.padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (selectedCategory == "All") "All domains" else selectedCategory, modifier = Modifier.weight(1f), color = textPrimary, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(if (selectedCategory == "All") "All domains" else displayCategoryLabel(selectedCategory), modifier = Modifier.weight(1f), color = textPrimary, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text("Change", color = lavender, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
@@ -1348,7 +1500,12 @@ private fun JobFilterDialog(
                     OutlinedTextField(value = minBudget, onValueChange = onMinBudgetChange, modifier = Modifier.fillMaxWidth(), label = { Text("Minimum budget") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                     OutlinedTextField(value = maxBudget, onValueChange = onMaxBudgetChange, modifier = Modifier.fillMaxWidth(), label = { Text("Maximum budget") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                     if (invalidBudgetRange) {
-                        Text("Maximum budget must be greater than or equal to minimum.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            if (invalidBudgetValue) "Enter a valid budget amount."
+                            else "Maximum budget must be greater than or equal to minimum.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
                 Text("PROJECT TYPE", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
@@ -1356,11 +1513,14 @@ private fun JobFilterDialog(
                     listOf("Fixed price", "Hourly").forEach { type -> FilterChip(selected = type in selectedProjectTypes, onClick = { onToggleProjectType(type) }, label = { Text(type) }) }
                 }
                 Text("REQUIRED SKILLS", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                OutlinedTextField(value = skillSearch, onValueChange = onSkillSearchChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search skills in open projects") }, leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) })
-                if (visibleSkills.isEmpty()) Text("No matching skills found in loaded projects.", color = textMuted, style = MaterialTheme.typography.bodySmall)
-                else Column(Modifier.fillMaxWidth().heightIn(max = 142.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                OutlinedTextField(value = skillSearch, onValueChange = onSkillSearchChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search skills in this domain") }, leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) })
+                if (skillSearch.isBlank() && allSkills.size > 12) {
+                    Text("Showing 12 of ${allSkills.size} skills. Search to find more.", color = textMuted, style = MaterialTheme.typography.labelSmall)
+                }
+                if (visibleSkills.isEmpty()) Text("No matching skills found in this domain's loaded projects.", color = textMuted, style = MaterialTheme.typography.bodySmall)
+                else Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(0.dp)) {
                     visibleSkills.forEach { skill ->
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onToggleSkill(skill) }.padding(horizontal = 2.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onToggleSkill(skill) }.padding(horizontal = 2.dp, vertical = 1.dp), verticalAlignment = Alignment.CenterVertically) {
                             androidx.compose.material3.Checkbox(checked = skill in selectedSkills, onCheckedChange = { onToggleSkill(skill) })
                             Text(skill, modifier = Modifier.weight(1f), color = textPrimary, style = MaterialTheme.typography.bodySmall)
                         }
@@ -1379,7 +1539,7 @@ private fun JobFilterDialog(
                 }
             }
         },
-        confirmButton = { Button(onClick = onDismiss, enabled = !invalidBudgetRange, colors = ButtonDefaults.buttonColors(containerColor = lavender, contentColor = Color.White)) { Text("Apply filters") } },
+        confirmButton = { Button(onClick = onApply, enabled = !invalidBudgetRange, colors = ButtonDefaults.buttonColors(containerColor = lavender, contentColor = Color.White)) { Text("Apply filters") } },
         dismissButton = { TextButton(onClick = onReset) { Text("Reset all", color = lavender, fontWeight = FontWeight.Bold) } },
         containerColor = if (darkTheme) Color(0xFF141619) else Color(0xFFFFFEFF),
         titleContentColor = textPrimary,
@@ -1553,7 +1713,7 @@ private fun JobCard(
 ) {
     val tint = jobCategoryAccent(job.category ?: job.subcategory.orEmpty())
     val shape = RoundedCornerShape(25.dp)
-    val cardSurface = if (darkTheme) Color(0xEA151719) else Color(0xF7FFFFFF)
+    val cardSurface = if (darkTheme) Color(0xF5191C23) else Color(0xF7FFFFFF)
     val outline = if (darkTheme) Color.White.copy(alpha = 0.13f) else Color(0xFF9C90C7).copy(alpha = 0.14f)
     val insetSurface = if (darkTheme) Color.White.copy(alpha = 0.055f) else Color(0xFFF2EFFA)
 
@@ -1834,42 +1994,42 @@ private fun jobCategoryIcon(category: String): ImageVector {
     val normalized = category.lowercase(Locale.ROOT)
     return when {
         "admin" in normalized || "customer support" in normalized || "virtual assistant" in normalized ->
-            Icons.Outlined.SupportAgent
+            Icons.Rounded.SupportAgent
         "ai" in normalized || "machine learning" in normalized || "data science" in normalized ->
-            Icons.Outlined.Analytics
+            Icons.Rounded.Analytics
         "business" in normalized || "finance" in normalized || "human resources" in normalized || "hr" in normalized ->
-            Icons.Outlined.AccountBalance
+            Icons.Rounded.AccountBalance
         "design" in normalized || "creative" in normalized || "ui/ux" in normalized ->
-            Icons.Outlined.Palette
+            Icons.Rounded.Palette
         "marketing" in normalized || "seo" in normalized || "advertis" in normalized ->
-            Icons.Outlined.Campaign
+            Icons.Rounded.Campaign
         "e-commerce" in normalized || "ecommerce" in normalized || "retail" in normalized ->
-            Icons.Outlined.ShoppingCart
+            Icons.Rounded.ShoppingCart
         "education" in normalized || "tutoring" in normalized || "coaching" in normalized ->
-            Icons.Outlined.School
+            Icons.Rounded.School
         "engineering" in normalized || "architecture" in normalized || "3d" in normalized ->
-            Icons.Outlined.Architecture
+            Icons.Rounded.Architecture
         "events" in normalized || "drones" in normalized || "local services" in normalized ->
-            Icons.Outlined.Event
+            Icons.Rounded.Event
         "gaming" in normalized || "esports" in normalized ->
-            Icons.Outlined.SportsEsports
+            Icons.Rounded.SportsEsports
         "mobile" in normalized || "android" in normalized || "ios" in normalized || "app development" in normalized ->
-            Icons.Outlined.Smartphone
+            Icons.Rounded.Smartphone
         "photography" in normalized || "image editing" in normalized || "photo" in normalized ->
-            Icons.Outlined.CameraAlt
+            Icons.Rounded.CameraAlt
         "social media" in normalized || "community" in normalized ->
-            Icons.Outlined.Groups
+            Icons.Rounded.Groups
         "software" in normalized || "desktop" in normalized || "cloud" in normalized ->
-            Icons.Outlined.CloudQueue
+            Icons.Rounded.CloudQueue
         "translation" in normalized || "transcription" in normalized || "language" in normalized ->
-            Icons.Outlined.Translate
+            Icons.Rounded.Translate
         "video" in normalized || "audio" in normalized || "animation" in normalized ->
-            Icons.Outlined.Videocam
+            Icons.Rounded.Videocam
         "web development" in normalized || "web" in normalized ->
-            Icons.Outlined.Language
+            Icons.Rounded.Language
         "writing" in normalized || "content" in normalized || "copywriting" in normalized ->
-            Icons.Outlined.Edit
-        else -> Icons.Outlined.Computer
+            Icons.Rounded.Edit
+        else -> Icons.Rounded.Computer
     }
 }
 
