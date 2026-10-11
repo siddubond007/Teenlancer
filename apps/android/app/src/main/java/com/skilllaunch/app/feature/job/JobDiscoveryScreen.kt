@@ -1488,9 +1488,28 @@ private fun JobFilterDialog(
                     }
                 }
                 Text("BUDGET RANGE (₹)", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = minBudget, onValueChange = onMinBudgetChange, modifier = Modifier.fillMaxWidth(), label = { Text("Minimum budget") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                    OutlinedTextField(value = maxBudget, onValueChange = onMaxBudgetChange, modifier = Modifier.fillMaxWidth(), label = { Text("Maximum budget") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = minBudget,
+                            onValueChange = onMinBudgetChange,
+                            modifier = Modifier.weight(1f),
+                            label = { Text("Min ₹") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
+                        OutlinedTextField(
+                            value = maxBudget,
+                            onValueChange = onMaxBudgetChange,
+                            modifier = Modifier.weight(1f),
+                            label = { Text("Max ₹") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
+                    }
                     if (invalidBudgetRange) {
                         Text(
                             if (invalidBudgetValue) "Enter a valid budget amount."
@@ -1517,8 +1536,23 @@ private fun JobFilterDialog(
                 if (visibleSkills.isEmpty()) Text("No matching skills found in this domain's loaded projects.", color = textMuted, style = MaterialTheme.typography.bodySmall)
                 else Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(0.dp)) {
                     visibleSkills.forEach { skill ->
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onToggleSkill(skill) }.padding(horizontal = 2.dp, vertical = 1.dp), verticalAlignment = Alignment.CenterVertically) {
-                            androidx.compose.material3.Checkbox(checked = skill in selectedSkills, onCheckedChange = { onToggleSkill(skill) })
+                        val selected = skill in selectedSkills
+                        val skillRowShape = RoundedCornerShape(10.dp)
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(skillRowShape)
+                                .background(if (selected) Color(0xFF191719) else Color.Transparent)
+                                .border(
+                                    1.dp,
+                                    if (selected) lavender.copy(alpha = 0.35f) else Color.Transparent,
+                                    skillRowShape
+                                )
+                                .clickable { onToggleSkill(skill) }
+                                .padding(horizontal = 2.dp, vertical = 1.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.material3.Checkbox(checked = selected, onCheckedChange = { onToggleSkill(skill) })
                             Text(skill, modifier = Modifier.weight(1f), color = textPrimary, style = MaterialTheme.typography.bodySmall)
                         }
                     }
