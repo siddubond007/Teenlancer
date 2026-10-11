@@ -1,5 +1,7 @@
 package com.skilllaunch.app.feature.job
 
+import android.graphics.BitmapFactory
+import android.util.Base64
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.RocketLaunch
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -74,9 +77,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -124,7 +131,7 @@ private fun sanitizeBudgetInput(value: String): String {
 private data class ActiveExploreFilter(
     val key: String,
     val label: String,
-    val artworkRes: Int? = null,
+    val artworkIndex: Int? = null,
     val onRemove: () -> Unit
 )
 
@@ -436,7 +443,7 @@ fun JobDiscoveryScreen(
                 ActiveExploreFilter(
                     key = "category",
                     label = displayCategoryLabel(selectedCategory),
-                    artworkRes = jobCategoryArtwork(selectedCategory),
+                    artworkIndex = jobCategoryArtwork(selectedCategory),
                     onRemove = { selectedCategory = "All" }
                 )
             )
@@ -614,11 +621,11 @@ fun JobDiscoveryScreen(
                                         onClick = filter.onRemove,
                                         label = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                filter.artworkRes?.let { art ->
-                                                    Image(
-                                                        painter = painterResource(art),
+                                                filter.artworkIndex?.let { art ->
+                                                    DomainArtwork(
+                                                        index = art,
                                                         contentDescription = null,
-                                                        modifier = Modifier.size(19.dp)
+                                                        modifier = Modifier.size(22.dp)
                                                     )
                                                 }
                                                 Text(filter.label, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 12.sp)
@@ -661,7 +668,7 @@ fun JobDiscoveryScreen(
                                 ExploreCategoryTile(
                                     label = "All",
                                     selected = selectedCategory == "All",
-                                    imageRes = R.drawable.domain_all_projects,
+                                    artworkIndex = -1,
                                     darkTheme = darkTheme,
                                     onClick = { chooseCategory("All") }
                                 )
@@ -677,7 +684,7 @@ fun JobDiscoveryScreen(
                                     ExploreCategoryTile(
                                         label = displayCategoryLabel(selectedCategory),
                                         selected = true,
-                                        imageRes = jobCategoryArtwork(selectedCategory),
+                                        artworkIndex = jobCategoryArtwork(selectedCategory),
                                         darkTheme = darkTheme,
                                         onClick = { chooseCategory("All") }
                                     )
@@ -694,7 +701,7 @@ fun JobDiscoveryScreen(
                                             displayCategoryLabel(category),
                                             ignoreCase = true
                                         ),
-                                        imageRes = jobCategoryArtwork(category),
+                                        artworkIndex = jobCategoryArtwork(category),
                                         darkTheme = darkTheme,
                                         onClick = {
                                             chooseCategory(
@@ -712,7 +719,7 @@ fun JobDiscoveryScreen(
                                 ExploreCategoryTile(
                                     label = "All domains",
                                     selected = showDomainPicker,
-                                    imageRes = R.drawable.domain_discover_all,
+                                    artworkIndex = -2,
                                     darkTheme = darkTheme,
                                     onClick = {
                                         domainSearch = ""
@@ -1176,7 +1183,7 @@ private fun JobSearchField(
 private fun ExploreCategoryTile(
     label: String,
     selected: Boolean,
-    imageRes: Int,
+    artworkIndex: Int,
     darkTheme: Boolean,
     onClick: () -> Unit
 ) {
@@ -1209,11 +1216,24 @@ private fun ExploreCategoryTile(
                 .border(1.dp, tileBorder, shape),
             contentAlignment = Alignment.Center
         ) {
-            Image(
-                painter = painterResource(imageRes),
-                contentDescription = label,
-                modifier = Modifier.size(46.dp)
-            )
+            if (artworkIndex >= 0) {
+                DomainArtwork(
+                    index = artworkIndex,
+                    contentDescription = label,
+                    modifier = Modifier.size(46.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = if (artworkIndex == -2) Icons.Outlined.Tune else Icons.Outlined.GridView,
+                    contentDescription = label,
+                    modifier = Modifier.size(28.dp),
+                    tint = if (selected) {
+                        if (darkTheme) Color(0xFFF4F1FA) else Color(0xFF6F5F9C)
+                    } else {
+                        if (darkTheme) Color(0xFFD2D2D6) else Color(0xFF595667)
+                    }
+                )
+            }
         }
         Text(
             label,
@@ -1345,7 +1365,7 @@ private fun DomainPickerDialog(
                         DomainPickerRow(
                             label = "All opportunities",
                             selected = selectedCategory == "All",
-                            imageRes = R.drawable.domain_all_projects,
+                            artworkIndex = -1,
                             darkTheme = darkTheme,
                             textPrimary = textPrimary,
                             onClick = { onSelect("All") }
@@ -1358,7 +1378,7 @@ private fun DomainPickerDialog(
                                 displayCategoryLabel(category),
                                 ignoreCase = true
                             ),
-                            imageRes = jobCategoryArtwork(category),
+                            artworkIndex = jobCategoryArtwork(category),
                             darkTheme = darkTheme,
                             textPrimary = textPrimary,
                             onClick = { onSelect(category) }
@@ -1389,7 +1409,7 @@ private fun DomainPickerDialog(
 private fun DomainPickerRow(
     label: String,
     selected: Boolean,
-    imageRes: Int,
+    artworkIndex: Int,
     darkTheme: Boolean,
     textPrimary: Color,
     onClick: () -> Unit
@@ -1408,11 +1428,20 @@ private fun DomainPickerRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Image(
-            painter = painterResource(imageRes),
-            contentDescription = null,
-            modifier = Modifier.size(42.dp)
-        )
+        if (artworkIndex >= 0) {
+            DomainArtwork(
+                index = artworkIndex,
+                contentDescription = label,
+                modifier = Modifier.size(42.dp)
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Outlined.GridView,
+                contentDescription = label,
+                modifier = Modifier.size(27.dp),
+                tint = if (darkTheme) Color(0xFFD2D2D6) else Color(0xFF595667)
+            )
+        }
         Text(
             label,
             modifier = Modifier.weight(1f),
@@ -1811,8 +1840,8 @@ private fun JobCard(
                         .border(1.dp, if (darkTheme) Color.White.copy(alpha = 0.08f) else Color(0xFFE0DBEE), iconShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(jobCategoryArtwork(job.category ?: job.subcategory.orEmpty())),
+                    DomainArtwork(
+                        index = jobCategoryArtwork(job.category ?: job.subcategory.orEmpty()),
                         contentDescription = job.category ?: "Project category",
                         modifier = Modifier.size(44.dp)
                     )
@@ -2058,43 +2087,77 @@ private fun JobCard(
 private fun jobCategoryArtwork(category: String): Int {
     val normalized = category.lowercase(Locale.ROOT)
     return when {
-        "admin" in normalized || "customer support" in normalized || "virtual assistant" in normalized ->
-            R.drawable.domain_admin_support
-        "ai" in normalized || "machine learning" in normalized || "data science" in normalized ->
-            R.drawable.domain_data_science
-        "business" in normalized || "finance" in normalized || "human resources" in normalized || " hr" in normalized ->
-            R.drawable.domain_business_finance
-        "design" in normalized || "creative" in normalized || "ui/ux" in normalized ->
-            R.drawable.domain_design_creative
-        "marketing" in normalized || "seo" in normalized || "advertis" in normalized ->
-            R.drawable.domain_digital_marketing
-        "e-commerce" in normalized || "ecommerce" in normalized || "retail" in normalized ->
-            R.drawable.domain_ecommerce
-        "education" in normalized || "tutoring" in normalized || "coaching" in normalized ->
-            R.drawable.domain_education
-        "engineering" in normalized || "architecture" in normalized || "3d" in normalized ->
-            R.drawable.domain_engineering
-        "events" in normalized || "drones" in normalized || "local services" in normalized ->
-            R.drawable.domain_events
-        "gaming" in normalized || "esports" in normalized ->
-            R.drawable.domain_gaming
-        "mobile" in normalized || "android" in normalized || "ios" in normalized || "app development" in normalized ->
-            R.drawable.domain_mobile_apps
-        "photography" in normalized || "image editing" in normalized || "photo" in normalized ->
-            R.drawable.domain_photography
-        "social media" in normalized || "community" in normalized ->
-            R.drawable.domain_community
-        "software" in normalized || "desktop" in normalized || "cloud" in normalized || "web development" in normalized || "web" in normalized ->
-            R.drawable.domain_web_development
-        "translation" in normalized || "transcription" in normalized || "language" in normalized ->
-            R.drawable.domain_translation
-        "video" in normalized || "audio" in normalized || "animation" in normalized ->
-            R.drawable.domain_video_animation
-        "writing" in normalized || "content" in normalized || "copywriting" in normalized ->
-            R.drawable.domain_writing_content
-        "legal" in normalized ->
-            R.drawable.domain_other_services
-        else -> R.drawable.domain_other_services
+        "admin" in normalized || "customer support" in normalized || "virtual assistant" in normalized -> 7
+        "ai" in normalized || "machine learning" in normalized || "artificial intelligence" in normalized -> 10
+        "cyber" in normalized || "security" in normalized || "legal" in normalized -> 11
+        "business" in normalized || "finance" in normalized || "human resources" in normalized || " hr" in normalized -> 6
+        "design" in normalized || "creative" in normalized || "ui/ux" in normalized -> 2
+        "marketing" in normalized || "seo" in normalized || "advertis" in normalized -> 4
+        "e-commerce" in normalized || "ecommerce" in normalized || "retail" in normalized -> 17
+        "education" in normalized || "tutoring" in normalized || "coaching" in normalized -> 5
+        "engineering" in normalized || "architecture" in normalized || "3d" in normalized -> 9
+        "events" in normalized || "drones" in normalized || "local services" in normalized -> 16
+        "gaming" in normalized || "esports" in normalized -> 12
+        "data science" in normalized || "analytics" in normalized || "statistics" in normalized -> 3
+        "mobile" in normalized || "android" in normalized || "ios" in normalized || "app development" in normalized -> 1
+        "photography" in normalized || "image editing" in normalized || "photo" in normalized -> 15
+        "social media" in normalized || "community" in normalized -> 18
+        "software" in normalized || "desktop" in normalized || "cloud" in normalized || "web development" in normalized || "web" in normalized -> 0
+        "translation" in normalized || "transcription" in normalized || "language" in normalized -> 14
+        "video" in normalized || "audio" in normalized || "animation" in normalized -> 8
+        "writing" in normalized || "content" in normalized || "copywriting" in normalized -> 13
+        else -> 19
+    }
+}
+
+@Composable
+private fun DomainArtwork(
+    index: Int,
+    modifier: Modifier,
+    contentDescription: String? = null
+) {
+    val context = LocalContext.current
+    val atlas = remember(context) {
+        runCatching {
+            val encodedAtlas = listOf(
+                R.raw.domain_art_sprite_01,
+                R.raw.domain_art_sprite_02,
+                R.raw.domain_art_sprite_03,
+                R.raw.domain_art_sprite_04,
+                R.raw.domain_art_sprite_05
+            ).joinToString(separator = "") { resourceId ->
+                context.resources.openRawResource(resourceId)
+                    .bufferedReader()
+                    .use { it.readText().trim() }
+            }
+            val bytes = Base64.decode(encodedAtlas, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }.getOrNull()
+    }
+    val safeIndex = index.coerceIn(0, 19)
+    val cellSize = 48
+    val painter = remember(atlas, safeIndex) {
+        atlas?.let {
+            BitmapPainter(
+                image = it,
+                srcOffset = IntOffset((safeIndex % 5) * cellSize, (safeIndex / 5) * cellSize),
+                srcSize = IntSize(cellSize, cellSize)
+            )
+        }
+    }
+
+    if (painter != null) {
+        Image(
+            painter = painter,
+            contentDescription = contentDescription,
+            modifier = modifier
+        )
+    } else {
+        Box(
+            modifier = modifier
+                .clip(RoundedCornerShape(9.dp))
+                .background(Color(0xFF171718))
+        )
     }
 }
 
