@@ -44,6 +44,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -1481,7 +1482,7 @@ private fun JobFilterDialog(
         text = {
             Column(Modifier.fillMaxWidth().heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("DOMAIN", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                Surface(onClick = onOpenDomains, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), color = if (darkTheme) Color(0xFF252832) else Color(0xFFF5F2FC), border = BorderStroke(1.dp, lavender.copy(alpha = 0.28f))) {
+                Surface(onClick = onOpenDomains, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), color = if (darkTheme) Color(0xFF111112) else Color(0xFFF5F2FC), border = BorderStroke(1.dp, if (darkTheme) Color.White.copy(alpha = 0.12f) else lavender.copy(alpha = 0.28f))) {
                     Row(Modifier.padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(if (selectedCategory == "All") "All domains" else displayCategoryLabel(selectedCategory), modifier = Modifier.weight(1f), color = textPrimary, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text("Change", color = lavender, fontWeight = FontWeight.Bold, fontSize = 12.sp)
@@ -1533,27 +1534,44 @@ private fun JobFilterDialog(
                 if (skillSearch.isBlank() && allSkills.size > 12) {
                     Text("Showing 12 of ${allSkills.size} skills. Search to find more.", color = textMuted, style = MaterialTheme.typography.labelSmall)
                 }
-                if (visibleSkills.isEmpty()) Text("No matching skills found in this domain's loaded projects.", color = textMuted, style = MaterialTheme.typography.bodySmall)
-                else Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                    visibleSkills.forEach { skill ->
-                        val selected = skill in selectedSkills
-                        val skillRowShape = RoundedCornerShape(10.dp)
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(skillRowShape)
-                                .background(if (selected) Color(0xFF191719) else Color.Transparent)
-                                .border(
+                if (visibleSkills.isEmpty()) {
+                    Text(
+                        "No matching skills found in this domain's loaded projects.",
+                        color = textMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        visibleSkills.forEach { skill ->
+                            val selected = skill in selectedSkills
+                            FilterChip(
+                                selected = selected,
+                                onClick = { onToggleSkill(skill) },
+                                label = {
+                                    Text(
+                                        skill,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                    containerColor = if (darkTheme) Color(0xFF111112) else Color(0xFFF4F1FA),
+                                    labelColor = textPrimary,
+                                    selectedContainerColor = if (darkTheme) Color(0xFF201C26) else Color(0xFFECE7FC),
+                                    selectedLabelColor = textPrimary
+                                ),
+                                border = BorderStroke(
                                     1.dp,
-                                    if (selected) lavender.copy(alpha = 0.35f) else Color.Transparent,
-                                    skillRowShape
+                                    if (selected) lavender.copy(alpha = 0.5f)
+                                    else if (darkTheme) Color.White.copy(alpha = 0.10f)
+                                    else Color(0xFFDFDBE7)
                                 )
-                                .clickable { onToggleSkill(skill) }
-                                .padding(horizontal = 2.dp, vertical = 1.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            androidx.compose.material3.Checkbox(checked = selected, onCheckedChange = { onToggleSkill(skill) })
-                            Text(skill, modifier = Modifier.weight(1f), color = textPrimary, style = MaterialTheme.typography.bodySmall)
+                            )
                         }
                     }
                 }
@@ -1799,7 +1817,7 @@ private fun JobCard(
                             job.category?.takeIf(String::isNotBlank)?.let(::displayCategoryLabel)?.uppercase(Locale.ROOT)
                                 ?: "OPEN PROJECT",
                             modifier = Modifier.weight(1f),
-                            color = if (darkTheme) tint.copy(alpha = 0.98f) else tint,
+                            color = if (darkTheme) Color(0xFFC5B9E4) else Color(0xFF6757D9),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 0.3.sp,
@@ -1880,9 +1898,11 @@ private fun JobCard(
             }
 
             if (job.skills.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    maxItemsInEachRow = 3,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     job.skills.take(3).forEach { skill ->
                         Surface(
@@ -1890,17 +1910,18 @@ private fun JobCard(
                             color = insetSurface,
                             border = BorderStroke(
                                 1.dp,
-                                if (darkTheme) Color.White.copy(alpha = 0.075f)
+                                if (darkTheme) Color.White.copy(alpha = 0.08f)
                                 else Color(0xFF8D82C0).copy(alpha = 0.075f)
                             )
                         ) {
                             Text(
                                 skill,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                color = if (darkTheme) Color(0xFFDDD6FF) else Color(0xFF35334A),
-                                fontSize = 11.sp,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                                color = if (darkTheme) Color(0xFFD6D6DA) else Color(0xFF35334A),
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
-                                maxLines = 1
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -1911,9 +1932,9 @@ private fun JobCard(
                         ) {
                             Text(
                                 "+" + (job.skills.size - 3),
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
                                 color = textMuted,
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1
                             )
@@ -1943,7 +1964,7 @@ private fun JobCard(
                 ) {
                     Text(
                         formatJobBudget(job),
-                        color = if (darkTheme) Color(0xFF91E2C9) else Color(0xFF08785C),
+                        color = if (darkTheme) Color(0xFFF2F0F5) else Color(0xFF08785C),
                         style = TextStyle(
                             fontFamily = ChakraPetchFontFamily,
                             fontSize = 14.sp,
