@@ -1460,7 +1460,7 @@ private fun JobFilterDialog(
 ) {
     val visibleSkills = remember(allSkills, selectedSkills, skillSearch) {
         val matching = if (skillSearch.isBlank()) allSkills.take(12)
-        else allSkills.filter { it.contains(skillSearch.trim(), ignoreCase = true) }.take(24)
+        else allSkills.filter { it.contains(skillSearch.trim(), ignoreCase = true) }
         (selectedSkills + matching).distinctBy { it.lowercase(Locale.ROOT) }
     }
     val invalidBudgetValue =
@@ -1524,8 +1524,22 @@ private fun JobFilterDialog(
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     listOf("Fixed price", "Hourly").forEach { type -> FilterChip(selected = type in selectedProjectTypes, onClick = { onToggleProjectType(type) }, label = { Text(type) }) }
                 }
-                Text("REQUIRED SKILLS", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                OutlinedTextField(value = skillSearch, onValueChange = onSkillSearchChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search skills in this domain") }, leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) })
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("REQUIRED SKILLS", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    if (selectedSkills.isNotEmpty()) {
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            "${selectedSkills.size} selected",
+                            color = lavender,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                OutlinedTextField(value = skillSearch, onValueChange = onSkillSearchChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search skills") }, leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) })
                 Text(
                     "Projects matching any selected skill will be shown.",
                     color = textMuted,
