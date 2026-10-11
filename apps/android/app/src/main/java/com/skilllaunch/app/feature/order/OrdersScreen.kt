@@ -273,7 +273,8 @@ private class OrdersViewModel(
 fun OrdersScreen(
     user: AuthUser,
     repository: OrderRepository,
-    initialOrderId: String? = null
+    initialOrderId: String? = null,
+    refreshVersion: Int = 0
 ) {
     val viewModel: OrdersViewModel = viewModel(
         factory = remember(repository) { OrdersViewModel.factory(repository) }
@@ -344,7 +345,7 @@ fun OrdersScreen(
         }
     }
 
-    LaunchedEffect(initialOrderId) {
+    LaunchedEffect(initialOrderId, refreshVersion) {
         if (initialOrderId != null) {
             viewModel.selectOrder(initialOrderId)
         } else {
