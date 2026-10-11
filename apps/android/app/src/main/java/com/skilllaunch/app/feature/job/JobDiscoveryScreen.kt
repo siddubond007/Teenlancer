@@ -686,7 +686,7 @@ fun JobDiscoveryScreen(
                             LinearProgressIndicator(
                                 modifier = Modifier.fillMaxWidth().height(3.dp),
                                 color = lavender,
-                                trackColor = if (darkTheme) Color(0xFF293247) else Color(0xFFE4DFF3)
+                                trackColor = if (darkTheme) Color(0xFF2A2C2F) else Color(0xFFE4DFF3)
                             )
                         }
                     }
@@ -1028,11 +1028,11 @@ private fun ExploreCategoryTile(
     val shape = RoundedCornerShape(18.dp)
     val selectedBackground = if (darkTheme) Color(0xFF493B86) else Color(0xFF8977F4)
     val idleBackground = when (index % 5) {
-        0 -> if (darkTheme) Color(0xFF242A46) else Color(0xFFE7E9FF)
-        1 -> if (darkTheme) Color(0xFF1C3045) else Color(0xFFE7F0FF)
-        2 -> if (darkTheme) Color(0xFF18372F) else Color(0xFFE3F7F0)
-        3 -> if (darkTheme) Color(0xFF3B2E28) else Color(0xFFFFEEE2)
-        else -> if (darkTheme) Color(0xFF3B2538) else Color(0xFFFFE9F3)
+        0 -> if (darkTheme) Color(0xFF202225) else Color(0xFFE7E9FF)
+        1 -> if (darkTheme) Color(0xFF222426) else Color(0xFFE7F0FF)
+        2 -> if (darkTheme) Color(0xFF202321) else Color(0xFFE3F7F0)
+        3 -> if (darkTheme) Color(0xFF242321) else Color(0xFFFFEEE2)
+        else -> if (darkTheme) Color(0xFF242124) else Color(0xFFFFE9F3)
     }
 
     Column(
@@ -1249,7 +1249,7 @@ private fun DomainPickerRow(
             .clip(RoundedCornerShape(14.dp))
             .background(
                 if (selected) {
-                    if (darkTheme) Color(0xFF332D52) else Color(0xFFF0ECFF)
+                    if (darkTheme) Color(0xFF252629) else Color(0xFFF0ECFF)
                 } else Color.Transparent
             )
             .clickable(onClick = onClick)
@@ -1493,7 +1493,7 @@ private fun JobFeedEmptyState(
             Surface(
                 modifier = Modifier.size(60.dp),
                 shape = RoundedCornerShape(20.dp),
-                color = if (darkTheme) Color(0xFF302A42) else Color(0xFFF0ECFF)
+                color = if (darkTheme) Color(0xFF222426) else Color(0xFFF0ECFF)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -1553,7 +1553,7 @@ private fun JobCard(
 ) {
     val tint = jobCategoryAccent(job.category ?: job.subcategory.orEmpty())
     val shape = RoundedCornerShape(25.dp)
-    val cardSurface = if (darkTheme) Color(0xEA151F32) else Color(0xF7FFFFFF)
+    val cardSurface = if (darkTheme) Color(0xEA151719) else Color(0xF7FFFFFF)
     val outline = if (darkTheme) Color.White.copy(alpha = 0.13f) else Color(0xFF9C90C7).copy(alpha = 0.14f)
     val insetSurface = if (darkTheme) Color.White.copy(alpha = 0.055f) else Color(0xFFF2EFFA)
 
