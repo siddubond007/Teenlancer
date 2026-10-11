@@ -405,7 +405,7 @@ private fun FloatingNavigationDock(
     val dockShape = RoundedCornerShape(32.dp)
     val dockBrush = Brush.linearGradient(
         if (darkTheme) {
-            listOf(Color(0xF2121416), Color(0xE41B1D20), Color(0xE5101214))
+            listOf(Color(0xFF151820), Color(0xFF20232D), Color(0xFF171A23))
         } else {
             listOf(Color(0xF7FFFFFF), Color(0xEDEBE8FF), Color(0xE8FFF0E9))
         }
