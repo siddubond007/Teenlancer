@@ -23,6 +23,45 @@ class JobRepository(
             throw mapError(it, "Unable to load available projects.")
         }
 
+    /**
+     * Loads every page returned by the public jobs API.
+     * The backend caps each page at 100 items, so larger feeds are fetched in batches.
+     */
+    suspend fun getAllJobs(query: String? = null): Result<JobListResponse> =
+        runCatching {
+            val normalizedQuery = query?.trim()?.ifBlank { null }
+            val firstPage = api.getJobs(
+                query = normalizedQuery,
+                page = 1,
+                limit = 100
+            )
+            val combinedJobs = firstPage.jobs.toMutableList()
+            var page = 2
+            val lastPage = firstPage.pagination.totalPages.coerceAtMost(10)
+
+            while (page <= lastPage) {
+                val nextPage = api.getJobs(
+                    query = normalizedQuery,
+                    page = page,
+                    limit = 100
+                )
+                if (nextPage.jobs.isEmpty()) break
+                combinedJobs.addAll(nextPage.jobs)
+                page += 1
+            }
+
+            firstPage.copy(
+                jobs = combinedJobs,
+                pagination = firstPage.pagination.copy(
+                    page = 1,
+                    limit = combinedJobs.size,
+                    totalPages = if (combinedJobs.isEmpty()) 0 else 1
+                )
+            )
+        }.recoverCatching {
+            throw mapError(it, "Unable to load available projects.")
+        }
+
     suspend fun getPublicJob(jobId: String): Result<Job> =
         runCatching {
             api.getPublicJob(jobId)
