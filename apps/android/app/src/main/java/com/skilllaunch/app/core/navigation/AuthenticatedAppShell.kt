@@ -154,128 +154,6 @@ fun AuthenticatedAppShell(
                 )
             }
         },
-        bottomBar = {
-            val darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
-            val activeColor = MaterialTheme.colorScheme.primary
-            val selectedIconBackground = if (darkTheme) Color(0xFFB7A8FF) else Color(0xFF8170ED)
-            val dockOutline = if (darkTheme) {
-                Color.White.copy(alpha = 0.16f)
-            } else {
-                Color(0xFF887BB7).copy(alpha = 0.20f)
-            }
-            val dockShape = RoundedCornerShape(32.dp)
-            val dockBrush = Brush.linearGradient(
-                if (darkTheme) {
-                    listOf(
-                        Color(0xF0162035),
-                        Color(0xE42C2947),
-                        Color(0xE51C3040)
-                    )
-                } else {
-                    listOf(
-                        Color(0xF7FFFFFF),
-                        Color(0xEDEBE8FF),
-                        Color(0xE8FFF0E9)
-                    )
-                }
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(78.dp)
-                        .shadow(22.dp, dockShape, clip = false)
-                        .clip(dockShape)
-                        .background(dockBrush)
-                        .border(1.dp, dockOutline, dockShape)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 7.dp, vertical = 5.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        shellDestinations.forEach { destination ->
-                            val selected = current == destination
-                            val itemShape = RoundedCornerShape(22.dp)
-
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxSize()
-                                    .clip(itemShape)
-                                    .clickable { openDestination(destination) }
-                                    .padding(vertical = 1.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(width = 49.dp, height = 35.dp)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(
-                                            if (selected) {
-                                                selectedIconBackground
-                                            } else {
-                                                Color.Transparent
-                                            }
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = destinationIcon(destination),
-                                        contentDescription = destinationTitle(destination),
-                                        modifier = Modifier.size(21.dp),
-                                        tint = if (selected) {
-                                            if (darkTheme) Color(0xFF241C4A) else Color.White
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        }
-                                    )
-                                }
-
-                                Text(
-                                    text = destinationTitle(destination),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = if (selected) {
-                                        androidx.compose.ui.text.font.FontWeight.Bold
-                                    } else {
-                                        androidx.compose.ui.text.font.FontWeight.Medium
-                                    },
-                                    color = if (selected) {
-                                        if (darkTheme) Color(0xFFDCD2FF) else activeColor
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    modifier = Modifier.padding(top = 2.dp),
-                                    maxLines = 1
-                                )
-
-                                if (selected) {
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(top = 2.dp)
-                                            .size(4.dp)
-                                            .clip(CircleShape)
-                                            .background(if (darkTheme) Color(0xFFB7A8FF) else activeColor)
-                                    )
-                                } else {
-                                    Spacer(Modifier.height(6.dp))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     ) { innerPadding ->
         NavDisplay(
             backStack = backStack,
@@ -400,7 +278,131 @@ fun AuthenticatedAppShell(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
+                .padding(bottom = 86.dp)
         )
+        FloatingNavigationDock(
+            current = current,
+            onSelectDestination = ::openDestination,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+}
+
+@Composable
+private fun FloatingNavigationDock(
+    current: AppDestination,
+    onSelectDestination: (AppDestination) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val activeColor = MaterialTheme.colorScheme.primary
+    val selectedIconBackground = if (darkTheme) Color(0xFFB7A8FF) else Color(0xFF8170ED)
+    val dockOutline = if (darkTheme) {
+        Color.White.copy(alpha = 0.20f)
+    } else {
+        Color(0xFF887BB7).copy(alpha = 0.22f)
+    }
+    val dockShape = RoundedCornerShape(32.dp)
+    val dockBrush = Brush.linearGradient(
+        if (darkTheme) {
+            listOf(Color(0xF0162035), Color(0xE42C2947), Color(0xE51C3040))
+        } else {
+            listOf(Color(0xF7FFFFFF), Color(0xEDEBE8FF), Color(0xE8FFF0E9))
+        }
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 17.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(78.dp)
+                .shadow(24.dp, dockShape, clip = false)
+                .clip(dockShape)
+                .background(dockBrush)
+                .border(1.dp, dockOutline, dockShape)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 7.dp, vertical = 5.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                shellDestinations.forEach { destination ->
+                    val selected = current == destination
+                    val itemShape = RoundedCornerShape(22.dp)
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .clip(itemShape)
+                            .clickable { onSelectDestination(destination) }
+                            .padding(vertical = 1.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 49.dp, height = 35.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    if (selected) selectedIconBackground
+                                    else Color.Transparent
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = destinationIcon(destination),
+                                contentDescription = destinationTitle(destination),
+                                modifier = Modifier.size(21.dp),
+                                tint = if (selected) {
+                                    if (darkTheme) Color(0xFF241C4A) else Color.White
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        }
+
+                        Text(
+                            text = destinationTitle(destination),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+                            fontWeight = if (selected) {
+                                androidx.compose.ui.text.font.FontWeight.Bold
+                            } else {
+                                androidx.compose.ui.text.font.FontWeight.Medium
+                            },
+                            color = if (selected) {
+                                if (darkTheme) Color(0xFFDCD2FF) else activeColor
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.padding(top = 2.dp),
+                            maxLines = 1
+                        )
+
+                        if (selected) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = 2.dp)
+                                    .size(4.dp)
+                                    .clip(CircleShape)
+                                    .background(if (darkTheme) Color(0xFFB7A8FF) else activeColor)
+                            )
+                        } else {
+                            Spacer(Modifier.height(6.dp))
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
