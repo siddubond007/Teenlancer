@@ -98,7 +98,7 @@ private class JobDiscoveryViewModel(
                 errorMessage = null
             )
 
-            repository.getJobs(query)
+            repository.getAllJobs(query)
                 .onSuccess { response ->
                     _state.value = JobDiscoveryUiState(
                         isLoading = false,
