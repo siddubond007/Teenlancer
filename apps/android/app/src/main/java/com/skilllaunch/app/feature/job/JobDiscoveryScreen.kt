@@ -10,58 +10,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.AccountBalance
-import androidx.compose.material.icons.outlined.Analytics
-import androidx.compose.material.icons.outlined.Architecture
-import androidx.compose.material.icons.outlined.CameraAlt
-import androidx.compose.material.icons.outlined.CloudQueue
-import androidx.compose.material.icons.outlined.Computer
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Event
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.School
-import androidx.compose.material.icons.outlined.ShoppingCart
-import androidx.compose.material.icons.outlined.SportsEsports
-import androidx.compose.material.icons.outlined.SupportAgent
-import androidx.compose.material.icons.outlined.Translate
-import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.Campaign
-import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.RocketLaunch
-import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material.icons.rounded.AccountBalance
-import androidx.compose.material.icons.rounded.Analytics
-import androidx.compose.material.icons.rounded.Architecture
-import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.Campaign
-import androidx.compose.material.icons.rounded.CloudQueue
-import androidx.compose.material.icons.rounded.Computer
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Event
-import androidx.compose.material.icons.rounded.GridView
-import androidx.compose.material.icons.rounded.Groups
-import androidx.compose.material.icons.rounded.Language
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.School
-import androidx.compose.material.icons.rounded.ShoppingCart
-import androidx.compose.material.icons.rounded.Smartphone
-import androidx.compose.material.icons.rounded.SportsEsports
-import androidx.compose.material.icons.rounded.SupportAgent
-import androidx.compose.material.icons.rounded.Translate
-import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -118,7 +74,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -163,20 +118,6 @@ private fun sanitizeBudgetInput(value: String): String {
     val decimalIndex = filtered.indexOf('.')
     return if (decimalIndex < 0) filtered
     else filtered.take(decimalIndex + 1) + filtered.drop(decimalIndex + 1).replace(".", "")
-}
-
-private fun domainAccent(label: String): Color {
-    val value = label.lowercase(Locale.ROOT)
-    return when {
-        "web" in value || "software" in value -> Color(0xFF83B8FF)
-        "mobile" in value || "app" in value -> Color(0xFF78DCC8)
-        "data" in value || "ai" in value -> Color(0xFF9FC7FF)
-        "design" in value || "creative" in value -> Color(0xFFFF9BCB)
-        "business" in value || "finance" in value || "education" in value -> Color(0xFFFFC780)
-        "marketing" in value || "social" in value -> Color(0xFFFF91B8)
-        "admin" in value || "support" in value -> Color(0xFFC5B7FF)
-        else -> Color(0xFFB7A8FF)
-    }
 }
 
 private data class ActiveExploreFilter(
@@ -685,7 +626,7 @@ fun JobDiscoveryScreen(
                                         colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
                                             containerColor = if (darkTheme) Color(0xFF101011) else Color(0xFFF2EFFA),
                                             labelColor = textPrimary,
-                                            selectedContainerColor = if (darkTheme) Color(0xFF181719) else Color(0xFFECE7FC),
+                                            selectedContainerColor = if (darkTheme) Color(0xFF171718) else Color(0xFFECE7FC),
                                             selectedLabelColor = textPrimary
                                         ),
                                         border = BorderStroke(
@@ -721,7 +662,6 @@ fun JobDiscoveryScreen(
                                     selected = selectedCategory == "All",
                                     imageRes = R.drawable.domain_all_projects,
                                     darkTheme = darkTheme,
-                                    index = 0,
                                     onClick = { chooseCategory("All") }
                                 )
                                 if (
@@ -733,19 +673,17 @@ fun JobDiscoveryScreen(
                                         selected = true,
                                         imageRes = jobCategoryArtwork(selectedCategory),
                                         darkTheme = darkTheme,
-                                        index = 0,
                                         onClick = { selectedCategory = "All" }
                                     )
                                 }
                                 featuredCategories.filterNot {
                                     selectedCategory != "All" && it.equals(selectedCategory, ignoreCase = true)
-                                }.forEachIndexed { index, category ->
+                                }.forEach { category ->
                                     ExploreCategoryTile(
                                         label = displayCategoryLabel(category),
                                         selected = selectedCategory.equals(category, ignoreCase = true),
                                         imageRes = jobCategoryArtwork(category),
                                         darkTheme = darkTheme,
-                                        index = index + 1,
                                         onClick = {
                                             chooseCategory(
                                                 if (selectedCategory.equals(category, ignoreCase = true)) "All"
@@ -759,7 +697,6 @@ fun JobDiscoveryScreen(
                                     selected = showDomainPicker,
                                     imageRes = R.drawable.domain_discover_all,
                                     darkTheme = darkTheme,
-                                    index = 4,
                                     onClick = {
                                         domainSearch = ""
                                         returnToFiltersAfterDomainPicker = false
@@ -1224,18 +1161,17 @@ private fun ExploreCategoryTile(
     selected: Boolean,
     imageRes: Int,
     darkTheme: Boolean,
-    index: Int,
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(17.dp)
     val tileBackground = when {
-        darkTheme && selected -> Color(0xFF1B1821)
+        darkTheme && selected -> Color(0xFF181818)
         darkTheme -> Color(0xFF101011)
         selected -> Color(0xFFECE7FC)
         else -> Color(0xFFF7F5FB)
     }
     val tileBorder = when {
-        darkTheme && selected -> Color(0xFF8E7BC4).copy(alpha = 0.48f)
+        darkTheme && selected -> Color(0xFF9989B8).copy(alpha = 0.40f)
         darkTheme -> Color.White.copy(alpha = 0.08f)
         selected -> Color(0xFF8E7BC4).copy(alpha = 0.45f)
         else -> Color(0xFFDFDBE7)
@@ -1395,7 +1331,6 @@ private fun DomainPickerDialog(
                             imageRes = R.drawable.domain_all_projects,
                             darkTheme = darkTheme,
                             textPrimary = textPrimary,
-                            lavender = lavender,
                             onClick = { onSelect("All") }
                         )
                     }
@@ -1406,7 +1341,6 @@ private fun DomainPickerDialog(
                             imageRes = jobCategoryArtwork(category),
                             darkTheme = darkTheme,
                             textPrimary = textPrimary,
-                            lavender = lavender,
                             onClick = { onSelect(category) }
                         )
                     }
@@ -1438,7 +1372,6 @@ private fun DomainPickerRow(
     imageRes: Int,
     darkTheme: Boolean,
     textPrimary: Color,
-    lavender: Color,
     onClick: () -> Unit
 ) {
     Row(
@@ -2071,49 +2004,6 @@ private fun jobCategoryArtwork(category: String): Int {
         "legal" in normalized ->
             R.drawable.domain_other_services
         else -> R.drawable.domain_other_services
-    }
-}
-
-private fun jobCategoryIcon(category: String): ImageVector {
-    val normalized = category.lowercase(Locale.ROOT)
-    return when {
-        "admin" in normalized || "customer support" in normalized || "virtual assistant" in normalized ->
-            Icons.Rounded.SupportAgent
-        "ai" in normalized || "machine learning" in normalized || "data science" in normalized ->
-            Icons.Rounded.Analytics
-        "business" in normalized || "finance" in normalized || "human resources" in normalized || "hr" in normalized ->
-            Icons.Rounded.AccountBalance
-        "design" in normalized || "creative" in normalized || "ui/ux" in normalized ->
-            Icons.Rounded.Palette
-        "marketing" in normalized || "seo" in normalized || "advertis" in normalized ->
-            Icons.Rounded.Campaign
-        "e-commerce" in normalized || "ecommerce" in normalized || "retail" in normalized ->
-            Icons.Rounded.ShoppingCart
-        "education" in normalized || "tutoring" in normalized || "coaching" in normalized ->
-            Icons.Rounded.School
-        "engineering" in normalized || "architecture" in normalized || "3d" in normalized ->
-            Icons.Rounded.Architecture
-        "events" in normalized || "drones" in normalized || "local services" in normalized ->
-            Icons.Rounded.Event
-        "gaming" in normalized || "esports" in normalized ->
-            Icons.Rounded.SportsEsports
-        "mobile" in normalized || "android" in normalized || "ios" in normalized || "app development" in normalized ->
-            Icons.Rounded.Smartphone
-        "photography" in normalized || "image editing" in normalized || "photo" in normalized ->
-            Icons.Rounded.CameraAlt
-        "social media" in normalized || "community" in normalized ->
-            Icons.Rounded.Groups
-        "software" in normalized || "desktop" in normalized || "cloud" in normalized ->
-            Icons.Rounded.CloudQueue
-        "translation" in normalized || "transcription" in normalized || "language" in normalized ->
-            Icons.Rounded.Translate
-        "video" in normalized || "audio" in normalized || "animation" in normalized ->
-            Icons.Rounded.Videocam
-        "web development" in normalized || "web" in normalized ->
-            Icons.Rounded.Language
-        "writing" in normalized || "content" in normalized || "copywriting" in normalized ->
-            Icons.Rounded.Edit
-        else -> Icons.Rounded.Computer
     }
 }
 
