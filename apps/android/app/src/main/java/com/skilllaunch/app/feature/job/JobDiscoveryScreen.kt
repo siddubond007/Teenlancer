@@ -295,7 +295,6 @@ fun JobDiscoveryScreen(
     var maxBudgetFilter by rememberSaveable { mutableStateOf("") }
     var selectedProjectTypes by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
     var selectedSkills by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
-    var skillFilterSearch by rememberSaveable { mutableStateOf("") }
     var locationFilter by rememberSaveable { mutableStateOf("") }
     var languageFilter by rememberSaveable { mutableStateOf("") }
 
@@ -913,7 +912,27 @@ fun JobDiscoveryScreen(
             onQueryChange = { domainSearch = it },
             onSelect = { category ->
                 val returnToFilters = returnToFiltersAfterDomainPicker
-                if (returnToFilters) draftSelectedCategory = category else selectedCategory = category
+                val availableSkillsForDomain = state.jobs
+                    .filter { job ->
+                        category == "All" ||
+                            job.category?.equals(category, ignoreCase = true) == true
+                    }
+                    .flatMap { it.skills }
+                    .map(String::trim)
+                    .filter(String::isNotBlank)
+                    .toSet()
+
+                if (returnToFilters) {
+                    draftSelectedCategory = category
+                    draftSkills = draftSkills.filter { skill ->
+                        availableSkillsForDomain.any { it.equals(skill, ignoreCase = true) }
+                    }
+                } else {
+                    selectedCategory = category
+                    selectedSkills = selectedSkills.filter { skill ->
+                        availableSkillsForDomain.any { it.equals(skill, ignoreCase = true) }
+                    }
+                }
                 showDomainPicker = false
                 domainSearch = ""
                 returnToFiltersAfterDomainPicker = false
@@ -1515,6 +1534,11 @@ private fun JobFilterDialog(
                 }
                 Text("REQUIRED SKILLS", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 OutlinedTextField(value = skillSearch, onValueChange = onSkillSearchChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search skills in this domain") }, leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) })
+                Text(
+                    "Projects matching any selected skill will be shown.",
+                    color = textMuted,
+                    style = MaterialTheme.typography.labelSmall
+                )
                 if (skillSearch.isBlank() && allSkills.size > 12) {
                     Text("Showing 12 of ${allSkills.size} skills. Search to find more.", color = textMuted, style = MaterialTheme.typography.labelSmall)
                 }
