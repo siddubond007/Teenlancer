@@ -9,6 +9,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.Analytics
+import androidx.compose.material.icons.outlined.Architecture
+import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.CloudQueue
+import androidx.compose.material.icons.outlined.Computer
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Event
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.outlined.ShoppingCart
+import androidx.compose.material.icons.outlined.SportsEsports
+import androidx.compose.material.icons.outlined.SupportAgent
+import androidx.compose.material.icons.outlined.Translate
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
@@ -282,7 +298,7 @@ fun JobDiscoveryScreen(
                     start = 16.dp,
                     end = 16.dp,
                     top = 18.dp,
-                    bottom = 24.dp
+                    bottom = 158.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(17.dp)
             ) {
@@ -365,9 +381,13 @@ fun JobDiscoveryScreen(
                             Text(
                                 visibleJobs.size.toString() + " opportunities",
                                 color = textPrimary,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = (-0.45).sp,
+                                style = TextStyle(
+                                    fontFamily = FontFamily.SansSerif,
+                                    fontSize = 24.sp,
+                                    lineHeight = 29.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = (-0.65).sp
+                                ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -566,16 +586,18 @@ private fun ExploreBrandHeader(
                 Text(
                     "Skill",
                     color = textPrimary,
+                    fontFamily = FontFamily.SansSerif,
                     fontSize = 23.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.65).sp
+                    letterSpacing = (-0.75).sp
                 )
                 Text(
                     "Launch",
                     color = accent,
+                    fontFamily = FontFamily.SansSerif,
                     fontSize = 23.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.65).sp
+                    letterSpacing = (-0.75).sp
                 )
             }
         }
@@ -805,8 +827,10 @@ private fun ExploreCategoryTile(
             } else {
                 if (darkTheme) Color(0xFFD5D4E1) else Color(0xFF38364B)
             },
-            fontSize = 9.sp,
+            fontFamily = FontFamily.SansSerif,
+            fontSize = 10.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            letterSpacing = if (selected) 0.sp else (-0.1).sp,
             lineHeight = 12.sp,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             maxLines = 2,
@@ -1141,9 +1165,10 @@ private fun JobCard(
                                 ?: "OPEN PROJECT",
                             modifier = Modifier.weight(1f),
                             color = if (darkTheme) tint.copy(alpha = 0.98f) else tint,
+                            fontFamily = FontFamily.Monospace,
                             fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 0.75.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.45.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1177,18 +1202,27 @@ private fun JobCard(
                     Text(
                         job.title ?: "Untitled project",
                         color = textPrimary,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 16.sp,
+                            lineHeight = 21.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.15).sp
+                        ),
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 22.sp
+                        overflow = TextOverflow.Ellipsis
                     )
 
                     job.client?.fullName?.takeIf(String::isNotBlank)?.let { client ->
                         Text(
                             "Posted by $client",
                             color = textMuted,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = TextStyle(
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1200,8 +1234,12 @@ private fun JobCard(
                 Text(
                     description.replace(Regex("<[^>]*>"), " ").replace(Regex("\\s+"), " ").trim(),
                     color = textMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                    lineHeight = 18.sp,
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        fontWeight = FontWeight.Normal
+                    ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1272,8 +1310,13 @@ private fun JobCard(
                     Text(
                         formatJobBudget(job),
                         color = if (darkTheme) Color(0xFF91E2C9) else Color(0xFF08785C),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.ExtraBold,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.35).sp
+                        ),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1304,8 +1347,10 @@ private fun JobCard(
                         Text(
                             formatTimeline(job.timeline),
                             color = textPrimary,
+                            fontFamily = FontFamily.SansSerif,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.1).sp,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1344,19 +1389,43 @@ private fun JobCard(
 private fun jobCategoryIcon(category: String): ImageVector {
     val normalized = category.lowercase(Locale.ROOT)
     return when {
-        "mobile" in normalized || "android" in normalized || "ios" in normalized ||
-            "app" in normalized || "phone" in normalized -> Icons.Outlined.Smartphone
-        "design" in normalized || "creative" in normalized || "ui" in normalized ||
-            "graphic" in normalized -> Icons.Outlined.Palette
-        "marketing" in normalized || "social" in normalized || "advertis" in normalized ||
-            "campaign" in normalized -> Icons.Outlined.Campaign
-        "ai" in normalized || "data" in normalized || "analytics" in normalized ||
-            "machine learning" in normalized -> Icons.Outlined.BarChart
-        "develop" in normalized || "software" in normalized || "program" in normalized ||
-            "coding" in normalized || "technology" in normalized || "web" in normalized -> Icons.Outlined.Code
-        "writing" in normalized || "content" in normalized || "research" in normalized ||
-            "education" in normalized || "translation" in normalized || "support" in normalized -> Icons.Outlined.Description
-        else -> Icons.Outlined.AutoAwesome
+        "admin" in normalized || "customer support" in normalized || "virtual assistant" in normalized ->
+            Icons.Outlined.SupportAgent
+        "ai" in normalized || "machine learning" in normalized || "data science" in normalized ->
+            Icons.Outlined.Analytics
+        "business" in normalized || "finance" in normalized || "human resources" in normalized || "hr" in normalized ->
+            Icons.Outlined.AccountBalance
+        "design" in normalized || "creative" in normalized || "ui/ux" in normalized ->
+            Icons.Outlined.Palette
+        "marketing" in normalized || "seo" in normalized || "advertis" in normalized ->
+            Icons.Outlined.Campaign
+        "e-commerce" in normalized || "ecommerce" in normalized || "retail" in normalized ->
+            Icons.Outlined.ShoppingCart
+        "education" in normalized || "tutoring" in normalized || "coaching" in normalized ->
+            Icons.Outlined.School
+        "engineering" in normalized || "architecture" in normalized || "3d" in normalized ->
+            Icons.Outlined.Architecture
+        "events" in normalized || "drones" in normalized || "local services" in normalized ->
+            Icons.Outlined.Event
+        "gaming" in normalized || "esports" in normalized ->
+            Icons.Outlined.SportsEsports
+        "mobile" in normalized || "android" in normalized || "ios" in normalized || "app development" in normalized ->
+            Icons.Outlined.Smartphone
+        "photography" in normalized || "image editing" in normalized || "photo" in normalized ->
+            Icons.Outlined.CameraAlt
+        "social media" in normalized || "community" in normalized ->
+            Icons.Outlined.Groups
+        "software" in normalized || "desktop" in normalized || "cloud" in normalized ->
+            Icons.Outlined.CloudQueue
+        "translation" in normalized || "transcription" in normalized || "language" in normalized ->
+            Icons.Outlined.Translate
+        "video" in normalized || "audio" in normalized || "animation" in normalized ->
+            Icons.Outlined.Videocam
+        "web development" in normalized || "web" in normalized ->
+            Icons.Outlined.Language
+        "writing" in normalized || "content" in normalized || "copywriting" in normalized ->
+            Icons.Outlined.Edit
+        else -> Icons.Outlined.Computer
     }
 }
 
