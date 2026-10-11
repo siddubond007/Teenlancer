@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.BusinessCenter
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Explore
@@ -37,6 +38,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableIntStateOf
@@ -195,11 +197,27 @@ fun AuthenticatedAppShell(
         backStack.add(destination)
     }
 
+    fun navigateBack() {
+        if (backStack.size > 1) {
+            backStack.removeLastOrNull()
+            // Refresh whatever screen was underneath the route we just popped.
+            screenRefreshVersion.intValue += 1
+        }
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             if (current != AppDestination.Home && current != AppDestination.Profile && current != AppDestination.Explore) {
                 CenterAlignedTopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = ::navigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    },
                     title = {
                         Text(
                             text = destinationTitle(current),
@@ -216,13 +234,7 @@ fun AuthenticatedAppShell(
         Box(modifier = Modifier.fillMaxSize()) {
             NavDisplay(
             backStack = backStack,
-            onBack = {
-                if (backStack.size > 1) {
-                    backStack.removeLastOrNull()
-                    // Refresh the destination revealed by Back, whatever its root tab is.
-                    screenRefreshVersion.intValue += 1
-                }
-            },
+            onBack = ::navigateBack,
             transitionSpec = {
                 fadeIn(animationSpec = tween(220)) togetherWith
                     fadeOut(animationSpec = tween(180))
