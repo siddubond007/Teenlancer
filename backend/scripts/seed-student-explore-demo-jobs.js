@@ -227,8 +227,20 @@ async function getOrCreateDemoClients(prisma) {
 }
 
 async function seed(prisma) {
+  // Use the current Jobs taxonomy as the source of truth. This excludes
+  // legacy/renamed category rows and the explicitly restricted Legal Services.
+  const { JOB_CATEGORIES, JOB_CATEGORIES_DATA } = await import(
+    '../../apps/web/src/data/jobsCategoriesData.js'
+  );
+  const publicCategoryNames = JOB_CATEGORIES.filter(
+    (name) => name !== 'Legal Services'
+  );
+
   const categories = await prisma.category.findMany({
-    where: { isRestricted: false },
+    where: {
+      isRestricted: false,
+      name: { in: publicCategoryNames }
+    },
     orderBy: { name: 'asc' },
     include: {
       subcategories: {
@@ -238,9 +250,15 @@ async function seed(prisma) {
     }
   });
 
-  if (!categories.length) {
+  const foundCategoryNames = new Set(categories.map((category) => category.name));
+  const missingCategories = publicCategoryNames.filter(
+    (name) => !foundCategoryNames.has(name)
+  );
+  if (missingCategories.length) {
     throw new Error(
-      'No non-restricted taxonomy categories were found. Seed the app taxonomy first; this script will not invent or replace platform domains.'
+      'Canonical Jobs taxonomy is not seeded completely. Missing public categories: ' +
+      missingCategories.join(', ') +
+      '. Run "npm run seed:taxonomy" first, then rerun this demo-job seed.'
     );
   }
 
@@ -258,11 +276,31 @@ async function seed(prisma) {
 
   for (let index = 0; index < targetCount; index += 1) {
     const category = categories[index % categories.length];
-    const subcategories = category.subcategories || [];
-    const subcategory = subcategories.length
-      ? subcategories[Math.floor(index / categories.length) % subcategories.length]
-      : null;
-    const skillRows = subcategory?.skills || [];
+    const canonicalSubcategories = JOB_CATEGORIES_DATA[category.name] || {};
+    const subcategories = (category.subcategories || []).filter(
+      (subcategory) => Object.prototype.hasOwnProperty.call(
+        canonicalSubcategories,
+        subcategory.name
+      )
+    );
+    const missingSubcategories = Object.keys(canonicalSubcategories).filter(
+      (name) => !subcategories.some((subcategory) => subcategory.name === name)
+    );
+    if (missingSubcategories.length) {
+      throw new Error(
+        'Canonical subcategories are missing for "' + category.name + '": ' +
+        missingSubcategories.join(', ') +
+        '. Run "npm run seed:taxonomy" before seeding demo jobs.'
+      );
+    }
+
+    const subcategory = subcategories[
+      Math.floor(index / categories.length) % subcategories.length
+    ];
+    const allowedSkills = new Set(canonicalSubcategories[subcategory.name] || []);
+    const skillRows = (subcategory.skills || []).filter(
+      (skill) => allowedSkills.has(skill.name)
+    );
     const client = clients[index % clients.length];
     const data = makeJobData(index, category, subcategory, client.id, skillRows);
 
