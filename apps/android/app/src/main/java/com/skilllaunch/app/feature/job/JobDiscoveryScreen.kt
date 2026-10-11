@@ -298,7 +298,7 @@ fun JobDiscoveryScreen(
                     start = 16.dp,
                     end = 16.dp,
                     top = 18.dp,
-                    bottom = 24.dp
+                    bottom = 158.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(17.dp)
             ) {
@@ -381,9 +381,13 @@ fun JobDiscoveryScreen(
                             Text(
                                 visibleJobs.size.toString() + " opportunities",
                                 color = textPrimary,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = (-0.45).sp,
+                                style = TextStyle(
+                                    fontFamily = FontFamily.SansSerif,
+                                    fontSize = 24.sp,
+                                    lineHeight = 29.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = (-0.65).sp
+                                ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -582,16 +586,18 @@ private fun ExploreBrandHeader(
                 Text(
                     "Skill",
                     color = textPrimary,
+                    fontFamily = FontFamily.SansSerif,
                     fontSize = 23.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.65).sp
+                    letterSpacing = (-0.75).sp
                 )
                 Text(
                     "Launch",
                     color = accent,
+                    fontFamily = FontFamily.SansSerif,
                     fontSize = 23.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.65).sp
+                    letterSpacing = (-0.75).sp
                 )
             }
         }
@@ -1159,9 +1165,10 @@ private fun JobCard(
                                 ?: "OPEN PROJECT",
                             modifier = Modifier.weight(1f),
                             color = if (darkTheme) tint.copy(alpha = 0.98f) else tint,
+                            fontFamily = FontFamily.Monospace,
                             fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 0.75.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.45.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1195,18 +1202,27 @@ private fun JobCard(
                     Text(
                         job.title ?: "Untitled project",
                         color = textPrimary,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = TextStyle(
+                            fontFamily = FontFamily.SansSerif,
+                            fontSize = 16.sp,
+                            lineHeight = 21.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.15).sp
+                        ),
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 22.sp
+                        overflow = TextOverflow.Ellipsis
                     )
 
                     job.client?.fullName?.takeIf(String::isNotBlank)?.let { client ->
                         Text(
                             "Posted by $client",
                             color = textMuted,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = TextStyle(
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1218,8 +1234,12 @@ private fun JobCard(
                 Text(
                     description.replace(Regex("<[^>]*>"), " ").replace(Regex("\\s+"), " ").trim(),
                     color = textMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                    lineHeight = 18.sp,
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        fontWeight = FontWeight.Normal
+                    ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1290,8 +1310,13 @@ private fun JobCard(
                     Text(
                         formatJobBudget(job),
                         color = if (darkTheme) Color(0xFF91E2C9) else Color(0xFF08785C),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.ExtraBold,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.35).sp
+                        ),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1322,8 +1347,10 @@ private fun JobCard(
                         Text(
                             formatTimeline(job.timeline),
                             color = textPrimary,
+                            fontFamily = FontFamily.SansSerif,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.1).sp,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
