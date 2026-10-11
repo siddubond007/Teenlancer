@@ -130,7 +130,8 @@ private class NotificationViewModel(
 
 @Composable
 fun NotificationScreen(
-    repository: NotificationRepository
+    repository: NotificationRepository,
+    refreshVersion: Int = 0
 ) {
     val viewModel: NotificationViewModel = viewModel(
         factory = remember(repository) {
@@ -139,7 +140,7 @@ fun NotificationScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycleCompat()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(refreshVersion) {
         viewModel.load(forceRefresh = true)
     }
 
