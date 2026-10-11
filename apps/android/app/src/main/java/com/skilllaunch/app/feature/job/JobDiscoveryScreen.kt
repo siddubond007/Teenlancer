@@ -232,7 +232,6 @@ fun JobDiscoveryScreen(
                     darkTheme = darkTheme,
                     textPrimary = textPrimary,
                     textMuted = textMuted,
-                    lavender = lavender,
                     domainCount = categoryOptions.size
                 )
             }
@@ -257,7 +256,7 @@ fun JobDiscoveryScreen(
                 item(key = "explore-categories") {
                     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Text(
-                            "EXPLORE BY CATEGORY",
+                            "BROWSE BY SPECIALTY",
                             color = if (darkTheme) lavender else Color(0xFF6F56B8),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -303,20 +302,20 @@ fun JobDiscoveryScreen(
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text(
-                            "YOUR NEXT STEP",
+                            "OPPORTUNITIES, OPEN NOW",
                             color = if (darkTheme) lavender else Color(0xFF6F56B8),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 1.0.sp
                         )
                         Text(
-                            "Projects to explore",
+                            "Open opportunities",
                             color = textPrimary,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
-                            visibleJobs.size.toString() + " projects shown",
+                            visibleJobs.size.toString() + " opportunities available",
                             color = textMuted,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -460,7 +459,6 @@ private fun ExploreJobsHero(
     darkTheme: Boolean,
     textPrimary: Color,
     textMuted: Color,
-    lavender: Color,
     domainCount: Int
 ) {
     val accent = if (darkTheme) Color(0xFFB7A8FF) else Color(0xFF6757D9)
@@ -503,7 +501,7 @@ private fun ExploreJobsHero(
                 border = BorderStroke(1.dp, hairline)
             ) {
                 Text(
-                    "$domainCount fields",
+                    if (domainCount > 0) "$domainCount fields" else "Discover",
                     modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
                     color = textMuted,
                     fontSize = 10.sp,
