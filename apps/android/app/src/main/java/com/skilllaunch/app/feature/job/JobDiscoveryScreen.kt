@@ -453,8 +453,9 @@ fun JobDiscoveryScreen(
             val searchableText = listOfNotNull(job.title, job.description, job.category, job.subcategory, job.client?.fullName, job.locationPreferences, job.languagePreferences).plus(job.skills).joinToString(" ")
             val matchesSearch = query.isBlank() || searchableText.contains(query, ignoreCase = true)
             val amount = jobBudgetValue(job)
-            val matchesMinimum = minBudget == null || amount >= minBudget
-            val matchesMaximum = maxBudget == null || amount <= maxBudget
+            val hasKnownBudget = amount > 0.0
+            val matchesMinimum = minBudget == null || (hasKnownBudget && amount >= minBudget)
+            val matchesMaximum = maxBudget == null || (hasKnownBudget && amount <= maxBudget)
             val actualType = if (job.projectType.orEmpty().contains("hour", ignoreCase = true) || job.budgetType.orEmpty().contains("hour", ignoreCase = true)) "Hourly" else "Fixed price"
             val matchesType = selectedProjectTypes.isEmpty() || actualType in selectedProjectTypes
             val matchesSkills = selectedSkills.isEmpty() || job.skills.any { jobSkill -> selectedSkills.any { selectedSkill -> jobSkill.equals(selectedSkill, ignoreCase = true) } }
@@ -463,8 +464,16 @@ fun JobDiscoveryScreen(
             matchesCategory && matchesSearch && matchesMinimum && matchesMaximum && matchesType && matchesSkills && matchesLocation && matchesLanguage
         }
         when (sortMode) {
-            "Highest budget" -> matching.sortedByDescending { jobBudgetValue(it) }
-            "Lowest budget" -> matching.sortedBy { jobBudgetValue(it) }
+            "Highest budget" -> matching.sortedWith(
+                compareByDescending<Job> {
+                    jobBudgetValue(it).takeIf { amount -> amount > 0.0 } ?: Double.NEGATIVE_INFINITY
+                }
+            )
+            "Lowest budget" -> matching.sortedWith(
+                compareBy<Job> {
+                    jobBudgetValue(it).takeIf { amount -> amount > 0.0 } ?: Double.POSITIVE_INFINITY
+                }
+            )
             else -> matching.sortedByDescending { it.createdAt.orEmpty() }
         }
     }
@@ -538,6 +547,33 @@ fun JobDiscoveryScreen(
         draftSkillSearch = ""
         draftLocation = ""
         draftLanguage = ""
+    }
+
+    fun skillsForDomain(category: String): List<String> =
+        state.jobs
+            .filter { job ->
+                category == "All" || job.category?.equals(category, ignoreCase = true) == true
+            }
+            .flatMap { it.skills }
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .distinctBy { it.lowercase(Locale.ROOT) }
+
+    fun chooseCategory(category: String) {
+        selectedCategory = category
+        val available = skillsForDomain(category)
+        selectedSkills = selectedSkills.filter { skill ->
+            available.any { it.equals(skill, ignoreCase = true) }
+        }
+    }
+
+    fun chooseDraftCategory(category: String) {
+        draftSelectedCategory = category
+        val available = skillsForDomain(category)
+        draftSkills = draftSkills.filter { skill ->
+            available.any { it.equals(skill, ignoreCase = true) }
+        }
+        draftSkillSearch = ""
     }
 
     Surface(
@@ -665,7 +701,7 @@ fun JobDiscoveryScreen(
                                     icon = Icons.Rounded.GridView,
                                     darkTheme = darkTheme,
                                     index = 0,
-                                    onClick = { selectedCategory = "All" }
+                                    onClick = { chooseCategory("All") }
                                 )
                                 if (
                                     selectedCategory != "All" &&
@@ -690,11 +726,10 @@ fun JobDiscoveryScreen(
                                         darkTheme = darkTheme,
                                         index = index + 1,
                                         onClick = {
-                                            selectedCategory = if (selectedCategory.equals(category, ignoreCase = true)) {
-                                                "All"
-                                            } else {
-                                                category
-                                            }
+                                            chooseCategory(
+                                                if (selectedCategory.equals(category, ignoreCase = true)) "All"
+                                                else category
+                                            )
                                         }
                                     )
                                 }
@@ -918,26 +953,10 @@ fun JobDiscoveryScreen(
             onQueryChange = { domainSearch = it },
             onSelect = { category ->
                 val returnToFilters = returnToFiltersAfterDomainPicker
-                val availableSkillsForDomain = state.jobs
-                    .filter { job ->
-                        category == "All" ||
-                            job.category?.equals(category, ignoreCase = true) == true
-                    }
-                    .flatMap { it.skills }
-                    .map(String::trim)
-                    .filter(String::isNotBlank)
-                    .toSet()
-
                 if (returnToFilters) {
-                    draftSelectedCategory = category
-                    draftSkills = draftSkills.filter { skill ->
-                        availableSkillsForDomain.any { it.equals(skill, ignoreCase = true) }
-                    }
+                    chooseDraftCategory(category)
                 } else {
-                    selectedCategory = category
-                    selectedSkills = selectedSkills.filter { skill ->
-                        availableSkillsForDomain.any { it.equals(skill, ignoreCase = true) }
-                    }
+                    chooseCategory(category)
                 }
                 showDomainPicker = false
                 domainSearch = ""
