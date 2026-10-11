@@ -180,8 +180,8 @@ private fun domainAccent(label: String): Color {
 private data class ActiveExploreFilter(
     val key: String,
     val label: String,
-    val onRemove: () -> Unit,
-    val icon: ImageVector? = null
+    val icon: ImageVector? = null,
+    val onRemove: () -> Unit
 )
 
 data class JobDiscoveryUiState(
@@ -483,10 +483,10 @@ fun JobDiscoveryScreen(
         if (selectedCategory != "All") {
             add(
                 ActiveExploreFilter(
-                    "category",
-                    displayCategoryLabel(selectedCategory),
-                    { selectedCategory = "All" },
-                    jobCategoryIcon(selectedCategory)
+                    key = "category",
+                    label = displayCategoryLabel(selectedCategory),
+                    icon = jobCategoryIcon(selectedCategory),
+                    onRemove = { selectedCategory = "All" }
                 )
             )
         }
