@@ -287,7 +287,7 @@ async function seed(prisma) {
   const demoJobs = await prisma.job.count({
     where: {
       title: { startsWith: JOB_TITLE_PREFIX },
-      client: { email: { startsWith: CLIENT_EMAIL_PREFIX } },
+      client: { is: { email: { startsWith: CLIENT_EMAIL_PREFIX } } },
       isDeleted: false
     }
   });
@@ -311,7 +311,7 @@ async function cleanup(prisma) {
   const jobs = await prisma.job.findMany({
     where: {
       title: { startsWith: JOB_TITLE_PREFIX },
-      client: { email: { startsWith: CLIENT_EMAIL_PREFIX } }
+      client: { is: { email: { startsWith: CLIENT_EMAIL_PREFIX } } }
     },
     select: {
       id: true,
