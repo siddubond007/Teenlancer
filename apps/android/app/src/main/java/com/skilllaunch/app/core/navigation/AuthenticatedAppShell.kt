@@ -155,7 +155,8 @@ fun AuthenticatedAppShell(
             }
         },
     ) { innerPadding ->
-        NavDisplay(
+        Box(modifier = Modifier.fillMaxSize()) {
+            NavDisplay(
             backStack = backStack,
             onBack = { backStack.removeLastOrNull() },
             transitionSpec = {
@@ -278,13 +279,13 @@ fun AuthenticatedAppShell(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
-                .padding(bottom = 86.dp)
         )
-        FloatingNavigationDock(
-            current = current,
-            onSelectDestination = ::openDestination,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
+            FloatingNavigationDock(
+                current = current,
+                onSelectDestination = ::openDestination,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
     }
 }
 
@@ -315,7 +316,7 @@ private fun FloatingNavigationDock(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 17.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
