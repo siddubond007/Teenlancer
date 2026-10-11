@@ -666,28 +666,44 @@ fun JobDiscoveryScreen(
                                 )
                                 if (
                                     selectedCategory != "All" &&
-                                    featuredCategories.none { it.equals(selectedCategory, ignoreCase = true) }
+                                    featuredCategories.none {
+                                        displayCategoryLabel(it).equals(
+                                            displayCategoryLabel(selectedCategory),
+                                            ignoreCase = true
+                                        )
+                                    }
                                 ) {
                                     ExploreCategoryTile(
                                         label = displayCategoryLabel(selectedCategory),
                                         selected = true,
                                         imageRes = jobCategoryArtwork(selectedCategory),
                                         darkTheme = darkTheme,
-                                        onClick = { selectedCategory = "All" }
+                                        onClick = { chooseCategory("All") }
                                     )
                                 }
                                 featuredCategories.filterNot {
-                                    selectedCategory != "All" && it.equals(selectedCategory, ignoreCase = true)
+                                    selectedCategory != "All" && displayCategoryLabel(it).equals(
+                                        displayCategoryLabel(selectedCategory),
+                                        ignoreCase = true
+                                    )
                                 }.forEach { category ->
                                     ExploreCategoryTile(
                                         label = displayCategoryLabel(category),
-                                        selected = selectedCategory.equals(category, ignoreCase = true),
+                                        selected = displayCategoryLabel(selectedCategory).equals(
+                                            displayCategoryLabel(category),
+                                            ignoreCase = true
+                                        ),
                                         imageRes = jobCategoryArtwork(category),
                                         darkTheme = darkTheme,
                                         onClick = {
                                             chooseCategory(
-                                                if (selectedCategory.equals(category, ignoreCase = true)) "All"
-                                                else category
+                                                if (
+                                                    selectedCategory != "All" &&
+                                                    displayCategoryLabel(selectedCategory).equals(
+                                                        displayCategoryLabel(category),
+                                                        ignoreCase = true
+                                                    )
+                                                ) "All" else category
                                             )
                                         }
                                     )
@@ -1337,7 +1353,10 @@ private fun DomainPickerDialog(
                     items(filteredCategories, key = { it.lowercase(Locale.ROOT) }) { category ->
                         DomainPickerRow(
                             label = displayCategoryLabel(category),
-                            selected = selectedCategory.equals(category, ignoreCase = true),
+                            selected = displayCategoryLabel(selectedCategory).equals(
+                                displayCategoryLabel(category),
+                                ignoreCase = true
+                            ),
                             imageRes = jobCategoryArtwork(category),
                             darkTheme = darkTheme,
                             textPrimary = textPrimary,
@@ -1689,7 +1708,11 @@ private fun JobCard(
     onToggleSaved: () -> Unit,
     onOpenDetails: () -> Unit
 ) {
-    val tint = jobCategoryAccent(job.category ?: job.subcategory.orEmpty())
+    val categoryName = job.category ?: job.subcategory.orEmpty()
+    val tint = jobCategoryAccent(categoryName)
+    val isHourly = job.projectType.orEmpty().contains("hour", ignoreCase = true) ||
+        job.budgetType.orEmpty().contains("hour", ignoreCase = true)
+    val budgetCaption = if (isHourly) "HOURLY RATE" else "FIXED BUDGET"
     val shape = RoundedCornerShape(25.dp)
     val cardSurface = if (darkTheme) Color(0xF5121213) else Color(0xF7FFFFFF)
     val outline = if (darkTheme) Color.White.copy(alpha = 0.10f) else Color(0xFF9C90C7).copy(alpha = 0.14f)
@@ -1743,10 +1766,9 @@ private fun JobCard(
                                 ?: "OPEN PROJECT",
                             modifier = Modifier.weight(1f),
                             color = if (darkTheme) tint.copy(alpha = 0.98f) else tint,
-                            fontFamily = RationaleFontFamily,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.45.sp,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.3.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1899,7 +1921,7 @@ private fun JobCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        "FIXED BUDGET",
+                        budgetCaption,
                         color = textMuted,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Medium,
