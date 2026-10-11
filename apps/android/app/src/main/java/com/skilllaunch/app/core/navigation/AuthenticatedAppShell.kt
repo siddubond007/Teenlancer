@@ -1,5 +1,8 @@
 package com.skilllaunch.app.core.navigation
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -49,6 +52,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
@@ -131,6 +135,12 @@ private fun destinationFromSavedToken(token: String): AppDestination = when {
     else -> AppDestination.Home
 }
 
+private tailrec fun Context.findActivityOrNull(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivityOrNull()
+    else -> null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthenticatedAppShell(
@@ -164,6 +174,7 @@ fun AuthenticatedAppShell(
         mutableStateListOf<AppDestination>(AppDestination.Home)
     }
     val screenRefreshVersion = remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
     val current = backStack.lastOrNull() ?: AppDestination.Home
     // Detail pages keep their parent tab selected in the floating dock.
     val selectedRootDestination =
@@ -202,6 +213,9 @@ fun AuthenticatedAppShell(
             backStack.removeLastOrNull()
             // Refresh whatever screen was underneath the route we just popped.
             screenRefreshVersion.intValue += 1
+        } else {
+            // Back at a root tab follows Android convention and closes the activity.
+            context.findActivityOrNull()?.finish()
         }
     }
 
