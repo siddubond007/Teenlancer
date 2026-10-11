@@ -561,7 +561,8 @@ fun JobDiscoveryScreen(
             PullToRefreshBox(
                 isRefreshing = state.isLoading,
                 onRefresh = { viewModel.clearError(); viewModel.load(appliedSearch.takeIf { it.isNotBlank() }) },
-                modifier = Modifier.fillMaxSize()
+                // Keep the feed viewport above the floating dock so cards never render underneath it.
+                modifier = Modifier.fillMaxSize().padding(bottom = 132.dp)
             ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -569,7 +570,7 @@ fun JobDiscoveryScreen(
                     start = 16.dp,
                     end = 16.dp,
                     top = 18.dp,
-                    bottom = 158.dp
+                    bottom = 24.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(17.dp)
             ) {
@@ -612,7 +613,7 @@ fun JobDiscoveryScreen(
                     item(key = "explore-active-filters") {
                         Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Text("ACTIVE FILTERS", color = textMuted, fontFamily = RationaleFontFamily, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.0.sp)
+                                Text("ACTIVE FILTERS", color = textMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
                                 Spacer(Modifier.weight(1f))
                                 TextButton(onClick = { resetAllFilters() }) { Text("Clear all", color = lavender, fontSize = 12.sp) }
                             }
@@ -1340,7 +1341,7 @@ private fun DomainPickerDialog(
                         DomainPickerRow(
                             label = "All opportunities",
                             selected = selectedCategory == "All",
-                            icon = Icons.Outlined.GridView,
+                            icon = Icons.Rounded.GridView,
                             darkTheme = darkTheme,
                             textPrimary = textPrimary,
                             lavender = lavender,
@@ -1424,8 +1425,8 @@ private fun DomainPickerRow(
             label,
             modifier = Modifier.weight(1f),
             color = textPrimary,
-            fontFamily = RationaleFontFamily,
-            fontSize = 13.sp,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -1527,9 +1528,9 @@ private fun JobFilterDialog(
                     }
                 }
                 Text("LOCATION", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                OutlinedTextField(value = locationFilter, onValueChange = onLocationFilterChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Location preference") })
+                OutlinedTextField(value = locationFilter, onValueChange = onLocationFilterChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Project location") })
                 Text("LANGUAGE", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                OutlinedTextField(value = languageFilter, onValueChange = onLanguageFilterChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Preferred language") })
+                OutlinedTextField(value = languageFilter, onValueChange = onLanguageFilterChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Language preference") })
                 Text("SORT BY", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 listOf("Newest", "Highest budget", "Lowest budget").forEach { option ->
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onSortModeChange(option) }.padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
