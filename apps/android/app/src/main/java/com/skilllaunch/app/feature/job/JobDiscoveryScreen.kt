@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Palette
@@ -193,7 +194,7 @@ fun JobDiscoveryScreen(
     var showFilterDialog by rememberSaveable { mutableStateOf(false) }
     var savedJobIds by remember {
         mutableStateOf(
-            savedPreferences.getStringSet("saved_job_ids", emptySet())
+            savedPreferences.getStringSet("saved_job_ids", mutableSetOf())
                 ?.toSet()
                 .orEmpty()
         )
@@ -253,7 +254,7 @@ fun JobDiscoveryScreen(
         val id = job.id ?: return
         val next = if (savedJobIds.contains(id)) savedJobIds - id else savedJobIds + id
         savedJobIds = next
-        savedPreferences.edit().putStringSet("saved_job_ids", next.toSet()).apply()
+        savedPreferences.edit().putStringSet("saved_job_ids", next.toMutableSet()).apply()
     }
 
     Surface(
@@ -1293,7 +1294,7 @@ private fun JobCard(
                         horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.AutoAwesome,
+                            imageVector = Icons.Outlined.Schedule,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
                             tint = textMuted
