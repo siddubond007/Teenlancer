@@ -39,8 +39,12 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,6 +98,37 @@ private val shellDestinations = listOf(
     AppDestination.Profile
 )
 
+private fun AppDestination.toSavedToken(): String = when (this) {
+    AppDestination.Home -> "home"
+    AppDestination.Explore -> "explore"
+    is AppDestination.GigDetails -> "gig:$gigId"
+    is AppDestination.JobDetails -> "job:$jobId"
+    is AppDestination.ClientProjectDetails -> "client-project:$jobId"
+    AppDestination.PostJob -> "post-job"
+    AppDestination.Orders -> "orders"
+    is AppDestination.OrderWorkspace -> "order-workspace:$orderId"
+    AppDestination.Chat -> "chat"
+    AppDestination.Profile -> "profile"
+    AppDestination.Notifications -> "notifications"
+}
+
+private fun destinationFromSavedToken(token: String): AppDestination = when {
+    token == "home" -> AppDestination.Home
+    token == "explore" -> AppDestination.Explore
+    token.startsWith("gig:") -> AppDestination.GigDetails(token.substringAfter("gig:"))
+    token.startsWith("job:") -> AppDestination.JobDetails(token.substringAfter("job:"))
+    token.startsWith("client-project:") ->
+        AppDestination.ClientProjectDetails(token.substringAfter("client-project:"))
+    token == "post-job" -> AppDestination.PostJob
+    token == "orders" -> AppDestination.Orders
+    token.startsWith("order-workspace:") ->
+        AppDestination.OrderWorkspace(token.substringAfter("order-workspace:"))
+    token == "chat" -> AppDestination.Chat
+    token == "profile" -> AppDestination.Profile
+    token == "notifications" -> AppDestination.Notifications
+    else -> AppDestination.Home
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthenticatedAppShell(
@@ -111,30 +146,55 @@ fun AuthenticatedAppShell(
     themeState: State<Boolean>,
     onToggleTheme: () -> Unit
 ) {
-    val backStack = remember {
+    // Persist the actual route stack across theme/system configuration changes.
+    // Destinations are stored as primitive tokens so SavedStateRegistry can restore them.
+    val backStack = rememberSaveable(
+        saver = listSaver<SnapshotStateList<AppDestination>, String>(
+            save = { stack -> stack.map { it.toSavedToken() } },
+            restore = { tokens ->
+                mutableStateListOf<AppDestination>().apply {
+                    addAll(tokens.map(::destinationFromSavedToken))
+                    if (isEmpty()) add(AppDestination.Home)
+                }
+            }
+        )
+    ) {
         mutableStateListOf<AppDestination>(AppDestination.Home)
     }
+    val exploreRefreshVersion = remember { mutableIntStateOf(0) }
     val current = backStack.lastOrNull() ?: AppDestination.Home
+    // Detail pages keep their parent tab selected in the floating dock.
+    val selectedRootDestination =
+        backStack.lastOrNull { it in shellDestinations } ?: AppDestination.Home
 
     fun openDestination(destination: AppDestination) {
-        if (destination == AppDestination.Home) {
-            backStack.clear()
-            backStack.add(AppDestination.Home)
-        } else if (destination != current) {
-            // Every current Gig Details entry point is a gig-card tap (Explore or
-            // Home recommendations). Record one CLICK centrally to cover both paths
-            // without double-counting Explore and without cancelling on navigation.
-            if (destination is AppDestination.GigDetails) {
-                gigRepository.recordAnalyticsEventInBackground(
-                    gigId = destination.gigId,
-                    type = "CLICK",
-                    eventId = UUID.randomUUID().toString()
-                )
+        if (destination in shellDestinations) {
+            // Bottom dock selections are root navigation, while detail/workspace
+            // destinations are pushed and retain the originating screen underneath.
+            if (backStack.size != 1 || current != destination) {
+                backStack.clear()
+                backStack.add(destination)
+                if (destination == AppDestination.Explore) {
+                    exploreRefreshVersion.intValue += 1
+                }
             }
-            backStack.clear()
-            backStack.add(AppDestination.Home)
-            backStack.add(destination)
+            return
         }
+
+        if (destination == current) return
+
+        // Every current Gig Details entry point is a gig-card tap (Explore or
+        // Home recommendations). Record one CLICK centrally to cover both paths.
+        if (destination is AppDestination.GigDetails) {
+            gigRepository.recordAnalyticsEventInBackground(
+                gigId = destination.gigId,
+                type = "CLICK",
+                eventId = UUID.randomUUID().toString()
+            )
+        }
+
+        // Preserve the current destination so Back returns to the correct page.
+        backStack.add(destination)
     }
 
     Scaffold(
@@ -158,7 +218,15 @@ fun AuthenticatedAppShell(
         Box(modifier = Modifier.fillMaxSize()) {
             NavDisplay(
             backStack = backStack,
-            onBack = { backStack.removeLastOrNull() },
+            onBack = {
+                if (backStack.size > 1) {
+                    backStack.removeLastOrNull()
+                    if (backStack.lastOrNull() == AppDestination.Explore) {
+                        // Refresh the feed when returning from details or another nested page.
+                        exploreRefreshVersion.intValue += 1
+                    }
+                }
+            },
             transitionSpec = {
                 fadeIn(animationSpec = tween(220)) togetherWith
                     fadeOut(animationSpec = tween(180))
@@ -191,6 +259,7 @@ fun AuthenticatedAppShell(
                                 repository = jobRepository,
                                 profileRepository = profileRepository,
                                 userId = user.id,
+                                refreshVersion = exploreRefreshVersion.intValue,
                                 onOpenJob = { jobId ->
                                     openDestination(AppDestination.JobDetails(jobId))
                                 },
@@ -201,6 +270,7 @@ fun AuthenticatedAppShell(
                         } else {
                             GigDiscoveryScreen(
                                 repository = gigRepository,
+                                refreshVersion = exploreRefreshVersion.intValue,
                                 onOpenGig = { gigId ->
                                     openDestination(AppDestination.GigDetails(gigId))
                                 }
@@ -283,7 +353,7 @@ fun AuthenticatedAppShell(
                 .padding(innerPadding)
         )
             FloatingNavigationDock(
-                current = current,
+                current = selectedRootDestination,
                 onSelectDestination = ::openDestination,
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
