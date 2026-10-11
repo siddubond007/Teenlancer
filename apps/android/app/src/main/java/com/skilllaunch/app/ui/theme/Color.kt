@@ -17,12 +17,12 @@ val SkillLaunchLightSurfaceVariant = Color(0xFFF0EDF8)
 val SkillLaunchLightText = Color(0xFF1B1A2C)
 val SkillLaunchLightTextSecondary = Color(0xFF77748B)
 
-// Midnight glass dark surfaces
-val SkillLaunchDarkBackground = Color(0xFF090F1F)
-val SkillLaunchDarkSurface = Color(0xFF121A2B)
-val SkillLaunchDarkSurfaceVariant = Color(0xFF1C2740)
-val SkillLaunchDarkText = Color(0xFFF8F7FF)
-val SkillLaunchDarkTextSecondary = Color(0xFFB9BDD0)
+// Matte graphite dark surfaces: neutral blacks with restrained brand accents.
+val SkillLaunchDarkBackground = Color(0xFF08090B)
+val SkillLaunchDarkSurface = Color(0xFF111315)
+val SkillLaunchDarkSurfaceVariant = Color(0xFF1A1C1F)
+val SkillLaunchDarkText = Color(0xFFF5F5F7)
+val SkillLaunchDarkTextSecondary = Color(0xFFB0B2B8)
 
 // System/supporting colors
 val SkillLaunchSuccess = Color(0xFF159A78)
