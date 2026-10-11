@@ -6,6 +6,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -44,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.navigation3.runtime.NavEntry
@@ -154,17 +157,28 @@ fun AuthenticatedAppShell(
         bottomBar = {
             val darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
             val activeColor = MaterialTheme.colorScheme.primary
-            val glassSurface = if (darkTheme) {
-                Color(0xE6162033)
+            val selectedIconBackground = if (darkTheme) Color(0xFFB7A8FF) else Color(0xFF8170ED)
+            val dockOutline = if (darkTheme) {
+                Color.White.copy(alpha = 0.16f)
             } else {
-                Color(0xEFFFFFFF)
+                Color(0xFF887BB7).copy(alpha = 0.20f)
             }
-            val glassOutline = if (darkTheme) {
-                Color.White.copy(alpha = 0.14f)
-            } else {
-                Color(0xFF887BB7).copy(alpha = 0.18f)
-            }
-            val dockShape = RoundedCornerShape(30.dp)
+            val dockShape = RoundedCornerShape(32.dp)
+            val dockBrush = Brush.linearGradient(
+                if (darkTheme) {
+                    listOf(
+                        Color(0xF0162035),
+                        Color(0xE42C2947),
+                        Color(0xE51C3040)
+                    )
+                } else {
+                    listOf(
+                        Color(0xF7FFFFFF),
+                        Color(0xEDEBE8FF),
+                        Color(0xE8FFF0E9)
+                    )
+                }
+            )
 
             Box(
                 modifier = Modifier
@@ -173,26 +187,25 @@ fun AuthenticatedAppShell(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Surface(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(76.dp)
-                        .shadow(20.dp, dockShape, clip = false),
-                    shape = dockShape,
-                    color = glassSurface,
-                    border = BorderStroke(1.dp, glassOutline),
-                    tonalElevation = 0.dp
+                        .height(78.dp)
+                        .shadow(22.dp, dockShape, clip = false)
+                        .clip(dockShape)
+                        .background(dockBrush)
+                        .border(1.dp, dockOutline, dockShape)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 7.dp, vertical = 6.dp),
+                            .padding(horizontal = 7.dp, vertical = 5.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         shellDestinations.forEach { destination ->
                             val selected = current == destination
-                            val itemShape = RoundedCornerShape(20.dp)
+                            val itemShape = RoundedCornerShape(22.dp)
 
                             Column(
                                 modifier = Modifier
@@ -200,17 +213,17 @@ fun AuthenticatedAppShell(
                                     .fillMaxSize()
                                     .clip(itemShape)
                                     .clickable { openDestination(destination) }
-                                    .padding(vertical = 2.dp),
+                                    .padding(vertical = 1.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(width = 46.dp, height = 35.dp)
-                                        .clip(RoundedCornerShape(15.dp))
+                                        .size(width = 49.dp, height = 35.dp)
+                                        .clip(RoundedCornerShape(16.dp))
                                         .background(
                                             if (selected) {
-                                                activeColor.copy(alpha = if (darkTheme) 0.24f else 0.12f)
+                                                selectedIconBackground
                                             } else {
                                                 Color.Transparent
                                             }
@@ -222,7 +235,7 @@ fun AuthenticatedAppShell(
                                         contentDescription = destinationTitle(destination),
                                         modifier = Modifier.size(21.dp),
                                         tint = if (selected) {
-                                            activeColor
+                                            if (darkTheme) Color(0xFF241C4A) else Color.White
                                         } else {
                                             MaterialTheme.colorScheme.onSurfaceVariant
                                         }
@@ -238,13 +251,25 @@ fun AuthenticatedAppShell(
                                         androidx.compose.ui.text.font.FontWeight.Medium
                                     },
                                     color = if (selected) {
-                                        activeColor
+                                        if (darkTheme) Color(0xFFDCD2FF) else activeColor
                                     } else {
                                         MaterialTheme.colorScheme.onSurfaceVariant
                                     },
-                                    modifier = Modifier.padding(top = 3.dp),
+                                    modifier = Modifier.padding(top = 2.dp),
                                     maxLines = 1
                                 )
+
+                                if (selected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(top = 2.dp)
+                                            .size(4.dp)
+                                            .clip(CircleShape)
+                                            .background(if (darkTheme) Color(0xFFB7A8FF) else activeColor)
+                                    )
+                                } else {
+                                    Spacer(Modifier.height(6.dp))
+                                }
                             }
                         }
                     }
@@ -284,7 +309,13 @@ fun AuthenticatedAppShell(
                     AppDestination.Explore -> NavEntry(key) {
                         if (user.role?.uppercase() == "STUDENT_FREELANCER") {
                             JobDiscoveryScreen(
-                                repository = jobRepository
+                                repository = jobRepository,
+                                onOpenJob = { jobId ->
+                                    openDestination(AppDestination.JobDetails(jobId))
+                                },
+                                onOpenNotifications = {
+                                    openDestination(AppDestination.Notifications)
+                                }
                             )
                         } else {
                             GigDiscoveryScreen(
