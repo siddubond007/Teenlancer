@@ -161,7 +161,7 @@ fun AuthenticatedAppShell(
     ) {
         mutableStateListOf<AppDestination>(AppDestination.Home)
     }
-    val exploreRefreshVersion = remember { mutableIntStateOf(0) }
+    val screenRefreshVersion = remember { mutableIntStateOf(0) }
     val current = backStack.lastOrNull() ?: AppDestination.Home
     // Detail pages keep their parent tab selected in the floating dock.
     val selectedRootDestination =
@@ -174,9 +174,7 @@ fun AuthenticatedAppShell(
             if (backStack.size != 1 || current != destination) {
                 backStack.clear()
                 backStack.add(destination)
-                if (destination == AppDestination.Explore) {
-                    exploreRefreshVersion.intValue += 1
-                }
+                screenRefreshVersion.intValue += 1
             }
             return
         }
@@ -221,10 +219,8 @@ fun AuthenticatedAppShell(
             onBack = {
                 if (backStack.size > 1) {
                     backStack.removeLastOrNull()
-                    if (backStack.lastOrNull() == AppDestination.Explore) {
-                        // Refresh the feed when returning from details or another nested page.
-                        exploreRefreshVersion.intValue += 1
-                    }
+                    // Refresh the destination revealed by Back, whatever its root tab is.
+                    screenRefreshVersion.intValue += 1
                 }
             },
             transitionSpec = {
@@ -248,6 +244,7 @@ fun AuthenticatedAppShell(
                             clientDashboardRepository = clientDashboardRepository,
                             onOpenDestination = ::openDestination,
                             onLogout = onLogout,
+                            refreshVersion = screenRefreshVersion.intValue,
                             darkTheme = themeState.value,
                             onToggleTheme = onToggleTheme
                         )
@@ -259,7 +256,7 @@ fun AuthenticatedAppShell(
                                 repository = jobRepository,
                                 profileRepository = profileRepository,
                                 userId = user.id,
-                                refreshVersion = exploreRefreshVersion.intValue,
+                                refreshVersion = screenRefreshVersion.intValue,
                                 onOpenJob = { jobId ->
                                     openDestination(AppDestination.JobDetails(jobId))
                                 },
@@ -270,7 +267,7 @@ fun AuthenticatedAppShell(
                         } else {
                             GigDiscoveryScreen(
                                 repository = gigRepository,
-                                refreshVersion = exploreRefreshVersion.intValue,
+                                refreshVersion = screenRefreshVersion.intValue,
                                 onOpenGig = { gigId ->
                                     openDestination(AppDestination.GigDetails(gigId))
                                 }
