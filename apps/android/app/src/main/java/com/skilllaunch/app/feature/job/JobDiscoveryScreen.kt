@@ -1057,14 +1057,6 @@ private fun ExploreBrandHeader(
                     modifier = Modifier.size(23.dp),
                     tint = if (darkTheme) Color(0xFFE8E4FF) else Color(0xFF292642)
                 )
-                Box(
-                    modifier = Modifier
-                        .padding(top = 9.dp, start = 10.dp)
-                        .size(7.dp)
-                        .align(Alignment.TopEnd)
-                        .clip(CircleShape)
-                        .background(Color(0xFFED647B))
-                )
             }
         }
     }
