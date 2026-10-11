@@ -308,7 +308,8 @@ fun AuthenticatedAppShell(
                     AppDestination.Orders -> NavEntry(key) {
                         OrdersScreen(
                             user = user,
-                            repository = orderRepository
+                            repository = orderRepository,
+                            refreshVersion = screenRefreshVersion.intValue
                         )
                     }
 
@@ -316,14 +317,16 @@ fun AuthenticatedAppShell(
                         OrdersScreen(
                             user = user,
                             repository = orderRepository,
-                            initialOrderId = key.orderId
+                            initialOrderId = key.orderId,
+                            refreshVersion = screenRefreshVersion.intValue
                         )
                     }
 
                     AppDestination.Chat -> NavEntry(key) {
                         ChatScreen(
                             user = user,
-                            repository = orderRepository
+                            repository = orderRepository,
+                            refreshVersion = screenRefreshVersion.intValue
                         )
                     }
 
@@ -333,13 +336,14 @@ fun AuthenticatedAppShell(
                             repository = profileRepository,
                             onLogout = onLogout,
                             onOpenOnboarding = onOpenOnboarding,
-                            refreshVersion = profileRefreshVersion
+                            refreshVersion = screenRefreshVersion.intValue + profileRefreshVersion
                         )
                     }
 
                     AppDestination.Notifications -> NavEntry(key) {
                         NotificationScreen(
-                            repository = notificationRepository
+                            repository = notificationRepository,
+                            refreshVersion = screenRefreshVersion.intValue
                         )
                     }
                 }
