@@ -189,6 +189,8 @@ fun AuthenticatedAppShell(
                         if (user.role?.uppercase() == "STUDENT_FREELANCER") {
                             JobDiscoveryScreen(
                                 repository = jobRepository,
+                                profileRepository = profileRepository,
+                                userId = user.id,
                                 onOpenJob = { jobId ->
                                     openDestination(AppDestination.JobDetails(jobId))
                                 },
