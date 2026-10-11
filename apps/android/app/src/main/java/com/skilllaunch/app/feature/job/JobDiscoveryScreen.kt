@@ -561,7 +561,11 @@ fun JobDiscoveryScreen(
     fun skillsForDomain(category: String): List<String> =
         state.jobs
             .filter { job ->
-                category == "All" || job.category?.equals(category, ignoreCase = true) == true
+                category == "All" ||
+                    displayCategoryLabel(job.category.orEmpty()).equals(
+                        displayCategoryLabel(category),
+                        ignoreCase = true
+                    )
             }
             .flatMap { it.skills }
             .map(String::trim)
@@ -1339,7 +1343,7 @@ private fun DomainPickerDialog(
         categories.filter { category ->
             category.contains(query, ignoreCase = true) ||
                 displayCategoryLabel(category).contains(query, ignoreCase = true)
-        }
+        }.distinctBy { displayCategoryLabel(it).lowercase(Locale.ROOT) }
     }
 
     AlertDialog(
@@ -1423,7 +1427,7 @@ private fun DomainPickerDialog(
                 Text("Close", color = lavender, fontWeight = FontWeight.Bold)
             }
         },
-        containerColor = if (darkTheme) Color(0xFF171A21) else Color(0xFFFFFEFF)
+        containerColor = if (darkTheme) Color(0xFF111112) else Color(0xFFFFFEFF)
     )
 }
 
@@ -1582,7 +1586,7 @@ private fun JobFilterDialog(
         },
         confirmButton = { Button(onClick = onApply, enabled = !invalidBudgetRange, colors = ButtonDefaults.buttonColors(containerColor = lavender, contentColor = Color.White)) { Text("Apply filters") } },
         dismissButton = { TextButton(onClick = onReset) { Text("Reset all", color = lavender, fontWeight = FontWeight.Bold) } },
-        containerColor = if (darkTheme) Color(0xFF141619) else Color(0xFFFFFEFF),
+        containerColor = if (darkTheme) Color(0xFF111112) else Color(0xFFFFFEFF),
         titleContentColor = textPrimary,
         textContentColor = textPrimary
     )
