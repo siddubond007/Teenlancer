@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material.icons.outlined.RocketLaunch
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Code
@@ -553,9 +554,9 @@ private fun ExploreBrandHeader(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.AutoAwesome,
+                    imageVector = Icons.Outlined.RocketLaunch,
                     contentDescription = "SkillLaunch",
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(23.dp),
                     tint = Color.White
                 )
             }
