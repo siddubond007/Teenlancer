@@ -1410,7 +1410,6 @@ private fun formatTimeline(value: String?): String {
 }
 
 @Composable
-private fun JobMetadataPill(@Composable
 private fun JobMetadataPill(
     label: String,
     darkTheme: Boolean,
