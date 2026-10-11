@@ -190,7 +190,6 @@ fun JobDiscoveryScreen(
     val categoryOptions = remember(state.jobs) {
         state.jobs.mapNotNull { it.category?.trim()?.takeIf(String::isNotBlank) }
             .distinctBy { it.lowercase(Locale.ROOT) }
-            .take(6)
     }
     val visibleJobs = remember(state.jobs, selectedCategory, sortMode) {
         val matching = state.jobs.filter { job ->
@@ -446,137 +445,109 @@ private fun ExploreJobsHero(
     textMuted: Color,
     lavender: Color
 ) {
-    val heroStart = if (darkTheme) Color(0xFF202A35) else Color(0xFFF0ECFF)
-    val heroEnd = if (darkTheme) Color(0xFF21352F) else Color(0xFFE2F7EF)
-    val accent = if (darkTheme) Color(0xFFC8B7FF) else Color(0xFF6246C7)
+    val accent = if (darkTheme) Color(0xFFC8B7FF) else Color(0xFF6F56B8)
+    val iconSurface = if (darkTheme) Color(0xFF2D2939) else Color(0xFFEDE7FF)
+    val supportingSurface = if (darkTheme) Color(0xFF202A28) else Color(0xFFE5F5EF)
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(26.dp),
-        color = heroStart,
-        border = BorderStroke(1.dp, if (darkTheme) Color(0xFF424052) else Color(0xFFE0D8FB))
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 1.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Brush.linearGradient(listOf(heroStart, heroEnd)))
+        Text(
+            "DISCOVER OPPORTUNITIES",
+            color = accent,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 1.05.sp
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 18.dp, top = 18.dp, end = 12.dp, bottom = 18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(accent.copy(alpha = if (darkTheme) 0.18f else 0.10f))
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.AutoAwesome,
-                            contentDescription = null,
-                            modifier = Modifier.size(13.dp),
-                            tint = accent
-                        )
-                        Text(
-                            "YOUR NEXT OPPORTUNITY",
-                            color = accent,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 0.45.sp,
-                            maxLines = 1
-                        )
-                    }
-                    Text(
-                        "Turn your skills\ninto momentum",
-                        color = textPrimary,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        lineHeight = 29.sp,
-                        letterSpacing = (-0.45).sp
-                    )
-                    Text(
-                        "Find real projects. Show what you can do.",
-                        color = textMuted,
-                        style = MaterialTheme.typography.bodySmall,
-                        lineHeight = 17.sp
+                Text(
+                    "Find your next project",
+                    color = textPrimary,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.45).sp,
+                    lineHeight = 30.sp
+                )
+                Text(
+                    "Explore work across the skills you’re building.",
+                    color = textMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    lineHeight = 18.sp
+                )
+            }
+
+            Surface(
+                modifier = Modifier.size(54.dp),
+                shape = RoundedCornerShape(18.dp),
+                color = iconSurface,
+                border = BorderStroke(
+                    1.dp,
+                    accent.copy(alpha = if (darkTheme) 0.32f else 0.18f)
+                )
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Outlined.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier.size(25.dp),
+                        tint = accent
                     )
                 }
-                ExploreSkillArtwork(darkTheme = darkTheme)
             }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(999.dp),
+                color = supportingSurface
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(13.dp),
+                        tint = if (darkTheme) Color(0xFF9FE2CA) else Color(0xFF148568)
+                    )
+                    Text(
+                        "Search by skill or category",
+                        color = textPrimary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            Text(
+                "•",
+                color = textMuted,
+                fontSize = 12.sp
+            )
+            Text(
+                "Filter. Compare. Pitch.",
+                color = textMuted,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
-
-@Composable
-private fun ExploreSkillArtwork(darkTheme: Boolean) {
-    val tileSurface = if (darkTheme) Color(0xFF2D3342) else Color.White
-    val violet = if (darkTheme) Color(0xFFC8B7FF) else Color(0xFF7254D6)
-    val mint = if (darkTheme) Color(0xFF9FE2CA) else Color(0xFF148568)
-    val gold = if (darkTheme) Color(0xFFFFD993) else Color(0xFFC17B16)
-
-    Box(
-        modifier = Modifier.size(width = 112.dp, height = 122.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(94.dp)
-                .clip(CircleShape)
-                .background(violet.copy(alpha = if (darkTheme) 0.12f else 0.13f))
-        )
-        Surface(
-            modifier = Modifier.align(Alignment.TopEnd).padding(end = 3.dp, top = 9.dp).size(48.dp).rotate(9f),
-            shape = RoundedCornerShape(17.dp),
-            color = tileSurface,
-            shadowElevation = 5.dp,
-            border = BorderStroke(1.dp, violet.copy(alpha = 0.28f))
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.Palette, contentDescription = null, modifier = Modifier.size(25.dp), tint = violet)
-            }
-        }
-        Surface(
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 5.dp, bottom = 10.dp).size(43.dp).rotate(-8f),
-            shape = RoundedCornerShape(15.dp),
-            color = tileSurface,
-            shadowElevation = 5.dp,
-            border = BorderStroke(1.dp, mint.copy(alpha = 0.28f))
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.Description, contentDescription = null, modifier = Modifier.size(22.dp), tint = mint)
-            }
-        }
-        Surface(
-            modifier = Modifier.align(Alignment.CenterStart).padding(start = 2.dp, top = 5.dp).size(55.dp).rotate(-8f),
-            shape = RoundedCornerShape(18.dp),
-            color = tileSurface,
-            shadowElevation = 8.dp,
-            border = BorderStroke(1.dp, gold.copy(alpha = 0.30f))
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.Code, contentDescription = null, modifier = Modifier.size(28.dp), tint = gold)
-            }
-        }
-        Box(
-            modifier = Modifier.align(Alignment.BottomStart).padding(start = 13.dp, bottom = 1.dp)
-                .size(17.dp).clip(CircleShape).background(mint.copy(alpha = 0.85f))
-        )
-        Box(
-            modifier = Modifier.align(Alignment.TopStart).padding(start = 19.dp, top = 8.dp)
-                .size(9.dp).clip(CircleShape).background(gold)
-        )
-    }
-}
-
 
 @Composable
 private fun JobSearchField(
