@@ -677,7 +677,7 @@ fun JobDiscoveryScreen(
                                         icon = jobCategoryIcon(selectedCategory),
                                         darkTheme = darkTheme,
                                         index = 0,
-                                        onClick = { /* The active domain is cleared from its filter chip. */ }
+                                        onClick = { selectedCategory = "All" }
                                     )
                                 }
                                 featuredCategories.filterNot {
@@ -689,7 +689,13 @@ fun JobDiscoveryScreen(
                                         icon = jobCategoryIcon(category),
                                         darkTheme = darkTheme,
                                         index = index + 1,
-                                        onClick = { selectedCategory = category }
+                                        onClick = {
+                                            selectedCategory = if (selectedCategory.equals(category, ignoreCase = true)) {
+                                                "All"
+                                            } else {
+                                                category
+                                            }
+                                        }
                                     )
                                 }
                                 ExploreCategoryTile(
