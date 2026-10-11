@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,6 +64,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -104,11 +106,31 @@ import com.skilllaunch.app.core.common.collectAsStateWithLifecycleCompat
 import com.skilllaunch.app.data.model.job.Job
 import com.skilllaunch.app.data.model.job.SubmitBidRequest
 import com.skilllaunch.app.data.repository.job.JobRepository
+import com.skilllaunch.app.data.repository.profile.ProfileRepository
+import com.skilllaunch.app.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
+
+private val ChakraPetchFontFamily = FontFamily(
+    Font(R.font.chakra_petch_regular, FontWeight.Normal),
+    Font(R.font.chakra_petch_semibold, FontWeight.SemiBold),
+    Font(R.font.chakra_petch_bold, FontWeight.Bold)
+)
+private val RationaleFontFamily = FontFamily(
+    Font(R.font.rationale_regular, FontWeight.Normal)
+)
+private val ViaodaLibreFontFamily = FontFamily(
+    Font(R.font.viaoda_libre_regular, FontWeight.Normal)
+)
+
+private fun normalizedTokens(value: String): Set<String> =
+    value.lowercase(Locale.ROOT)
+        .split(Regex("[^a-z0-9+#]+"))
+        .filter { it.length >= 2 }
+        .toSet()
 
 data class JobDiscoveryUiState(
     val isLoading: Boolean = true,
@@ -191,6 +213,8 @@ private class JobDiscoveryViewModel(
 @Composable
 fun JobDiscoveryScreen(
     repository: JobRepository,
+    profileRepository: ProfileRepository,
+    userId: String?,
     onOpenJob: (String) -> Unit,
     onOpenNotifications: () -> Unit
 ) {
@@ -210,6 +234,10 @@ fun JobDiscoveryScreen(
     var sortMode by rememberSaveable { mutableStateOf("Newest") }
     var selectedFeedTab by rememberSaveable { mutableStateOf("Explore") }
     var showFilterDialog by rememberSaveable { mutableStateOf(false) }
+    var showDomainPicker by rememberSaveable { mutableStateOf(false) }
+    var domainSearch by rememberSaveable { mutableStateOf("") }
+    var profileCategory by rememberSaveable { mutableStateOf("") }
+    var profileSkills by remember { mutableStateOf<List<String>>(emptyList()) }
     var savedJobIds by remember {
         mutableStateOf(
             savedPreferences.getStringSet("saved_job_ids", mutableSetOf())
@@ -222,6 +250,23 @@ fun JobDiscoveryScreen(
         viewModel.load()
     }
 
+    LaunchedEffect(profileRepository, userId) {
+        profileRepository.getMyProfile().onSuccess { profileUser ->
+            val profile = profileUser.profile
+            profileCategory = sequenceOf(
+                profile?.category,
+                profile?.onboardingData?.primaryDomain
+            ).filterNotNull().firstOrNull { it.isNotBlank() }.orEmpty()
+            profileSkills = (
+                profile?.skills.orEmpty() +
+                    profile?.onboardingData?.selectedSkills.orEmpty()
+                )
+                .map(String::trim)
+                .filter(String::isNotBlank)
+                .distinctBy { it.lowercase(Locale.ROOT) }
+        }
+    }
+
     val darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val textPrimary = MaterialTheme.colorScheme.onBackground
     val textMuted = MaterialTheme.colorScheme.onSurfaceVariant
@@ -230,22 +275,70 @@ fun JobDiscoveryScreen(
     val cardBackground = if (darkTheme) Color(0xEB151E31) else Color(0xF7FFFFFF)
     val searchBackground = if (darkTheme) Color(0xB51C2740) else Color(0xEFFFFFFF)
 
-    val categoryOptions = remember(state.jobs) {
-        val available = state.jobs.mapNotNull {
+    val allCategories = remember(state.jobs) {
+        state.jobs.mapNotNull {
             it.category?.trim()?.takeIf(String::isNotBlank)
         }.distinctBy { it.lowercase(Locale.ROOT) }
-        val preferred = listOf(
+            .sortedBy { it.lowercase(Locale.ROOT) }
+    }
+    val featuredCategories = remember(allCategories, state.jobs, profileCategory, profileSkills) {
+        val curatedFallback = listOf(
             "Web Development",
             "Mobile App Development",
             "Design & Creative",
             "AI, Machine Learning & Data Science",
             "Digital Marketing & SEO"
+        ).filter { preferred ->
+            allCategories.any { it.equals(preferred, ignoreCase = true) }
+        }
+        val profileDomain = profileCategory.trim()
+        val profileDomainTokens = normalizedTokens(profileDomain)
+        val normalizedSkills = profileSkills.map { it.lowercase(Locale.ROOT).trim() }
+            .filter(String::isNotBlank)
+        val scores = allCategories.associateWith { category ->
+            val categoryJobs = state.jobs.filter {
+                it.category?.equals(category, ignoreCase = true) == true
+            }
+            val exactDomainScore = if (
+                profileDomain.isNotBlank() && category.equals(profileDomain, ignoreCase = true)
+            ) 10_000 else 0
+            val domainTokenScore = normalizedTokens(category)
+                .intersect(profileDomainTokens)
+                .size * 250
+            val skillMatchScore = categoryJobs.sumOf { job ->
+                val jobSkillText = (
+                    job.skills + listOfNotNull(job.subcategory, job.title)
+                ).joinToString(" ").lowercase(Locale.ROOT)
+                val jobTokens = normalizedTokens(jobSkillText)
+                normalizedSkills.sumOf { skill ->
+                    when {
+                        jobSkillText.contains(skill) -> 20
+                        normalizedTokens(skill).intersect(jobTokens).isNotEmpty() -> 4
+                        else -> 0
+                    }
+                }
+            }
+            exactDomainScore + domainTokenScore + skillMatchScore
+        }
+        val ranked = allCategories.sortedWith(
+            compareByDescending<String> { scores[it] ?: 0 }
+                .thenBy { category ->
+                    val position = curatedFallback.indexOfFirst {
+                        it.equals(category, ignoreCase = true)
+                    }
+                    if (position < 0) Int.MAX_VALUE else position
+                }
+                .thenBy { it.lowercase(Locale.ROOT) }
         )
-        preferred.filter { candidate ->
-            available.any { it.equals(candidate, ignoreCase = true) }
-        } + available
-            .filterNot { candidate -> preferred.any { it.equals(candidate, ignoreCase = true) } }
-            .sortedBy { it.lowercase(Locale.ROOT) }
+        val hasProfilePreferences = profileDomain.isNotBlank() || normalizedSkills.isNotEmpty()
+        val personalized = if (hasProfilePreferences) {
+            ranked.filter { (scores[it] ?: 0) > 0 }
+        } else {
+            emptyList()
+        }
+        (personalized + curatedFallback + ranked)
+            .distinctBy { it.lowercase(Locale.ROOT) }
+            .take(3)
     }
 
     val tabJobs = remember(state.jobs, selectedFeedTab, savedJobIds) {
@@ -337,31 +430,50 @@ fun JobDiscoveryScreen(
                     )
                 }
 
-                if (categoryOptions.isNotEmpty()) {
+                if (allCategories.isNotEmpty()) {
                     item(key = "explore-categories") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(9.dp),
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            ExploreCategoryTile(
-                                label = "All",
-                                selected = selectedCategory == "All",
-                                icon = Icons.Outlined.GridView,
-                                darkTheme = darkTheme,
-                                index = 0,
-                                onClick = { selectedCategory = "All" }
+                        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Text(
+                                "RECOMMENDED DOMAINS",
+                                color = textMuted,
+                                fontFamily = RationaleFontFamily,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.15.sp
                             )
-                            categoryOptions.forEachIndexed { index, category ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
                                 ExploreCategoryTile(
-                                    label = displayCategoryLabel(category),
-                                    selected = selectedCategory.equals(category, ignoreCase = true),
-                                    icon = jobCategoryIcon(category),
+                                    label = "All",
+                                    selected = selectedCategory == "All",
+                                    icon = Icons.Outlined.GridView,
                                     darkTheme = darkTheme,
-                                    index = index + 1,
-                                    onClick = { selectedCategory = category }
+                                    index = 0,
+                                    onClick = { selectedCategory = "All" }
+                                )
+                                featuredCategories.forEachIndexed { index, category ->
+                                    ExploreCategoryTile(
+                                        label = displayCategoryLabel(category),
+                                        selected = selectedCategory.equals(category, ignoreCase = true),
+                                        icon = jobCategoryIcon(category),
+                                        darkTheme = darkTheme,
+                                        index = index + 1,
+                                        onClick = { selectedCategory = category }
+                                    )
+                                }
+                                ExploreCategoryTile(
+                                    label = "All domains",
+                                    selected = showDomainPicker,
+                                    icon = Icons.Outlined.Tune,
+                                    darkTheme = darkTheme,
+                                    index = 4,
+                                    onClick = {
+                                        domainSearch = ""
+                                        showDomainPicker = true
+                                    }
                                 )
                             }
                         }
@@ -382,7 +494,7 @@ fun JobDiscoveryScreen(
                                 visibleJobs.size.toString() + " opportunities",
                                 color = textPrimary,
                                 style = TextStyle(
-                                    fontFamily = FontFamily.SansSerif,
+                                    fontFamily = ChakraPetchFontFamily,
                                     fontSize = 24.sp,
                                     lineHeight = 29.sp,
                                     fontWeight = FontWeight.ExtraBold,
@@ -538,6 +650,28 @@ fun JobDiscoveryScreen(
             textMuted = textMuted
         )
     }
+
+    if (showDomainPicker) {
+        DomainPickerDialog(
+            categories = allCategories,
+            selectedCategory = selectedCategory,
+            query = domainSearch,
+            onQueryChange = { domainSearch = it },
+            onSelect = { category ->
+                selectedCategory = category
+                showDomainPicker = false
+                domainSearch = ""
+            },
+            onDismiss = {
+                showDomainPicker = false
+                domainSearch = ""
+            },
+            darkTheme = darkTheme,
+            textPrimary = textPrimary,
+            textMuted = textMuted,
+            lavender = lavender
+        )
+    }
 }
 
 @Composable
@@ -586,17 +720,17 @@ private fun ExploreBrandHeader(
                 Text(
                     "Skill",
                     color = textPrimary,
-                    fontFamily = FontFamily.SansSerif,
+                    fontFamily = ChakraPetchFontFamily,
                     fontSize = 23.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.75).sp
                 )
                 Text(
                     "Launch",
                     color = accent,
-                    fontFamily = FontFamily.SansSerif,
+                    fontFamily = ChakraPetchFontFamily,
                     fontSize = 23.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.75).sp
                 )
             }
@@ -672,6 +806,7 @@ private fun ExploreTopTabs(
                         } else {
                             if (darkTheme) Color(0xFFCBC9D9) else Color(0xFF706D81)
                         },
+                        fontFamily = ChakraPetchFontFamily,
                         fontSize = 12.sp,
                         fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -794,7 +929,7 @@ private fun ExploreCategoryTile(
 
     Column(
         modifier = Modifier
-            .width(64.dp)
+            .width(62.dp)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -827,7 +962,7 @@ private fun ExploreCategoryTile(
             } else {
                 if (darkTheme) Color(0xFFD5D4E1) else Color(0xFF38364B)
             },
-            fontFamily = FontFamily.SansSerif,
+            fontFamily = RationaleFontFamily,
             fontSize = 10.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             letterSpacing = if (selected) 0.sp else (-0.1).sp,
@@ -882,6 +1017,168 @@ private fun JobSortChip(
                 maxLines = 1
             )
         }
+    }
+}
+
+@Composable
+private fun DomainPickerDialog(
+    categories: List<String>,
+    selectedCategory: String,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+    darkTheme: Boolean,
+    textPrimary: Color,
+    textMuted: Color,
+    lavender: Color
+) {
+    val filteredCategories = remember(categories, query) {
+        categories.filter { category ->
+            category.contains(query, ignoreCase = true) ||
+                displayCategoryLabel(category).contains(query, ignoreCase = true)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    "Explore all domains",
+                    color = textPrimary,
+                    fontFamily = ChakraPetchFontFamily,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Choose a specialty to refine your opportunities.",
+                    color = textMuted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    placeholder = { Text("Search domains") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = null
+                        )
+                    }
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 350.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    item(key = "all-domains-option") {
+                        DomainPickerRow(
+                            label = "All opportunities",
+                            selected = selectedCategory == "All",
+                            icon = Icons.Outlined.GridView,
+                            darkTheme = darkTheme,
+                            textPrimary = textPrimary,
+                            lavender = lavender,
+                            onClick = { onSelect("All") }
+                        )
+                    }
+                    items(filteredCategories, key = { it.lowercase(Locale.ROOT) }) { category ->
+                        DomainPickerRow(
+                            label = displayCategoryLabel(category),
+                            selected = selectedCategory.equals(category, ignoreCase = true),
+                            icon = jobCategoryIcon(category),
+                            darkTheme = darkTheme,
+                            textPrimary = textPrimary,
+                            lavender = lavender,
+                            onClick = { onSelect(category) }
+                        )
+                    }
+                    if (filteredCategories.isEmpty()) {
+                        item(key = "no-domain-results") {
+                            Text(
+                                "No domains match that search.",
+                                color = textMuted,
+                                modifier = Modifier.padding(vertical = 12.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = lavender, fontWeight = FontWeight.Bold)
+            }
+        },
+        containerColor = if (darkTheme) Color(0xFF171D2D) else Color(0xFFFFFEFF)
+    )
+}
+
+@Composable
+private fun DomainPickerRow(
+    label: String,
+    selected: Boolean,
+    icon: ImageVector,
+    darkTheme: Boolean,
+    textPrimary: Color,
+    lavender: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                if (selected) {
+                    if (darkTheme) Color(0xFF332D52) else Color(0xFFF0ECFF)
+                } else Color.Transparent
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(11.dp))
+                .background(
+                    if (darkTheme) Color.White.copy(alpha = 0.06f)
+                    else Color(0xFFF3F0FC)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(19.dp),
+                tint = lavender
+            )
+        }
+        Text(
+            label,
+            modifier = Modifier.weight(1f),
+            color = textPrimary,
+            fontFamily = RationaleFontFamily,
+            fontSize = 13.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+        RadioButton(
+            selected = selected,
+            onClick = onClick
+        )
     }
 }
 
@@ -1064,7 +1361,7 @@ private fun JobFeedEmptyState(
                 if (filteredCategory == null) "Your next project is still out there" else "No projects in " + filteredCategory,
                 color = textPrimary,
                 style = TextStyle(
-                    fontFamily = FontFamily.Serif,
+                    fontFamily = ViaodaLibreFontFamily,
                     fontSize = 23.sp,
                     lineHeight = 27.sp,
                     fontWeight = FontWeight.Bold
@@ -1165,8 +1462,8 @@ private fun JobCard(
                                 ?: "OPEN PROJECT",
                             modifier = Modifier.weight(1f),
                             color = if (darkTheme) tint.copy(alpha = 0.98f) else tint,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 9.sp,
+                            fontFamily = RationaleFontFamily,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.45.sp,
                             maxLines = 1,
@@ -1203,7 +1500,7 @@ private fun JobCard(
                         job.title ?: "Untitled project",
                         color = textPrimary,
                         style = TextStyle(
-                            fontFamily = FontFamily.SansSerif,
+                            fontFamily = ChakraPetchFontFamily,
                             fontSize = 16.sp,
                             lineHeight = 21.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -1311,8 +1608,8 @@ private fun JobCard(
                         formatJobBudget(job),
                         color = if (darkTheme) Color(0xFF91E2C9) else Color(0xFF08785C),
                         style = TextStyle(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
+                            fontFamily = ChakraPetchFontFamily,
+                            fontSize = 14.sp,
                             lineHeight = 16.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.35).sp
