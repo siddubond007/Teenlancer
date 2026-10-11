@@ -1,22 +1,23 @@
 package com.skilllaunch.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val SkillLaunchDarkColorScheme = darkColorScheme(
-    primary = SkillLaunchIndigoLight,
-    onPrimary = SkillLaunchDarkText,
-    primaryContainer = SkillLaunchViolet,
-    onPrimaryContainer = SkillLaunchDarkText,
+    primary = SkillLaunchVioletLight,
+    onPrimary = Color(0xFF211A45),
+    primaryContainer = Color(0xFF352A65),
+    onPrimaryContainer = Color(0xFFF1ECFF),
     secondary = SkillLaunchCyanLight,
-    onSecondary = SkillLaunchDarkBackground,
-    secondaryContainer = SkillLaunchDarkSurfaceVariant,
-    onSecondaryContainer = SkillLaunchDarkText,
-    tertiary = SkillLaunchVioletLight,
-    onTertiary = SkillLaunchDarkText,
+    onSecondary = Color(0xFF08241E),
+    secondaryContainer = Color(0xFF173D38),
+    onSecondaryContainer = Color(0xFFC9F7EA),
+    tertiary = SkillLaunchIndigoLight,
+    onTertiary = Color(0xFF1A1740),
     background = SkillLaunchDarkBackground,
     onBackground = SkillLaunchDarkText,
     surface = SkillLaunchDarkSurface,
@@ -29,15 +30,17 @@ private val SkillLaunchDarkColorScheme = darkColorScheme(
 
 private val SkillLaunchLightColorScheme = lightColorScheme(
     primary = SkillLaunchIndigo,
-    onPrimary = SkillLaunchLightSurface,
-    primaryContainer = SkillLaunchIndigoLight,
-    onPrimaryContainer = SkillLaunchLightSurface,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFE9E4FF),
+    onPrimaryContainer = Color(0xFF35266F),
     secondary = SkillLaunchViolet,
-    onSecondary = SkillLaunchLightSurface,
-    secondaryContainer = SkillLaunchLightSurfaceVariant,
-    onSecondaryContainer = SkillLaunchLightText,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFF0EBFF),
+    onSecondaryContainer = Color(0xFF382D70),
     tertiary = SkillLaunchCyan,
-    onTertiary = SkillLaunchLightSurface,
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFDDF5ED),
+    onTertiaryContainer = Color(0xFF0A4D3E),
     background = SkillLaunchLightBackground,
     onBackground = SkillLaunchLightText,
     surface = SkillLaunchLightSurface,
@@ -45,7 +48,7 @@ private val SkillLaunchLightColorScheme = lightColorScheme(
     surfaceVariant = SkillLaunchLightSurfaceVariant,
     onSurfaceVariant = SkillLaunchLightTextSecondary,
     error = SkillLaunchError,
-    onError = SkillLaunchLightSurface
+    onError = Color.White
 )
 
 @Composable
