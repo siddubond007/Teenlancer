@@ -655,7 +655,7 @@ fun JobDiscoveryScreen(
                                 letterSpacing = 1.0.sp
                             )
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.Top
                             ) {
@@ -1223,10 +1223,23 @@ private fun ExploreCategoryTile(
                 ),
             contentAlignment = Alignment.Center
         ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                accent.copy(alpha = if (selected) 0.42f else 0.24f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                modifier = Modifier.size(25.dp),
+                modifier = Modifier.size(27.dp),
                 tint = if (selected) Color.White else accent
             )
         }
