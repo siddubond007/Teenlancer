@@ -17,12 +17,12 @@ val SkillLaunchLightSurfaceVariant = Color(0xFFF0EDF8)
 val SkillLaunchLightText = Color(0xFF1B1A2C)
 val SkillLaunchLightTextSecondary = Color(0xFF77748B)
 
-// Matte graphite dark surfaces: neutral blacks with restrained brand accents.
-val SkillLaunchDarkBackground = Color(0xFF08090B)
-val SkillLaunchDarkSurface = Color(0xFF111315)
-val SkillLaunchDarkSurfaceVariant = Color(0xFF1A1C1F)
-val SkillLaunchDarkText = Color(0xFFF5F5F7)
-val SkillLaunchDarkTextSecondary = Color(0xFFB0B2B8)
+// Premium graphite theme: visibly layered charcoal with restrained violet highlights.
+val SkillLaunchDarkBackground = Color(0xFF0D0F14)
+val SkillLaunchDarkSurface = Color(0xFF161820)
+val SkillLaunchDarkSurfaceVariant = Color(0xFF222530)
+val SkillLaunchDarkText = Color(0xFFF5F5F8)
+val SkillLaunchDarkTextSecondary = Color(0xFFB7BAC5)
 
 // System/supporting colors
 val SkillLaunchSuccess = Color(0xFF159A78)
