@@ -17,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -180,16 +181,17 @@ fun JobDiscoveryScreen(
 
     // Match onboarding's palette and respect the app's in-app theme toggle.
     val darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val pageBackground = if (darkTheme) Color(0xFF1A1A1D) else Color(0xFFF8F7FA)
-    val cardBackground = if (darkTheme) Color(0xFF262629) else Color.White
-    val searchBackground = if (darkTheme) Color(0xFF262629) else Color(0xFFE8E7EA)
-    val textPrimary = if (darkTheme) Color.White else Color(0xFF17171A)
-    val textMuted = if (darkTheme) Color(0xFFAAA9AE) else Color(0xFF77767D)
-    val lavender = Color(0xFFD4C6FF)
+    val pageBackground = if (darkTheme) Color(0xFF0B1020) else Color(0xFFF7F5FB)
+    val cardBackground = if (darkTheme) Color(0xED151E31) else Color(0xEFFFFFFF)
+    val searchBackground = if (darkTheme) Color(0xB51C2740) else Color(0xDFFFFFFF)
+    val textPrimary = MaterialTheme.colorScheme.onBackground
+    val textMuted = MaterialTheme.colorScheme.onSurfaceVariant
+    val lavender = if (darkTheme) Color(0xFFB7A8FF) else Color(0xFF6757D9)
 
     val categoryOptions = remember(state.jobs) {
         state.jobs.mapNotNull { it.category?.trim()?.takeIf(String::isNotBlank) }
             .distinctBy { it.lowercase(Locale.ROOT) }
+            .sortedBy { it.lowercase(Locale.ROOT) }
     }
     val visibleJobs = remember(state.jobs, selectedCategory, sortMode) {
         val matching = state.jobs.filter { job ->
@@ -207,17 +209,30 @@ fun JobDiscoveryScreen(
         modifier = Modifier.fillMaxSize(),
         color = pageBackground
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().background(pageBackground),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(15.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = if (darkTheme) {
+                            listOf(Color(0xFF090F1F), Color(0xFF11172A), Color(0xFF0B1020))
+                        } else {
+                            listOf(Color(0xFFFFFEFF), Color(0xFFF8F6FC), Color(0xFFF0EDFA))
+                        }
+                    )
+                )
         ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 26.dp),
+                verticalArrangement = Arrangement.spacedBy(19.dp)
+            ) {
             item(key = "explore-hero") {
                 ExploreJobsHero(
                     darkTheme = darkTheme,
                     textPrimary = textPrimary,
                     textMuted = textMuted,
-                    lavender = lavender
+                    domainCount = categoryOptions.size
                 )
             }
 
@@ -241,7 +256,7 @@ fun JobDiscoveryScreen(
                 item(key = "explore-categories") {
                     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Text(
-                            "EXPLORE BY CATEGORY",
+                            "BROWSE BY SPECIALTY",
                             color = if (darkTheme) lavender else Color(0xFF6F56B8),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -287,20 +302,20 @@ fun JobDiscoveryScreen(
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text(
-                            "YOUR NEXT STEP",
+                            "OPPORTUNITIES, OPEN NOW",
                             color = if (darkTheme) lavender else Color(0xFF6F56B8),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 1.0.sp
                         )
                         Text(
-                            "Projects to explore",
+                            "Open opportunities",
                             color = textPrimary,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
-                            visibleJobs.size.toString() + " projects shown",
+                            visibleJobs.size.toString() + " opportunities available",
                             color = textMuted,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -421,6 +436,7 @@ fun JobDiscoveryScreen(
             }
         }
     }
+    }
 
     dialogJob?.let { job ->
         ProposalDialog(
@@ -443,109 +459,77 @@ private fun ExploreJobsHero(
     darkTheme: Boolean,
     textPrimary: Color,
     textMuted: Color,
-    lavender: Color
+    domainCount: Int
 ) {
-    val accent = if (darkTheme) Color(0xFFC8B7FF) else Color(0xFF6F56B8)
-    val iconSurface = if (darkTheme) Color(0xFF2D2939) else Color(0xFFEDE7FF)
-    val supportingSurface = if (darkTheme) Color(0xFF202A28) else Color(0xFFE5F5EF)
+    val accent = if (darkTheme) Color(0xFFB7A8FF) else Color(0xFF6757D9)
+    val hairline = if (darkTheme) Color.White.copy(alpha = 0.13f) else Color(0xFF7165B8).copy(alpha = 0.14f)
 
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 1.dp),
-        verticalArrangement = Arrangement.spacedBy(7.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 1.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text(
-            "DISCOVER OPPORTUNITIES",
-            color = accent,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.ExtraBold,
-            letterSpacing = 1.05.sp
-        )
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    "Find your next project",
-                    color = textPrimary,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.45).sp,
-                    lineHeight = 30.sp
+                Box(
+                    modifier = Modifier
+                        .width(22.dp)
+                        .height(2.dp)
+                        .clip(CircleShape)
+                        .background(accent)
                 )
                 Text(
-                    "Explore work across the skills you’re building.",
-                    color = textMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                    lineHeight = 18.sp
+                    "SKILLLAUNCH  /  DISCOVER",
+                    color = accent,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.25.sp
                 )
             }
 
-            Surface(
-                modifier = Modifier.size(54.dp),
-                shape = RoundedCornerShape(18.dp),
-                color = iconSurface,
-                border = BorderStroke(
-                    1.dp,
-                    accent.copy(alpha = if (darkTheme) 0.32f else 0.18f)
-                )
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Outlined.AutoAwesome,
-                        contentDescription = null,
-                        modifier = Modifier.size(25.dp),
-                        tint = accent
-                    )
-                }
-            }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             Surface(
                 shape = RoundedCornerShape(999.dp),
-                color = supportingSurface
+                color = if (darkTheme) Color.White.copy(alpha = 0.055f) else Color.White.copy(alpha = 0.72f),
+                border = BorderStroke(1.dp, hairline)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = null,
-                        modifier = Modifier.size(13.dp),
-                        tint = if (darkTheme) Color(0xFF9FE2CA) else Color(0xFF148568)
-                    )
-                    Text(
-                        "Search by skill or category",
-                        color = textPrimary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                Text(
+                    if (domainCount > 0) "$domainCount fields" else "Discover",
+                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                    color = textMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
+                )
             }
-            Text(
-                "•",
-                color = textMuted,
-                fontSize = 12.sp
-            )
-            Text(
-                "Filter. Compare. Pitch.",
-                color = textMuted,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium
-            )
         }
+
+        Text(
+            "Find work that\nmoves you.",
+            color = textPrimary,
+            style = TextStyle(
+                fontFamily = FontFamily.Default,
+                fontSize = 31.sp,
+                lineHeight = 35.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.9).sp
+            ),
+            maxLines = 2
+        )
+
+        Text(
+            "Meaningful projects. Real clients. Room to grow.",
+            color = textMuted,
+            style = MaterialTheme.typography.bodyMedium,
+            lineHeight = 21.sp
+        )
     }
 }
 
@@ -559,15 +543,21 @@ private fun JobSearchField(
     onValueChange: (String) -> Unit,
     onSearch: () -> Unit
 ) {
-    val borderColor = if (darkTheme) Color(0xFF403B4C) else Color(0xFFD9D2ED)
+    val shape = RoundedCornerShape(24.dp)
+    val borderColor = if (darkTheme) {
+        Color.White.copy(alpha = 0.13f)
+    } else {
+        Color(0xFF8D82C0).copy(alpha = 0.16f)
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(58.dp)
-            .clip(RoundedCornerShape(30.dp))
+            .height(60.dp)
+            .shadow(11.dp, shape, clip = false)
+            .clip(shape)
             .background(searchBackground)
-            .border(1.dp, borderColor, RoundedCornerShape(30.dp))
+            .border(1.dp, borderColor, shape)
             .padding(start = 17.dp, end = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -577,7 +567,7 @@ private fun JobSearchField(
             modifier = Modifier.size(21.dp),
             tint = textMuted
         )
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(11.dp))
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
@@ -590,13 +580,17 @@ private fun JobSearchField(
             keyboardActions = androidx.compose.foundation.text.KeyboardActions(
                 onSearch = { onSearch() }
             ),
-            textStyle = TextStyle(color = textPrimary, fontSize = 14.sp),
+            textStyle = TextStyle(
+                color = textPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            ),
             decorationBox = { innerTextField ->
                 Box {
                     if (value.isBlank()) {
                         Text(
                             "Search projects, skills or keywords",
-                            color = textMuted,
+                            color = textMuted.copy(alpha = 0.88f),
                             fontSize = 13.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -609,16 +603,20 @@ private fun JobSearchField(
         Spacer(Modifier.width(8.dp))
         Surface(
             onClick = onSearch,
-            modifier = Modifier.size(42.dp),
+            modifier = Modifier.size(44.dp),
             shape = CircleShape,
-            color = Color(0xFFD4C6FF)
+            color = if (darkTheme) Color(0xFFB7A8FF) else Color(0xFFE9E4FF),
+            border = BorderStroke(
+                1.dp,
+                if (darkTheme) Color.White.copy(alpha = 0.24f) else Color(0xFFB6A8F3).copy(alpha = 0.55f)
+            )
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Outlined.Search,
                     contentDescription = "Search projects",
                     modifier = Modifier.size(19.dp),
-                    tint = Color(0xFF17171A)
+                    tint = if (darkTheme) Color(0xFF211A45) else Color(0xFF4B3AA6)
                 )
             }
         }
@@ -635,20 +633,34 @@ private fun JobCategoryChip(
     textMuted: Color,
     onClick: () -> Unit
 ) {
-    val unselectedColor = if (darkTheme) Color(0xFF262629) else Color(0xFFE8E7EA)
+    val shape = RoundedCornerShape(999.dp)
+    val borderColor = when {
+        selected -> lavender.copy(alpha = if (darkTheme) 0.95f else 0.78f)
+        darkTheme -> Color.White.copy(alpha = 0.12f)
+        else -> Color(0xFF8B80B5).copy(alpha = 0.16f)
+    }
+    val chipColor = when {
+        selected && darkTheme -> lavender.copy(alpha = 0.20f)
+        selected -> Color(0xFFE9E4FF)
+        darkTheme -> Color.White.copy(alpha = 0.055f)
+        else -> Color.White.copy(alpha = 0.78f)
+    }
+
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(999.dp),
-        color = if (selected) lavender else unselectedColor,
-        border = BorderStroke(
-            1.dp,
-            if (selected) lavender else if (darkTheme) Color(0xFF3A393E) else Color(0xFFDEDAE7)
-        )
+        modifier = if (selected) Modifier.shadow(6.dp, shape, clip = false) else Modifier,
+        shape = shape,
+        color = chipColor,
+        border = BorderStroke(if (selected) 1.2.dp else 1.dp, borderColor)
     ) {
         Text(
             label,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-            color = if (selected) Color(0xFF17171A) else if (darkTheme) textPrimary else textMuted,
+            modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp),
+            color = if (selected) {
+                if (darkTheme) Color(0xFFF8F5FF) else Color(0xFF423487)
+            } else {
+                if (darkTheme) textPrimary else textMuted
+            },
             fontSize = 12.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1
@@ -664,25 +676,34 @@ private fun JobSortChip(
     lavender: Color,
     onClick: () -> Unit
 ) {
+    val shape = RoundedCornerShape(17.dp)
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
-        color = if (darkTheme) Color(0xFF262629) else Color(0xFFE8E7EA),
-        border = BorderStroke(1.dp, lavender.copy(alpha = if (darkTheme) 0.32f else 0.72f))
+        modifier = Modifier.shadow(6.dp, shape, clip = false),
+        shape = shape,
+        color = if (darkTheme) Color.White.copy(alpha = 0.055f) else Color.White.copy(alpha = 0.78f),
+        border = BorderStroke(
+            1.dp,
+            if (darkTheme) Color.White.copy(alpha = 0.13f) else Color(0xFF8B80B5).copy(alpha = 0.16f)
+        )
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 11.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Outlined.Tune,
                 contentDescription = "Change sort order",
                 modifier = Modifier.size(15.dp),
-                tint = if (darkTheme) lavender else Color(0xFF5C48B9)
+                tint = lavender
             )
             Text(
-                sortMode,
+                when (sortMode) {
+                    "Highest budget" -> "Budget: high"
+                    "Lowest budget" -> "Budget: low"
+                    else -> "Newest"
+                },
                 color = textPrimary,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -856,27 +877,47 @@ private fun JobCard(
     onSubmit: () -> Unit
 ) {
     val tint = jobCategoryAccent(job.category ?: job.subcategory.orEmpty())
-    val cardBackground = if (darkTheme) Color(0xFF24242A) else Color.White
-    val outline = if (darkTheme) Color(0xFF3A3944) else Color(0xFFE8E3F0)
+    val shape = RoundedCornerShape(27.dp)
+    val cardBackground = if (darkTheme) {
+        Color(0xE8162034)
+    } else {
+        Color(0xEFFFFFFF)
+    }
+    val outline = if (darkTheme) {
+        Color.White.copy(alpha = 0.13f)
+    } else {
+        Color(0xFF9387C5).copy(alpha = 0.15f)
+    }
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(12.dp, shape, clip = false),
+        shape = shape,
         color = cardBackground,
-        border = BorderStroke(1.dp, outline)
+        border = BorderStroke(1.dp, outline),
+        tonalElevation = 0.dp
     ) {
         Column(
-            modifier = Modifier.padding(15.dp),
-            verticalArrangement = Arrangement.spacedBy(11.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(11.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                val iconShape = RoundedCornerShape(18.dp)
                 Box(
-                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(15.dp))
-                        .background(tint.copy(alpha = if (darkTheme) 0.19f else 0.13f)),
+                    modifier = Modifier
+                        .size(50.dp)
+                        .shadow(5.dp, iconShape, clip = false)
+                        .clip(iconShape)
+                        .background(
+                            if (darkTheme) tint.copy(alpha = 0.16f)
+                            else tint.copy(alpha = 0.10f)
+                        )
+                        .border(1.dp, tint.copy(alpha = 0.20f), iconShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -886,9 +927,10 @@ private fun JobCard(
                         tint = tint
                     )
                 }
+
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -897,37 +939,44 @@ private fun JobCard(
                         Text(
                             job.category?.takeIf(String::isNotBlank)?.uppercase(Locale.ROOT) ?: "OPEN PROJECT",
                             modifier = Modifier.weight(1f),
-                            color = if (darkTheme) lavender else Color(0xFF6F56B8),
+                            color = if (darkTheme) tint.copy(alpha = 0.95f) else tint,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 0.65.sp,
+                            letterSpacing = 0.85.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         if (job.viewerBid != null || submitted) {
                             Surface(
                                 shape = RoundedCornerShape(999.dp),
-                                color = if (darkTheme) Color(0xFF244238) else Color(0xFFE4F5EC)
+                                color = if (darkTheme) {
+                                    Color(0xFF69D1BC).copy(alpha = 0.13f)
+                                } else {
+                                    Color(0xFFDDF5ED)
+                                },
+                                border = BorderStroke(1.dp, Color(0xFF258E7A).copy(alpha = 0.20f))
                             ) {
                                 Text(
                                     "Pitched",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    color = if (darkTheme) Color(0xFFA4E2C6) else Color(0xFF16734F),
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    color = if (darkTheme) Color(0xFF9DE9D5) else Color(0xFF176D5C),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                     }
+
                     Text(
                         job.title ?: "Untitled project",
                         color = textPrimary,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        maxLines = 2,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
-                        lineHeight = 21.sp
+                        lineHeight = 22.sp
                     )
+
                     job.client?.fullName?.takeIf(String::isNotBlank)?.let { client ->
                         Text(
                             "Posted by $client",
@@ -945,7 +994,7 @@ private fun JobCard(
                     description.replace(Regex("<[^>]*>"), " ").replace(Regex("\\s+"), " ").trim(),
                     color = textMuted,
                     style = MaterialTheme.typography.bodySmall,
-                    lineHeight = 18.sp,
+                    lineHeight = 19.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -958,13 +1007,22 @@ private fun JobCard(
                 ) {
                     job.skills.take(4).forEach { skill ->
                         Surface(
-                            shape = RoundedCornerShape(9.dp),
-                            color = if (darkTheme) Color(0xFF30303A) else Color(0xFFF2EFF8)
+                            shape = RoundedCornerShape(999.dp),
+                            color = if (darkTheme) {
+                                Color.White.copy(alpha = 0.065f)
+                            } else {
+                                Color(0xFFF0EDFA)
+                            },
+                            border = BorderStroke(
+                                1.dp,
+                                if (darkTheme) Color.White.copy(alpha = 0.08f)
+                                else Color(0xFF8B80B5).copy(alpha = 0.09f)
+                            )
                         ) {
                             Text(
                                 skill,
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
-                                color = if (darkTheme) Color(0xFFE2D9FF) else Color(0xFF4B416B),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                color = if (darkTheme) Color(0xFFDCD5FF) else Color(0xFF514774),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1
@@ -976,7 +1034,8 @@ private fun JobCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 if (!job.timeline.isNullOrBlank()) {
                     JobMetadataPill(
@@ -987,7 +1046,6 @@ private fun JobCard(
                     )
                 }
                 if (job.bids.isNotEmpty()) {
-                    Spacer(Modifier.width(6.dp))
                     JobMetadataPill(
                         label = job.bids.size.toString() + " proposals",
                         darkTheme = darkTheme,
@@ -997,44 +1055,63 @@ private fun JobCard(
                 }
             }
 
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(
+                        if (darkTheme) Color.White.copy(alpha = 0.09f)
+                        else Color(0xFF8B80B5).copy(alpha = 0.12f)
+                    )
+            )
+
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 1.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
                         "PROJECT BUDGET",
                         color = textMuted,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 0.7.sp
+                        letterSpacing = 0.75.sp
                     )
                     Text(
                         formatJobBudget(job),
-                        color = if (darkTheme) Color(0xFFA7E3C8) else Color(0xFF137452),
+                        color = if (darkTheme) Color(0xFF91E2C9) else Color(0xFF14765D),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
                 Button(
                     onClick = onSubmit,
                     enabled = !submitted,
-                    shape = RoundedCornerShape(14.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                    shape = RoundedCornerShape(17.dp),
+                    contentPadding = PaddingValues(horizontal = 13.dp, vertical = 0.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = lavender,
-                        contentColor = Color(0xFF17171A),
-                        disabledContainerColor = lavender.copy(alpha = 0.38f),
-                        disabledContentColor = Color(0xFF17171A).copy(alpha = 0.62f)
+                        contentColor = if (darkTheme) Color(0xFF211A45) else Color.White,
+                        disabledContainerColor = lavender.copy(alpha = 0.30f),
+                        disabledContentColor = if (darkTheme) {
+                            Color(0xFF211A45).copy(alpha = 0.76f)
+                        } else {
+                            Color(0xFF46378A).copy(alpha = 0.72f)
+                        }
                     )
                 ) {
-                    Text(if (submitted) "Pitched ✓" else "Pitch project →", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(
+                        if (submitted) "Pitched ✓" else "Pitch project  →",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        maxLines = 1
+                    )
                 }
             }
         }
@@ -1065,13 +1142,13 @@ private fun JobMetadataPill(
 ) {
     Surface(
         shape = RoundedCornerShape(999.dp),
-        color = accent.copy(alpha = if (darkTheme) 0.14f else 0.45f),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.40f))
+        color = accent.copy(alpha = if (darkTheme) 0.15f else 0.075f),
+        border = BorderStroke(1.dp, accent.copy(alpha = if (darkTheme) 0.24f else 0.18f))
     ) {
         Text(
             label,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            color = if (darkTheme) Color.White else textMuted,
+            color = if (darkTheme) Color(0xFFDAD5F7) else textMuted,
             fontSize = 10.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1
@@ -1088,11 +1165,12 @@ private fun jobBudgetValue(job: Job): Double =
 private fun jobCategoryAccent(category: String): Color {
     val normalized = category.lowercase(Locale.ROOT)
     return when {
-        "design" in normalized || "creative" in normalized || "ui" in normalized -> Color(0xFF8B5CF6)
-        "writing" in normalized || "content" in normalized || "research" in normalized -> Color(0xFFE7834D)
-        "ai" in normalized || "data" in normalized -> Color(0xFF438DE8)
-        "video" in normalized || "marketing" in normalized -> Color(0xFFD29A27)
-        else -> Color(0xFF159A75)
+        "design" in normalized || "creative" in normalized || "ui" in normalized -> Color(0xFF8870DE)
+        "writing" in normalized || "content" in normalized || "research" in normalized -> Color(0xFFC77A55)
+        "ai" in normalized || "data" in normalized -> Color(0xFF4E8DCB)
+        "video" in normalized || "marketing" in normalized -> Color(0xFFB18A39)
+        "education" in normalized || "tutoring" in normalized -> Color(0xFF6C75CD)
+        else -> Color(0xFF258E7A)
     }
 }
 

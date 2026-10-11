@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BusinessCenter
@@ -40,7 +42,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.ui.NavDisplay
@@ -132,7 +137,7 @@ fun AuthenticatedAppShell(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            if (current != AppDestination.Home && current != AppDestination.Profile) {
+            if (current != AppDestination.Home && current != AppDestination.Profile && current != AppDestination.Explore) {
                 CenterAlignedTopAppBar(
                     title = {
                         Text(
@@ -147,75 +152,100 @@ fun AuthenticatedAppShell(
             }
         },
         bottomBar = {
-            val studentRole = user.role?.uppercase() == "STUDENT_FREELANCER"
-            val activeColor = if (studentRole) {
-                androidx.compose.ui.graphics.Color(0xFF047857)
+            val darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+            val activeColor = MaterialTheme.colorScheme.primary
+            val glassSurface = if (darkTheme) {
+                Color(0xE6162033)
             } else {
-                androidx.compose.ui.graphics.Color(0xFF4338CA)
+                Color(0xEFFFFFFF)
             }
+            val glassOutline = if (darkTheme) {
+                Color.White.copy(alpha = 0.14f)
+            } else {
+                Color(0xFF887BB7).copy(alpha = 0.18f)
+            }
+            val dockShape = RoundedCornerShape(30.dp)
 
-            Surface(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
+                Surface(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxWidth()
+                        .height(76.dp)
+                        .shadow(20.dp, dockShape, clip = false),
+                    shape = dockShape,
+                    color = glassSurface,
+                    border = BorderStroke(1.dp, glassOutline),
+                    tonalElevation = 0.dp
                 ) {
-                    shellDestinations.forEach { destination ->
-                        val selected = current == destination
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 7.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        shellDestinations.forEach { destination ->
+                            val selected = current == destination
+                            val itemShape = RoundedCornerShape(20.dp)
 
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxSize()
-                                .clickable { openDestination(destination) },
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Box(
+                            Column(
                                 modifier = Modifier
-                                    .size(width = 44.dp, height = 26.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(
-                                        if (selected) activeColor.copy(alpha = 0.10f)
-                                        else MaterialTheme.colorScheme.surface
-                                    ),
-                                contentAlignment = Alignment.Center
+                                    .weight(1f)
+                                    .fillMaxSize()
+                                    .clip(itemShape)
+                                    .clickable { openDestination(destination) }
+                                    .padding(vertical = 2.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
-                                Icon(
-                                    imageVector = destinationIcon(destination),
-                                    contentDescription = destinationTitle(destination),
-                                    modifier = Modifier.size(20.dp),
-                                    tint = if (selected) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 46.dp, height = 35.dp)
+                                        .clip(RoundedCornerShape(15.dp))
+                                        .background(
+                                            if (selected) {
+                                                activeColor.copy(alpha = if (darkTheme) 0.24f else 0.12f)
+                                            } else {
+                                                Color.Transparent
+                                            }
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = destinationIcon(destination),
+                                        contentDescription = destinationTitle(destination),
+                                        modifier = Modifier.size(21.dp),
+                                        tint = if (selected) {
+                                            activeColor
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                }
+
+                                Text(
+                                    text = destinationTitle(destination),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (selected) {
+                                        androidx.compose.ui.text.font.FontWeight.Bold
+                                    } else {
+                                        androidx.compose.ui.text.font.FontWeight.Medium
+                                    },
+                                    color = if (selected) {
                                         activeColor
                                     } else {
                                         MaterialTheme.colorScheme.onSurfaceVariant
-                                    }
+                                    },
+                                    modifier = Modifier.padding(top = 3.dp),
+                                    maxLines = 1
                                 )
                             }
-
-                            Text(
-                                text = destinationTitle(destination),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (selected) {
-                                    androidx.compose.ui.text.font.FontWeight.Bold
-                                } else {
-                                    androidx.compose.ui.text.font.FontWeight.Medium
-                                },
-                                color = if (selected) {
-                                    activeColor
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                modifier = Modifier.padding(top = 1.dp)
-                            )
                         }
                     }
                 }
