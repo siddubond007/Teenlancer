@@ -21,6 +21,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
@@ -53,9 +55,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.Locale
 import java.util.UUID
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GigDiscoveryScreen(
     repository: GigRepository,
+    refreshVersion: Int = 0,
     onOpenGig: (String) -> Unit
 ) {
     val factory = remember(repository) {
@@ -92,8 +96,8 @@ fun GigDiscoveryScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        gigViewModel.loadGigs()
+    LaunchedEffect(refreshVersion) {
+        gigViewModel.loadGigs(forceRefresh = refreshVersion > 0)
     }
 
     LaunchedEffect(listState, filteredGigs) {
@@ -216,6 +220,11 @@ fun GigDiscoveryScreen(
                 }
 
                 else -> {
+                    PullToRefreshBox(
+                        isRefreshing = uiState.isLoading,
+                        onRefresh = { gigViewModel.loadGigs(forceRefresh = true) },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
@@ -347,6 +356,7 @@ fun GigDiscoveryScreen(
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
