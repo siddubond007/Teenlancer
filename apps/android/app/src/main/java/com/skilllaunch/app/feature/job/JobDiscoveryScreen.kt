@@ -35,11 +35,14 @@ import androidx.compose.material.icons.outlined.RocketLaunch
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
@@ -132,6 +135,12 @@ private fun normalizedTokens(value: String): Set<String> =
         .filter { it.length >= 2 }
         .toSet()
 
+private data class ActiveExploreFilter(
+    val key: String,
+    val label: String,
+    val onRemove: () -> Unit
+)
+
 data class JobDiscoveryUiState(
     val isLoading: Boolean = true,
     val jobs: List<Job> = emptyList(),
@@ -211,10 +220,12 @@ private class JobDiscoveryViewModel(
 
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun JobDiscoveryScreen(
     repository: JobRepository,
     profileRepository: ProfileRepository,
     userId: String?,
+    refreshVersion: Int = 0,
     onOpenJob: (String) -> Unit,
     onOpenNotifications: () -> Unit
 ) {
@@ -230,12 +241,20 @@ fun JobDiscoveryScreen(
     }
 
     var search by rememberSaveable { mutableStateOf("") }
+    var appliedSearch by rememberSaveable { mutableStateOf("") }
     var selectedCategory by rememberSaveable { mutableStateOf("All") }
     var sortMode by rememberSaveable { mutableStateOf("Newest") }
     var selectedFeedTab by rememberSaveable { mutableStateOf("Explore") }
     var showFilterDialog by rememberSaveable { mutableStateOf(false) }
     var showDomainPicker by rememberSaveable { mutableStateOf(false) }
     var domainSearch by rememberSaveable { mutableStateOf("") }
+    var minBudgetFilter by rememberSaveable { mutableStateOf("") }
+    var maxBudgetFilter by rememberSaveable { mutableStateOf("") }
+    var selectedProjectTypes by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    var selectedSkills by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    var skillFilterSearch by rememberSaveable { mutableStateOf("") }
+    var locationFilter by rememberSaveable { mutableStateOf("") }
+    var languageFilter by rememberSaveable { mutableStateOf("") }
     var profileCategory by rememberSaveable { mutableStateOf("") }
     var profileSkills by remember { mutableStateOf<List<String>>(emptyList()) }
     var savedJobIds by remember {
@@ -246,8 +265,9 @@ fun JobDiscoveryScreen(
         )
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.load()
+    LaunchedEffect(refreshVersion) {
+        // Reload when returning from a detail page or selecting Explore again.
+        viewModel.load(appliedSearch.takeIf { it.isNotBlank() })
     }
 
     LaunchedEffect(profileRepository, userId) {
@@ -271,9 +291,9 @@ fun JobDiscoveryScreen(
     val textPrimary = MaterialTheme.colorScheme.onBackground
     val textMuted = MaterialTheme.colorScheme.onSurfaceVariant
     val lavender = if (darkTheme) Color(0xFFB7A8FF) else Color(0xFF6757D9)
-    val pageBackground = if (darkTheme) Color(0xFF0B1020) else Color(0xFFF9F7FC)
-    val cardBackground = if (darkTheme) Color(0xEB151E31) else Color(0xF7FFFFFF)
-    val searchBackground = if (darkTheme) Color(0xB51C2740) else Color(0xEFFFFFFF)
+    val pageBackground = if (darkTheme) Color(0xFF08090B) else Color(0xFFF9F7FC)
+    val cardBackground = if (darkTheme) Color(0xF0131518) else Color(0xF7FFFFFF)
+    val searchBackground = if (darkTheme) Color(0xF016181B) else Color(0xEFFFFFFF)
 
     val allCategories = remember(state.jobs) {
         state.jobs.mapNotNull {
@@ -341,6 +361,14 @@ fun JobDiscoveryScreen(
             .take(3)
     }
 
+    val allJobSkills = remember(state.jobs) {
+        state.jobs.flatMap { it.skills }
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .distinctBy { it.lowercase(Locale.ROOT) }
+            .sortedBy { it.lowercase(Locale.ROOT) }
+    }
+
     val tabJobs = remember(state.jobs, selectedFeedTab, savedJobIds) {
         when (selectedFeedTab) {
             "Clients" -> state.jobs.filter { !it.client?.fullName.isNullOrBlank() }
@@ -349,10 +377,25 @@ fun JobDiscoveryScreen(
             else -> state.jobs
         }
     }
-    val visibleJobs = remember(tabJobs, selectedCategory, sortMode) {
+    val visibleJobs = remember(tabJobs, selectedCategory, sortMode, appliedSearch, minBudgetFilter, maxBudgetFilter, selectedProjectTypes, selectedSkills, locationFilter, languageFilter) {
+        val minBudget = minBudgetFilter.toDoubleOrNull()
+        val maxBudget = maxBudgetFilter.toDoubleOrNull()
+        val query = appliedSearch.trim()
+        val locationQuery = locationFilter.trim()
+        val languageQuery = languageFilter.trim()
         val matching = tabJobs.filter { job ->
-            selectedCategory == "All" ||
-                job.category?.equals(selectedCategory, ignoreCase = true) == true
+            val matchesCategory = selectedCategory == "All" || job.category?.equals(selectedCategory, ignoreCase = true) == true
+            val searchableText = listOfNotNull(job.title, job.description, job.category, job.subcategory, job.client?.fullName, job.locationPreferences, job.languagePreferences).plus(job.skills).joinToString(" ")
+            val matchesSearch = query.isBlank() || searchableText.contains(query, ignoreCase = true)
+            val amount = jobBudgetValue(job)
+            val matchesMinimum = minBudget == null || amount >= minBudget
+            val matchesMaximum = maxBudget == null || amount <= maxBudget
+            val actualType = if (job.projectType.orEmpty().contains("hour", ignoreCase = true) || job.budgetType.orEmpty().contains("hour", ignoreCase = true)) "Hourly" else "Fixed price"
+            val matchesType = selectedProjectTypes.isEmpty() || actualType in selectedProjectTypes
+            val matchesSkills = selectedSkills.isEmpty() || job.skills.any { jobSkill -> selectedSkills.any { selectedSkill -> jobSkill.equals(selectedSkill, ignoreCase = true) } }
+            val matchesLocation = locationQuery.isBlank() || job.locationPreferences.orEmpty().contains(locationQuery, ignoreCase = true)
+            val matchesLanguage = languageQuery.isBlank() || job.languagePreferences.orEmpty().contains(languageQuery, ignoreCase = true)
+            matchesCategory && matchesSearch && matchesMinimum && matchesMaximum && matchesType && matchesSkills && matchesLocation && matchesLanguage
         }
         when (sortMode) {
             "Highest budget" -> matching.sortedByDescending { jobBudgetValue(it) }
@@ -361,11 +404,30 @@ fun JobDiscoveryScreen(
         }
     }
 
+    val activeFilters = buildList {
+        if (appliedSearch.isNotBlank()) add(ActiveExploreFilter("search", "Search: $appliedSearch") { search = ""; appliedSearch = ""; viewModel.load() })
+        if (selectedCategory != "All") add(ActiveExploreFilter("category", selectedCategory) { selectedCategory = "All" })
+        if (minBudgetFilter.isNotBlank()) add(ActiveExploreFilter("minimum-budget", "Min ₹$minBudgetFilter") { minBudgetFilter = "" })
+        if (maxBudgetFilter.isNotBlank()) add(ActiveExploreFilter("maximum-budget", "Max ₹$maxBudgetFilter") { maxBudgetFilter = "" })
+        selectedProjectTypes.forEach { type -> add(ActiveExploreFilter("type:$type", type) { selectedProjectTypes = selectedProjectTypes - type }) }
+        selectedSkills.forEach { skill -> add(ActiveExploreFilter("skill:$skill", skill) { selectedSkills = selectedSkills - skill }) }
+        if (locationFilter.isNotBlank()) add(ActiveExploreFilter("location", "Location: $locationFilter") { locationFilter = "" })
+        if (languageFilter.isNotBlank()) add(ActiveExploreFilter("language", "Language: $languageFilter") { languageFilter = "" })
+    }
+
     fun toggleSaved(job: Job) {
         val id = job.id ?: return
         val next = if (savedJobIds.contains(id)) savedJobIds - id else savedJobIds + id
         savedJobIds = next
         savedPreferences.edit().putStringSet("saved_job_ids", next.toMutableSet()).apply()
+    }
+
+    fun resetAllFilters() {
+        search = ""; appliedSearch = ""; selectedCategory = "All"
+        minBudgetFilter = ""; maxBudgetFilter = ""; selectedProjectTypes = emptyList()
+        selectedSkills = emptyList(); locationFilter = ""; languageFilter = ""; sortMode = "Newest"
+        selectedFeedTab = "Explore"
+        viewModel.load()
     }
 
     Surface(
@@ -378,13 +440,18 @@ fun JobDiscoveryScreen(
                 .background(
                     Brush.verticalGradient(
                         colors = if (darkTheme) {
-                            listOf(Color(0xFF090F1F), Color(0xFF11172A), Color(0xFF0B1020))
+                            listOf(Color(0xFF08090B), Color(0xFF101214), Color(0xFF08090B))
                         } else {
                             listOf(Color(0xFFFFFEFF), Color(0xFFF8F6FC), Color(0xFFF0EDFA))
                         }
                     )
                 )
         ) {
+            PullToRefreshBox(
+                isRefreshing = state.isLoading,
+                onRefresh = { viewModel.clearError(); viewModel.load(appliedSearch.takeIf { it.isNotBlank() }) },
+                modifier = Modifier.fillMaxSize()
+            ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
@@ -422,12 +489,35 @@ fun JobDiscoveryScreen(
                         onValueChange = { search = it },
                         onSearch = {
                             selectedFeedTab = "Explore"
+                            appliedSearch = search.trim()
                             selectedCategory = "All"
                             viewModel.clearError()
-                            viewModel.load(search)
+                            viewModel.load(appliedSearch.takeIf { it.isNotBlank() })
                         },
                         onOpenFilters = { showFilterDialog = true }
                     )
+                }
+
+                if (activeFilters.isNotEmpty()) {
+                    item(key = "explore-active-filters") {
+                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text("ACTIVE FILTERS", color = textMuted, fontFamily = RationaleFontFamily, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.0.sp)
+                                Spacer(Modifier.weight(1f))
+                                TextButton(onClick = { resetAllFilters() }) { Text("Clear all", color = lavender, fontSize = 12.sp) }
+                            }
+                            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                                activeFilters.forEach { filter ->
+                                    FilterChip(
+                                        selected = true,
+                                        onClick = filter.onRemove,
+                                        label = { Text(filter.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                        trailingIcon = { Icon(Icons.Outlined.Close, contentDescription = "Remove ${filter.label}", modifier = Modifier.size(14.dp)) }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 if (allCategories.isNotEmpty()) {
@@ -555,7 +645,7 @@ fun JobDiscoveryScreen(
                             lavender = lavender,
                             onRetry = {
                                 viewModel.clearError()
-                                viewModel.load(search)
+                                viewModel.load(appliedSearch.takeIf { it.isNotBlank() })
                             }
                         )
                     }
@@ -570,7 +660,7 @@ fun JobDiscoveryScreen(
                             lavender = lavender,
                             onAction = {
                                 viewModel.clearError()
-                                viewModel.load(search)
+                                viewModel.load(appliedSearch.takeIf { it.isNotBlank() })
                             }
                         )
                     }
@@ -635,6 +725,7 @@ fun JobDiscoveryScreen(
                     }
                 }
             }
+            }
         }
     }
 
@@ -642,7 +733,24 @@ fun JobDiscoveryScreen(
         JobFilterDialog(
             sortMode = sortMode,
             onSortModeChange = { sortMode = it },
-            onClearCategory = { selectedCategory = "All" },
+            selectedCategory = selectedCategory,
+            onOpenDomains = { showFilterDialog = false; domainSearch = ""; showDomainPicker = true },
+            minBudget = minBudgetFilter,
+            onMinBudgetChange = { minBudgetFilter = it.filter { ch -> ch.isDigit() || ch == '.' } },
+            maxBudget = maxBudgetFilter,
+            onMaxBudgetChange = { maxBudgetFilter = it.filter { ch -> ch.isDigit() || ch == '.' } },
+            selectedProjectTypes = selectedProjectTypes,
+            onToggleProjectType = { type -> selectedProjectTypes = if (type in selectedProjectTypes) selectedProjectTypes - type else selectedProjectTypes + type },
+            allSkills = allJobSkills,
+            selectedSkills = selectedSkills,
+            skillSearch = skillFilterSearch,
+            onSkillSearchChange = { skillFilterSearch = it },
+            onToggleSkill = { skill -> selectedSkills = if (skill in selectedSkills) selectedSkills - skill else selectedSkills + skill },
+            locationFilter = locationFilter,
+            onLocationFilterChange = { locationFilter = it },
+            languageFilter = languageFilter,
+            onLanguageFilterChange = { languageFilter = it },
+            onReset = { resetAllFilters() },
             onDismiss = { showFilterDialog = false },
             darkTheme = darkTheme,
             lavender = lavender,
@@ -1121,7 +1229,7 @@ private fun DomainPickerDialog(
                 Text("Close", color = lavender, fontWeight = FontWeight.Bold)
             }
         },
-        containerColor = if (darkTheme) Color(0xFF171D2D) else Color(0xFFFFFEFF)
+        containerColor = if (darkTheme) Color(0xFF141619) else Color(0xFFFFFEFF)
     )
 }
 
@@ -1186,57 +1294,90 @@ private fun DomainPickerRow(
 private fun JobFilterDialog(
     sortMode: String,
     onSortModeChange: (String) -> Unit,
-    onClearCategory: () -> Unit,
+    selectedCategory: String,
+    onOpenDomains: () -> Unit,
+    minBudget: String,
+    onMinBudgetChange: (String) -> Unit,
+    maxBudget: String,
+    onMaxBudgetChange: (String) -> Unit,
+    selectedProjectTypes: List<String>,
+    onToggleProjectType: (String) -> Unit,
+    allSkills: List<String>,
+    selectedSkills: List<String>,
+    skillSearch: String,
+    onSkillSearchChange: (String) -> Unit,
+    onToggleSkill: (String) -> Unit,
+    locationFilter: String,
+    onLocationFilterChange: (String) -> Unit,
+    languageFilter: String,
+    onLanguageFilterChange: (String) -> Unit,
+    onReset: () -> Unit,
     onDismiss: () -> Unit,
     darkTheme: Boolean,
     lavender: Color,
     textPrimary: Color,
     textMuted: Color
 ) {
+    val visibleSkills = remember(allSkills, selectedSkills, skillSearch) {
+        val matching = if (skillSearch.isBlank()) allSkills.take(12)
+        else allSkills.filter { it.contains(skillSearch.trim(), ignoreCase = true) }.take(24)
+        (selectedSkills + matching).distinctBy { it.lowercase(Locale.ROOT) }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Sort & refine", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text("Sort opportunities by", color = textMuted, style = MaterialTheme.typography.labelMedium)
-                listOf("Newest", "Highest budget", "Lowest budget").forEach { option ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .clickable { onSortModeChange(option) }
-                            .padding(horizontal = 4.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = sortMode == option,
-                            onClick = { onSortModeChange(option) }
-                        )
-                        Text(
-                            option,
-                            color = textPrimary,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-                Text(
-                    "Choose a category from the tiles on Explore.",
-                    color = textMuted,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                FilterChip(
-                    selected = false,
-                    onClick = onClearCategory,
-                    label = { Text("Clear category filter") }
-                )
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("Filters & preferences", color = textPrimary, fontFamily = ChakraPetchFontFamily, fontWeight = FontWeight.Bold, fontSize = 21.sp)
+                Text("Refine projects by domain, budget, skills and more.", color = textMuted, style = MaterialTheme.typography.bodySmall)
             }
         },
-        confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = lavender, contentColor = Color.White)
-            ) { Text("Done") }
-        }
+        text = {
+            Column(Modifier.fillMaxWidth().heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("DOMAIN", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Surface(onClick = onOpenDomains, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), color = if (darkTheme) Color(0xFF202225) else Color(0xFFF5F2FC), border = BorderStroke(1.dp, lavender.copy(alpha = 0.28f))) {
+                    Row(Modifier.padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (selectedCategory == "All") "All domains" else selectedCategory, modifier = Modifier.weight(1f), color = textPrimary, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text("Change", color = lavender, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+                Text("BUDGET RANGE (₹)", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = minBudget, onValueChange = onMinBudgetChange, modifier = Modifier.weight(1f), label = { Text("Minimum") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                    OutlinedTextField(value = maxBudget, onValueChange = onMaxBudgetChange, modifier = Modifier.weight(1f), label = { Text("Maximum") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                }
+                Text("PROJECT TYPE", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    listOf("Fixed price", "Hourly").forEach { type -> FilterChip(selected = type in selectedProjectTypes, onClick = { onToggleProjectType(type) }, label = { Text(type) }) }
+                }
+                Text("REQUIRED SKILLS", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                OutlinedTextField(value = skillSearch, onValueChange = onSkillSearchChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search skills in open projects") }, leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) })
+                if (visibleSkills.isEmpty()) Text("No matching skills found in loaded projects.", color = textMuted, style = MaterialTheme.typography.bodySmall)
+                else Column(Modifier.fillMaxWidth().heightIn(max = 142.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    visibleSkills.forEach { skill ->
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onToggleSkill(skill) }.padding(horizontal = 2.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.Checkbox(checked = skill in selectedSkills, onCheckedChange = { onToggleSkill(skill) })
+                            Text(skill, modifier = Modifier.weight(1f), color = textPrimary, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                Text("LOCATION", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                OutlinedTextField(value = locationFilter, onValueChange = onLocationFilterChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Any location or keyword") })
+                Text("LANGUAGE", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                OutlinedTextField(value = languageFilter, onValueChange = onLanguageFilterChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Preferred language") })
+                Text("SORT BY", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                listOf("Newest", "Highest budget", "Lowest budget").forEach { option ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onSortModeChange(option) }.padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = sortMode == option, onClick = { onSortModeChange(option) })
+                        Text(option, color = textPrimary, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        },
+        confirmButton = { Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = lavender, contentColor = Color.White)) { Text("Apply filters") } },
+        dismissButton = { TextButton(onClick = onReset) { Text("Reset all", color = lavender, fontWeight = FontWeight.Bold) } },
+        containerColor = if (darkTheme) Color(0xFF141619) else Color(0xFFFFFEFF),
+        titleContentColor = textPrimary,
+        textContentColor = textPrimary
     )
 }
 
