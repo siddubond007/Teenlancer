@@ -1097,9 +1097,13 @@ private fun JobCard(
                     contentPadding = PaddingValues(horizontal = 13.dp, vertical = 0.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = lavender,
-                        contentColor = Color.White,
+                        contentColor = if (darkTheme) Color(0xFF211A45) else Color.White,
                         disabledContainerColor = lavender.copy(alpha = 0.30f),
-                        disabledContentColor = if (darkTheme) Color.White.copy(alpha = 0.72f) else Color(0xFF46378A)
+                        disabledContentColor = if (darkTheme) {
+                            Color(0xFF211A45).copy(alpha = 0.76f)
+                        } else {
+                            Color(0xFF46378A).copy(alpha = 0.72f)
+                        }
                     )
                 ) {
                     Text(
