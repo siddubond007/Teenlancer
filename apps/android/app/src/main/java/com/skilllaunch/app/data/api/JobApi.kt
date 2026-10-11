@@ -27,7 +27,7 @@ interface JobApi {
         @Query("maxBudget") maxBudget: Int? = null,
         @Query("skills") skills: String? = null,
         @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 30
+        @Query("limit") limit: Int = 100
     ): JobListResponse
 
     @GET("jobs/public/{jobId}")
