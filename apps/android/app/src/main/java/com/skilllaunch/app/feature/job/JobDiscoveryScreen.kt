@@ -1323,6 +1323,9 @@ private fun JobFilterDialog(
         else allSkills.filter { it.contains(skillSearch.trim(), ignoreCase = true) }.take(24)
         (selectedSkills + matching).distinctBy { it.lowercase(Locale.ROOT) }
     }
+    val invalidBudgetRange = minBudget.toDoubleOrNull()?.let { minimum ->
+        maxBudget.toDoubleOrNull()?.let { maximum -> maximum < minimum }
+    } == true
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -1341,9 +1344,12 @@ private fun JobFilterDialog(
                     }
                 }
                 Text("BUDGET RANGE (₹)", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = minBudget, onValueChange = onMinBudgetChange, modifier = Modifier.weight(1f), label = { Text("Minimum") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                    OutlinedTextField(value = maxBudget, onValueChange = onMaxBudgetChange, modifier = Modifier.weight(1f), label = { Text("Maximum") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = minBudget, onValueChange = onMinBudgetChange, modifier = Modifier.fillMaxWidth(), label = { Text("Minimum budget") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                    OutlinedTextField(value = maxBudget, onValueChange = onMaxBudgetChange, modifier = Modifier.fillMaxWidth(), label = { Text("Maximum budget") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                    if (invalidBudgetRange) {
+                        Text("Maximum budget must be greater than or equal to minimum.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
                 Text("PROJECT TYPE", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -1361,7 +1367,7 @@ private fun JobFilterDialog(
                     }
                 }
                 Text("LOCATION", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                OutlinedTextField(value = locationFilter, onValueChange = onLocationFilterChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Any location or keyword") })
+                OutlinedTextField(value = locationFilter, onValueChange = onLocationFilterChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Location preference") })
                 Text("LANGUAGE", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 OutlinedTextField(value = languageFilter, onValueChange = onLanguageFilterChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Preferred language") })
                 Text("SORT BY", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
@@ -1373,7 +1379,7 @@ private fun JobFilterDialog(
                 }
             }
         },
-        confirmButton = { Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = lavender, contentColor = Color.White)) { Text("Apply filters") } },
+        confirmButton = { Button(onClick = onDismiss, enabled = !invalidBudgetRange, colors = ButtonDefaults.buttonColors(containerColor = lavender, contentColor = Color.White)) { Text("Apply filters") } },
         dismissButton = { TextButton(onClick = onReset) { Text("Reset all", color = lavender, fontWeight = FontWeight.Bold) } },
         containerColor = if (darkTheme) Color(0xFF141619) else Color(0xFFFFFEFF),
         titleContentColor = textPrimary,
