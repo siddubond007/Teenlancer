@@ -1,7 +1,6 @@
 package com.skilllaunch.app.feature.job
 
 import android.graphics.BitmapFactory
-import android.util.Base64
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -79,7 +78,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.unit.IntOffset
@@ -2119,19 +2117,10 @@ private fun DomainArtwork(
     val context = LocalContext.current
     val atlas = remember(context) {
         runCatching {
-            val encodedAtlas = listOf(
-                R.raw.domain_art_sprite_01,
-                R.raw.domain_art_sprite_02,
-                R.raw.domain_art_sprite_03,
-                R.raw.domain_art_sprite_04,
-                R.raw.domain_art_sprite_05
-            ).joinToString(separator = "") { resourceId ->
-                context.resources.openRawResource(resourceId)
-                    .bufferedReader()
-                    .use { it.readText().trim() }
-            }
-            val bytes = Base64.decode(encodedAtlas, Base64.DEFAULT)
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+            BitmapFactory.decodeResource(
+                context.resources,
+                R.drawable.domain_art_sprite
+            )?.asImageBitmap()
         }.getOrNull()
     }
     val safeIndex = index.coerceIn(0, 19)
