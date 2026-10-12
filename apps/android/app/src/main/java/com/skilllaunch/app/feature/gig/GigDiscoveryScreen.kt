@@ -154,7 +154,8 @@ fun GigDiscoveryScreen(
             PullToRefreshBox(
                 isRefreshing = uiState.isLoading,
                 onRefresh = { gigViewModel.loadGigs(forceRefresh = true) },
-                modifier = Modifier.fillMaxSize()
+                // Reserve the same safe area as student Explore so the dock never covers actions.
+                modifier = Modifier.fillMaxSize().padding(bottom = 132.dp)
             ) {
             when {
                 uiState.isLoading && uiState.gigs.isEmpty() -> {
@@ -222,6 +223,15 @@ fun GigDiscoveryScreen(
                             modifier = Modifier.padding(top = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Button(
+                            onClick = {
+                                gigViewModel.clearError()
+                                gigViewModel.loadGigs(forceRefresh = true)
+                            },
+                            modifier = Modifier.padding(top = 16.dp)
+                        ) {
+                            Text("Refresh marketplace")
+                        }
                     }
                 }
 
