@@ -23,8 +23,8 @@ class JobRepository(
         }
 
     /**
-     * Loads every page returned by the public jobs API.
-     * The backend caps each page at 100 items, so larger feeds are fetched in batches.
+     * Loads up to 10 pages from the public jobs API (100 items per page) to bound
+     * feed startup work; duplicate non-null IDs across pages are discarded.
      */
     suspend fun getAllJobs(query: String? = null): Result<JobListResponse> =
         safeCall("Unable to load available projects.") {
