@@ -80,6 +80,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.unit.IntOffset
@@ -989,6 +990,8 @@ fun JobDiscoveryScreen(
 private fun ExploreBrandHeader(
     darkTheme: Boolean,
     textPrimary: Color,
+    avatarUrl: String?,
+    displayName: String,
     onOpenNotifications: () -> Unit
 ) {
     val accent = if (darkTheme) Color(0xFFB7A8FF) else Color(0xFF6757D9)
@@ -1047,25 +1050,92 @@ private fun ExploreBrandHeader(
             }
         }
 
-        Surface(
-            onClick = onOpenNotifications,
-            modifier = Modifier.size(48.dp).shadow(6.dp, notificationShape, clip = false),
-            shape = notificationShape,
-            color = if (darkTheme) Color.White.copy(alpha = 0.07f) else Color.White.copy(alpha = 0.84f),
-            border = BorderStroke(
-                1.dp,
-                if (darkTheme) Color.White.copy(alpha = 0.13f) else Color(0xFF8D82C0).copy(alpha = 0.12f)
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Outlined.NotificationsNone,
-                    contentDescription = "Notifications",
-                    modifier = Modifier.size(23.dp),
-                    tint = if (darkTheme) Color(0xFFE8E4FF) else Color(0xFF292642)
+            Surface(
+                onClick = onOpenNotifications,
+                modifier = Modifier.size(44.dp).shadow(if (darkTheme) 2.dp else 4.dp, notificationShape, clip = false),
+                shape = notificationShape,
+                color = if (darkTheme) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.84f),
+                border = BorderStroke(
+                    1.dp,
+                    if (darkTheme) Color.White.copy(alpha = 0.13f) else Color(0xFF8D82C0).copy(alpha = 0.12f)
                 )
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Outlined.NotificationsNone,
+                        contentDescription = "Notifications",
+                        modifier = Modifier.size(22.dp),
+                        tint = if (darkTheme) Color(0xFFE8E4FF) else Color(0xFF292642)
+                    )
+                }
             }
+            ExploreAvatar(
+                avatarUrl = avatarUrl,
+                displayName = displayName,
+                darkTheme = darkTheme
+            )
         }
+    }
+}
+
+@Composable
+private fun ExploreAvatar(
+    avatarUrl: String?,
+    displayName: String,
+    darkTheme: Boolean
+) {
+    val initials = remember(displayName) {
+        displayName.trim()
+            .split(Regex("\\s+"))
+            .filter(String::isNotBlank)
+            .take(2)
+            .mapNotNull { it.firstOrNull() }
+            .joinToString("")
+            .uppercase(Locale.ROOT)
+            .ifBlank { "S" }
+    }
+    Surface(
+        modifier = Modifier.size(42.dp),
+        shape = CircleShape,
+        color = if (darkTheme) Color(0xFF202023) else Color(0xFFE9E4F7),
+        border = BorderStroke(
+            1.dp,
+            if (darkTheme) Color.White.copy(alpha = 0.18f) else Color(0xFF8D82C0).copy(alpha = 0.20f)
+        )
+    ) {
+        if (!avatarUrl.isNullOrBlank()) {
+            SubcomposeAsyncImage(
+                model = avatarUrl,
+                contentDescription = "$displayName profile photo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                loading = { ExploreAvatarFallback(initials, darkTheme) },
+                error = { ExploreAvatarFallback(initials, darkTheme) }
+            )
+        } else {
+            ExploreAvatarFallback(initials, darkTheme)
+        }
+    }
+}
+
+@Composable
+private fun ExploreAvatarFallback(initials: String, darkTheme: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(if (darkTheme) Color(0xFF27252F) else Color(0xFFE9E4F7)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            initials,
+            color = if (darkTheme) Color(0xFFE8E2FA) else Color(0xFF4E3D87),
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp
+        )
     }
 }
 
@@ -2140,6 +2210,23 @@ private fun jobCategoryArtwork(category: String): Int {
         "video" in normalized || "audio" in normalized || "animation" in normalized -> 8
         "writing" in normalized || "content" in normalized || "copywriting" in normalized -> 13
         else -> 19
+    }
+}
+
+private object DomainArtworkAtlas {
+    @Volatile
+    private var cached: ImageBitmap? = null
+
+    fun load(context: Context): ImageBitmap? {
+        cached?.let { return it }
+        return synchronized(this) {
+            cached ?: runCatching {
+                BitmapFactory.decodeResource(
+                    context.resources,
+                    R.drawable.domain_art_sprite
+                )?.asImageBitmap()
+            }.getOrNull()?.also { cached = it }
+        }
     }
 }
 
