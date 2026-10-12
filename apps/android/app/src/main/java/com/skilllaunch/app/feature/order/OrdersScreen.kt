@@ -75,6 +75,7 @@ data class OrdersUiState(
     val errorMessage: String? = null,
     val actionMessage: String? = null,
     val isPreparingCheckout: Boolean = false,
+    val isPerformingAction: Boolean = false,
     val checkoutConfig: OrderCheckoutConfig? = null
 )
 
@@ -85,6 +86,9 @@ private class OrdersViewModel(
     val state = _state.asStateFlow()
     private var ordersRequestGeneration = 0
     private var selectedOrderRequestGeneration = 0
+    private var checkoutRequestGeneration = 0
+    private var paymentVerificationGeneration = 0
+    private var actionRequestGeneration = 0
 
     fun load() {
         val requestGeneration = ++ordersRequestGeneration
@@ -97,7 +101,7 @@ private class OrdersViewModel(
                         isLoading = false,
                         orders = orders,
                         selectedOrder = _state.value.selectedOrder?.let { selected ->
-                            orders.firstOrNull { it.id == selected.id }
+                            orders.firstOrNull { it.id == selected.id } ?: selected
                         }
                     )
                 }
@@ -111,17 +115,24 @@ private class OrdersViewModel(
         }
     }
 
-    fun selectOrder(orderId: String) {
-        // An older list refresh must not clear the loading state or overwrite a new selection.
+    fun selectOrder(orderId: String, clearActionMessage: Boolean = true) {
+        // Invalidate work tied to the previous order before changing the active selection.
         ordersRequestGeneration += 1
+        actionRequestGeneration += 1
+        checkoutRequestGeneration += 1
+        paymentVerificationGeneration += 1
         val requestGeneration = ++selectedOrderRequestGeneration
+        val retainedActionMessage = _state.value.actionMessage
         viewModelScope.launch {
             _state.value = _state.value.copy(
                 isLoading = true,
                 selectedOrder = null,
                 requestedOrderId = orderId,
+                isPreparingCheckout = false,
+                isPerformingAction = false,
+                checkoutConfig = null,
                 errorMessage = null,
-                actionMessage = null
+                actionMessage = if (clearActionMessage) null else retainedActionMessage
             )
             repository.getOrder(orderId)
                 .onSuccess { order ->
@@ -145,10 +156,16 @@ private class OrdersViewModel(
 
     fun clearSelection() {
         selectedOrderRequestGeneration += 1
+        actionRequestGeneration += 1
+        checkoutRequestGeneration += 1
+        paymentVerificationGeneration += 1
         _state.value = _state.value.copy(
             isLoading = false,
             selectedOrder = null,
             requestedOrderId = null,
+            isPreparingCheckout = false,
+            isPerformingAction = false,
+            checkoutConfig = null,
             actionMessage = null
         )
     }
@@ -158,6 +175,12 @@ private class OrdersViewModel(
             checkoutLaunchFailed("This order cannot be funded because its ID is missing.")
             return
         }
+        if (
+            _state.value.isPreparingCheckout ||
+            _state.value.isPerformingAction ||
+            _state.value.selectedOrder?.id != orderId
+        ) return
+        val requestGeneration = ++checkoutRequestGeneration
         viewModelScope.launch {
             _state.value = _state.value.copy(
                 isPreparingCheckout = true,
@@ -167,6 +190,10 @@ private class OrdersViewModel(
             )
             repository.getCheckoutConfig(orderId)
                 .onSuccess { config ->
+                    if (
+                        requestGeneration != checkoutRequestGeneration ||
+                        _state.value.selectedOrder?.id != orderId
+                    ) return@onSuccess
                     if (
                         config.orderId != orderId ||
                         config.razorpayOrderId.isBlank() ||
@@ -182,6 +209,10 @@ private class OrdersViewModel(
                     }
                 }
                 .onFailure { error ->
+                    if (
+                        requestGeneration != checkoutRequestGeneration ||
+                        _state.value.selectedOrder?.id != orderId
+                    ) return@onFailure
                     checkoutLaunchFailed(
                         error.message ?: "Unable to prepare escrow checkout."
                     )
@@ -206,6 +237,8 @@ private class OrdersViewModel(
     }
 
     fun handlePaymentVerification(event: com.skilllaunch.app.core.payment.PaymentVerificationEvent) {
+        if (_state.value.selectedOrder?.id != event.orderId) return
+        val requestGeneration = ++paymentVerificationGeneration
         if (!event.success) {
             _state.value = _state.value.copy(
                 isPreparingCheckout = false,
@@ -219,6 +252,10 @@ private class OrdersViewModel(
         viewModelScope.launch {
             val refreshedOrder = repository.getOrder(event.orderId).getOrNull()
             val refreshedOrders = repository.getMyOrders().getOrNull()
+            if (
+                requestGeneration != paymentVerificationGeneration ||
+                _state.value.selectedOrder?.id != event.orderId
+            ) return@launch
             val current = _state.value
             _state.value = current.copy(
                 isLoading = false,
@@ -232,17 +269,44 @@ private class OrdersViewModel(
         }
     }
 
+    private fun beginOrderAction(orderId: String): Int? {
+        if (
+            orderId.isBlank() ||
+            _state.value.selectedOrder?.id != orderId ||
+            _state.value.isPerformingAction ||
+            _state.value.isPreparingCheckout
+        ) return null
+        val generation = ++actionRequestGeneration
+        _state.value = _state.value.copy(
+            isPerformingAction = true,
+            actionMessage = null,
+            errorMessage = null
+        )
+        return generation
+    }
+
+    private fun isCurrentOrderAction(generation: Int, orderId: String): Boolean =
+        generation == actionRequestGeneration && _state.value.selectedOrder?.id == orderId
+
     fun approve(orderId: String) {
+        val generation = beginOrderAction(orderId) ?: return
         viewModelScope.launch {
-            _state.value = _state.value.copy(actionMessage = null)
             repository.approveOrder(orderId)
                 .onSuccess { response ->
-                    _state.value = _state.value.copy(actionMessage = response.message)
-                    selectOrder(orderId)
+                    if (!isCurrentOrderAction(generation, orderId)) return@onSuccess
+                    _state.value = _state.value.copy(
+                        isPerformingAction = false,
+                        actionMessage = response.message,
+                        errorMessage = null
+                    )
+                    selectOrder(orderId, clearActionMessage = false)
                     load()
                 }
                 .onFailure { error ->
+                    if (!isCurrentOrderAction(generation, orderId)) return@onFailure
                     _state.value = _state.value.copy(
+                        isPerformingAction = false,
+                        actionMessage = null,
                         errorMessage = error.message ?: "Unable to approve the delivery."
                     )
                 }
@@ -250,15 +314,24 @@ private class OrdersViewModel(
     }
 
     fun requestRevision(orderId: String, reason: String) {
+        val generation = beginOrderAction(orderId) ?: return
         viewModelScope.launch {
             repository.requestRevision(orderId, reason)
                 .onSuccess { response ->
-                    _state.value = _state.value.copy(actionMessage = response.message)
-                    selectOrder(orderId)
+                    if (!isCurrentOrderAction(generation, orderId)) return@onSuccess
+                    _state.value = _state.value.copy(
+                        isPerformingAction = false,
+                        actionMessage = response.message,
+                        errorMessage = null
+                    )
+                    selectOrder(orderId, clearActionMessage = false)
                     load()
                 }
                 .onFailure { error ->
+                    if (!isCurrentOrderAction(generation, orderId)) return@onFailure
                     _state.value = _state.value.copy(
+                        isPerformingAction = false,
+                        actionMessage = null,
                         errorMessage = error.message ?: "Unable to request a revision."
                     )
                 }
@@ -266,15 +339,24 @@ private class OrdersViewModel(
     }
 
     fun submitDeliverable(orderId: String, request: SubmitDeliverableRequest) {
+        val generation = beginOrderAction(orderId) ?: return
         viewModelScope.launch {
             repository.submitDeliverable(orderId, request)
                 .onSuccess { response ->
-                    _state.value = _state.value.copy(actionMessage = response.message)
-                    selectOrder(orderId)
+                    if (!isCurrentOrderAction(generation, orderId)) return@onSuccess
+                    _state.value = _state.value.copy(
+                        isPerformingAction = false,
+                        actionMessage = response.message,
+                        errorMessage = null
+                    )
+                    selectOrder(orderId, clearActionMessage = false)
                     load()
                 }
                 .onFailure { error ->
+                    if (!isCurrentOrderAction(generation, orderId)) return@onFailure
                     _state.value = _state.value.copy(
+                        isPerformingAction = false,
+                        actionMessage = null,
                         errorMessage = error.message ?: "Unable to submit delivery."
                     )
                 }
@@ -393,6 +475,7 @@ fun OrdersScreen(
             actionMessage = state.actionMessage,
             errorMessage = state.errorMessage,
             isPreparingCheckout = state.isPreparingCheckout,
+            isPerformingAction = state.isPerformingAction,
             onBack = {
                 if (initialOrderId != null) {
                     onBackFromWorkspace?.invoke() ?: viewModel.clearSelection()
@@ -592,6 +675,7 @@ private fun OrderWorkspace(
     actionMessage: String?,
     errorMessage: String?,
     isPreparingCheckout: Boolean,
+    isPerformingAction: Boolean,
     onBack: () -> Unit,
     showBackButton: Boolean,
     onApprove: () -> Unit,
@@ -726,7 +810,7 @@ private fun OrderWorkspace(
         if (!isStudent && order.status == "PENDING_PAYMENT") {
             Button(
                 onClick = onFundEscrow,
-                enabled = !isPreparingCheckout,
+                enabled = !isPreparingCheckout && !isPerformingAction,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 18.dp)
@@ -758,28 +842,31 @@ private fun OrderWorkspace(
         ) {
             Button(
                 onClick = onSubmitDelivery,
+                enabled = !isPerformingAction,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 18.dp)
             ) {
-                Text("Submit Delivery")
+                Text(if (isPerformingAction) "Submitting delivery…" else "Submit Delivery")
             }
         }
 
         if (!isStudent && order.status == "DELIVERED") {
             Button(
                 onClick = onApprove,
+                enabled = !isPerformingAction,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 18.dp)
             ) {
-                Text("Approve Delivery")
+                Text(if (isPerformingAction) "Updating order…" else "Approve Delivery")
             }
             TextButton(
                 onClick = onRequestRevision,
+                enabled = !isPerformingAction,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Request Revision")
+                Text(if (isPerformingAction) "Sending request…" else "Request Revision")
             }
         }
     }
