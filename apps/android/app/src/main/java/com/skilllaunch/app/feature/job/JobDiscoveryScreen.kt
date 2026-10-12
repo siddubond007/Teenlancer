@@ -92,7 +92,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.skilllaunch.app.core.common.collectAsStateWithLifecycleCompat
 import com.skilllaunch.app.data.model.job.Job
 import com.skilllaunch.app.data.model.job.SubmitBidRequest
