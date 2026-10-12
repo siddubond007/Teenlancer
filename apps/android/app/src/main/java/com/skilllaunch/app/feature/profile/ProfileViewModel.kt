@@ -69,9 +69,9 @@ class ProfileViewModel(
                 .onSuccess { user ->
                     if (requestGeneration != profileLoadGeneration) return@onSuccess
                     val currentState = _uiState.value
-                    val previousProfile = currentState.profileUser?.profile
-                    val preserveEditedForm = previousProfile != null &&
-                        currentState.form != previousProfile.toFormState()
+                    val previousForm = currentState.profileUser?.let { it.profile.toFormState() }
+                    val preserveEditedForm = previousForm != null &&
+                        currentState.form != previousForm
                     _uiState.value = currentState.copy(
                         isLoading = false,
                         profileUser = user,
