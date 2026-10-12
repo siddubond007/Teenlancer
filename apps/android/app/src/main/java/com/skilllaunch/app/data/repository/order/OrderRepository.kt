@@ -7,6 +7,7 @@ import com.skilllaunch.app.data.model.order.OrderActionResponse
 import com.skilllaunch.app.data.model.order.OrderSummary
 import com.skilllaunch.app.data.model.order.OrderMessage
 import com.skilllaunch.app.data.model.order.SubmitDeliverableRequest
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 
 class OrderRepository(
@@ -15,22 +16,13 @@ class OrderRepository(
     private val gson = Gson()
 
     suspend fun getMyOrders(): Result<List<OrderSummary>> =
-        runCatching { api.getMyOrders() }
-            .recoverCatching {
-                throw mapError(it, "Unable to load your orders.")
-            }
+        safeCall("Unable to load your orders.") { api.getMyOrders() }
 
     suspend fun getOrder(orderId: String): Result<OrderSummary> =
-        runCatching { api.getOrder(orderId) }
-            .recoverCatching {
-                throw mapError(it, "Unable to load this workspace.")
-            }
+        safeCall("Unable to load this workspace.") { api.getOrder(orderId) }
 
     suspend fun getCheckoutConfig(orderId: String): Result<com.skilllaunch.app.data.model.order.OrderCheckoutConfig> =
-        runCatching { api.getCheckoutConfig(orderId) }
-            .recoverCatching {
-                throw mapError(it, "Unable to prepare escrow checkout.")
-            }
+        safeCall("Unable to prepare escrow checkout.") { api.getCheckoutConfig(orderId) }
 
     suspend fun verifyPayment(
         orderId: String,
@@ -38,7 +30,7 @@ class OrderRepository(
         razorpayPaymentId: String,
         razorpaySignature: String
     ): Result<OrderActionResponse> =
-        runCatching {
+        safeCall("Payment succeeded but escrow verification could not be completed.") {
             api.verifyPayment(
                 orderId,
                 mapOf(
@@ -47,31 +39,23 @@ class OrderRepository(
                     "razorpay_signature" to razorpaySignature
                 )
             )
-        }.recoverCatching {
-            throw mapError(it, "Payment succeeded but escrow verification could not be completed.")
         }
 
     suspend fun submitDeliverable(
         orderId: String,
         request: SubmitDeliverableRequest
     ): Result<OrderActionResponse> =
-        runCatching { api.submitDeliverable(orderId, request) }
-            .recoverCatching {
-                throw mapError(it, "Unable to submit the delivery.")
-            }
+        safeCall("Unable to submit the delivery.") { api.submitDeliverable(orderId, request) }
 
     suspend fun getMessages(orderId: String): Result<List<OrderMessage>> =
-        runCatching { api.getMessages(orderId) }
-            .recoverCatching {
-                throw mapError(it, "Unable to load conversation.")
-            }
+        safeCall("Unable to load conversation.") { api.getMessages(orderId) }
 
     suspend fun sendMessage(
         orderId: String,
         content: String,
         fileUrl: String? = null
     ): Result<OrderMessage> =
-        runCatching {
+        safeCall("Unable to send message.") {
             api.sendMessage(
                 orderId = orderId,
                 request = buildMap {
@@ -79,25 +63,29 @@ class OrderRepository(
                     if (!fileUrl.isNullOrBlank()) put("fileUrl", fileUrl.trim())
                 }
             )
-        }.recoverCatching {
-            throw mapError(it, "Unable to send message.")
         }
 
     suspend fun approveOrder(orderId: String): Result<OrderActionResponse> =
-        runCatching { api.approveOrder(orderId) }
-            .recoverCatching {
-                throw mapError(it, "Unable to approve this delivery.")
-            }
+        safeCall("Unable to approve this delivery.") { api.approveOrder(orderId) }
 
     suspend fun requestRevision(
         orderId: String,
         reason: String
     ): Result<OrderActionResponse> =
-        runCatching {
+        safeCall("Unable to request a revision.") {
             api.requestRevision(orderId, mapOf("reason" to reason))
-        }.recoverCatching {
-            throw mapError(it, "Unable to request a revision.")
         }
+
+    private suspend fun <T> safeCall(
+        fallback: String,
+        block: suspend () -> T
+    ): Result<T> = try {
+        Result.success(block())
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Result.failure(mapError(error, fallback))
+    }
 
     private fun mapError(
         error: Throwable,
