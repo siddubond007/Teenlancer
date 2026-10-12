@@ -292,7 +292,7 @@ fun JobDiscoveryScreen(
         viewModel.load(appliedSearch.takeIf { it.isNotBlank() })
     }
 
-    LaunchedEffect(profileRepository, userId) {
+    LaunchedEffect(profileRepository, userId, refreshVersion) {
         profileRepository.getMyProfile().onSuccess { profileUser ->
             val profile = profileUser.profile
             profileAvatarUrl = profile?.avatarUrl?.trim()?.takeIf(String::isNotBlank)
