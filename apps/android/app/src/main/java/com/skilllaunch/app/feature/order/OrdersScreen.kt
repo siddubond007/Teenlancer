@@ -393,6 +393,7 @@ fun OrdersScreen(
                     viewModel.clearSelection()
                 }
             },
+            showBackButton = initialOrderId == null,
             onApprove = { viewModel.approve(selected.id.orEmpty()) },
             onRequestRevision = { revisionOrderId = selected.id },
             onSubmitDelivery = { deliveryOrderId = selected.id },
@@ -585,6 +586,7 @@ private fun OrderWorkspace(
     errorMessage: String?,
     isPreparingCheckout: Boolean,
     onBack: () -> Unit,
+    showBackButton: Boolean,
     onApprove: () -> Unit,
     onRequestRevision: () -> Unit,
     onSubmitDelivery: () -> Unit,
@@ -597,8 +599,10 @@ private fun OrderWorkspace(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        TextButton(onClick = onBack) {
-            Text("← Back to Orders")
+        if (showBackButton) {
+            TextButton(onClick = onBack) {
+                Text("← Back to Orders")
+            }
         }
 
         Text(
