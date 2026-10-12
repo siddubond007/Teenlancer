@@ -218,6 +218,41 @@ fun NotificationScreen(
                 contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 28.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                if (state.isLoading && state.notifications.isNotEmpty()) {
+                    item(key = "notifications-loading") {
+                        androidx.compose.material3.LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                if (state.errorMessage != null && state.notifications.isNotEmpty()) {
+                    item(key = "notifications-inline-error") {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Column(Modifier.padding(14.dp)) {
+                                Text(
+                                    "Notifications couldn't refresh",
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    state.errorMessage.orEmpty(),
+                                    Modifier.padding(top = 4.dp),
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                androidx.compose.material3.TextButton(
+                                    onClick = { viewModel.load(forceRefresh = true) },
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Text("Retry")
+                                }
+                            }
+                        }
+                    }
+                }
                 if (state.unread > 0) {
                     item {
                         Box(
