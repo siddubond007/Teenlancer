@@ -6,6 +6,7 @@ import com.skilllaunch.app.data.model.auth.ApiErrorResponse
 import com.skilllaunch.app.data.model.home.ClientDashboardState
 import retrofit2.HttpException
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
 
 class ClientDashboardRepository(
     private val api: ClientDashboardApi
@@ -15,6 +16,8 @@ class ClientDashboardRepository(
     suspend fun getDashboard(): Result<ClientDashboardState> {
         return try {
             Result.success(api.getClientDashboard())
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (exception: HttpException) {
             val body = exception.response()?.errorBody()?.string()
             val parsed = body?.let {
