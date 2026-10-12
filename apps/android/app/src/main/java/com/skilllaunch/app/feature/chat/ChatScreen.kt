@@ -62,12 +62,17 @@ private class ChatViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(ChatUiState())
     val state = _state.asStateFlow()
+    private var ordersRequestGeneration = 0
+    private var messagesRequestGeneration = 0
+    private var sendRequestGeneration = 0
 
     fun loadOrders() {
+        val requestGeneration = ++ordersRequestGeneration
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, errorMessage = null)
             repository.getMyOrders()
                 .onSuccess { orders ->
+                    if (requestGeneration != ordersRequestGeneration) return@onSuccess
                     _state.value = _state.value.copy(
                         isLoading = false,
                         orders = orders,
@@ -75,6 +80,7 @@ private class ChatViewModel(
                     )
                 }
                 .onFailure { error ->
+                    if (requestGeneration != ordersRequestGeneration) return@onFailure
                     _state.value = _state.value.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Unable to load conversations."
@@ -83,22 +89,39 @@ private class ChatViewModel(
         }
     }
 
+    fun refresh() {
+        val activeOrderId = _state.value.selectedOrderId
+        loadOrders()
+        activeOrderId?.let(::selectOrder)
+    }
+
     fun selectOrder(orderId: String) {
+        val requestGeneration = ++messagesRequestGeneration
+        sendRequestGeneration += 1
         viewModelScope.launch {
             _state.value = _state.value.copy(
                 selectedOrderId = orderId,
                 isLoadingMessages = true,
+                isSending = false,
                 messages = emptyList(),
                 errorMessage = null
             )
             repository.getMessages(orderId)
                 .onSuccess { messages ->
+                    if (
+                        requestGeneration != messagesRequestGeneration ||
+                        _state.value.selectedOrderId != orderId
+                    ) return@onSuccess
                     _state.value = _state.value.copy(
                         isLoadingMessages = false,
                         messages = messages
                     )
                 }
                 .onFailure { error ->
+                    if (
+                        requestGeneration != messagesRequestGeneration ||
+                        _state.value.selectedOrderId != orderId
+                    ) return@onFailure
                     _state.value = _state.value.copy(
                         isLoadingMessages = false,
                         errorMessage = error.message ?: "Unable to load this conversation."
@@ -108,9 +131,13 @@ private class ChatViewModel(
     }
 
     fun clearSelection() {
+        messagesRequestGeneration += 1
+        sendRequestGeneration += 1
         _state.value = _state.value.copy(
             selectedOrderId = null,
             messages = emptyList(),
+            isLoadingMessages = false,
+            isSending = false,
             errorMessage = null
         )
     }
@@ -118,6 +145,7 @@ private class ChatViewModel(
     fun sendMessage(content: String) {
         val orderId = _state.value.selectedOrderId ?: return
         if (content.trim().isBlank() || _state.value.isSending) return
+        val requestGeneration = ++sendRequestGeneration
 
         viewModelScope.launch {
             _state.value = _state.value.copy(
@@ -126,12 +154,20 @@ private class ChatViewModel(
             )
             repository.sendMessage(orderId, content)
                 .onSuccess { message ->
+                    if (
+                        requestGeneration != sendRequestGeneration ||
+                        _state.value.selectedOrderId != orderId
+                    ) return@onSuccess
                     _state.value = _state.value.copy(
                         isSending = false,
                         messages = _state.value.messages + message
                     )
                 }
                 .onFailure { error ->
+                    if (
+                        requestGeneration != sendRequestGeneration ||
+                        _state.value.selectedOrderId != orderId
+                    ) return@onFailure
                     _state.value = _state.value.copy(
                         isSending = false,
                         errorMessage = error.message ?: "Unable to send message."
@@ -164,7 +200,7 @@ fun ChatScreen(
     val state by viewModel.state.collectAsStateWithLifecycleCompat()
 
     LaunchedEffect(refreshVersion) {
-        viewModel.loadOrders()
+        viewModel.refresh()
     }
 
     val selectedId = state.selectedOrderId
