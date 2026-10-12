@@ -593,7 +593,7 @@ fun JobDiscoveryScreen(
                 )
         ) {
             PullToRefreshBox(
-                isRefreshing = state.isLoading,
+                isRefreshing = state.isLoading && state.jobs.isNotEmpty(),
                 onRefresh = { viewModel.clearError(); viewModel.load(appliedSearch.takeIf { it.isNotBlank() }) },
                 // Keep the feed viewport above the floating dock so cards never render underneath it.
                 modifier = Modifier.fillMaxSize().padding(bottom = 132.dp)
