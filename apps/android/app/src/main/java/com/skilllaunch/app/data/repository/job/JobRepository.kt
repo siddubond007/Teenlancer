@@ -18,10 +18,8 @@ class JobRepository(
     private val gson = Gson()
 
     suspend fun getJobs(query: String? = null): Result<JobListResponse> =
-        runCatching {
+        safeCall("Unable to load available projects.") {
             api.getJobs(query = query?.trim()?.ifBlank { null })
-        }.recoverCatching {
-            throw mapError(it, "Unable to load available projects.")
         }
 
     /**
@@ -29,7 +27,7 @@ class JobRepository(
      * The backend caps each page at 100 items, so larger feeds are fetched in batches.
      */
     suspend fun getAllJobs(query: String? = null): Result<JobListResponse> =
-        runCatching {
+        safeCall("Unable to load available projects.") {
             val normalizedQuery = query?.trim()?.ifBlank { null }
             val firstPage = api.getJobs(
                 query = normalizedQuery,
@@ -52,69 +50,63 @@ class JobRepository(
             }
 
             firstPage.copy(
-                jobs = combinedJobs,
+                jobs = combinedJobs.distinctBy { it.id },
                 pagination = firstPage.pagination.copy(
                     page = 1,
-                    limit = combinedJobs.size,
+                    limit = combinedJobs.distinctBy { it.id }.size,
                     totalPages = if (combinedJobs.isEmpty()) 0 else 1
                 )
             )
-        }.recoverCatching {
-            throw mapError(it, "Unable to load available projects.")
         }
 
     suspend fun getPublicJob(jobId: String): Result<Job> =
-        runCatching {
+        safeCall("Unable to load this project.") {
             api.getPublicJob(jobId)
-        }.recoverCatching {
-            throw mapError(it, "Unable to load this project.")
         }
 
     suspend fun getClientProject(jobId: String): Result<Job> =
-        runCatching {
+        safeCall("Unable to load this project and its proposals.") {
             api.getClientProject(jobId)
-        }.recoverCatching {
-            throw mapError(it, "Unable to load this project and its proposals.")
         }
 
     suspend fun shortlistBid(jobId: String, bidId: String): Result<String> =
-        runCatching {
+        safeCall("Unable to shortlist this proposal.") {
             api.shortlistBid(jobId, bidId).message ?: "Proposal shortlisted."
-        }.recoverCatching {
-            throw mapError(it, "Unable to shortlist this proposal.")
         }
 
     suspend fun rejectBid(jobId: String, bidId: String): Result<String> =
-        runCatching {
+        safeCall("Unable to reject this proposal.") {
             api.rejectBid(jobId, bidId).message ?: "Proposal rejected."
-        }.recoverCatching {
-            throw mapError(it, "Unable to reject this proposal.")
         }
 
     suspend fun createJob(request: CreateJobRequest): Result<CreateJobResponse> =
-        runCatching {
+        safeCall("Unable to create the project.") {
             api.createJob(request)
-        }.recoverCatching {
-            throw mapError(it, "Unable to create the project.")
         }
 
     suspend fun submitBid(
         jobId: String,
         request: SubmitBidRequest
     ): Result<SubmitBidResponse> =
-        runCatching {
+        safeCall("Unable to submit your proposal.") {
             api.submitBid(jobId, request)
-        }.recoverCatching {
-            throw mapError(it, "Unable to submit your proposal.")
         }
+
+    private suspend fun <T> safeCall(
+        fallback: String,
+        block: suspend () -> T
+    ): Result<T> = try {
+        Result.success(block())
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Result.failure(mapError(error, fallback))
+    }
 
     private fun mapError(
         error: Throwable,
         fallback: String
-    ): Throwable {
-        // runCatching also captures coroutine cancellation; preserve it so stale requests
-        // stop promptly instead of being converted into user-visible network errors.
-        if (error is CancellationException) return error
+    ): IllegalStateException {
         if (error is HttpException) {
             val body = error.response()?.errorBody()?.string()
             val message = body?.let {
