@@ -9,6 +9,7 @@ import com.skilllaunch.app.data.model.job.Job
 import com.skilllaunch.app.data.model.job.JobListResponse
 import com.skilllaunch.app.data.model.job.SubmitBidRequest
 import com.skilllaunch.app.data.model.job.SubmitBidResponse
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 
 class JobRepository(
@@ -110,7 +111,10 @@ class JobRepository(
     private fun mapError(
         error: Throwable,
         fallback: String
-    ): IllegalStateException {
+    ): Throwable {
+        // runCatching also captures coroutine cancellation; preserve it so stale requests
+        // stop promptly instead of being converted into user-visible network errors.
+        if (error is CancellationException) return error
         if (error is HttpException) {
             val body = error.response()?.errorBody()?.string()
             val message = body?.let {
