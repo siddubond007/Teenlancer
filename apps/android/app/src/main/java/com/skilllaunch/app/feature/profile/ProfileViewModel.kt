@@ -43,6 +43,7 @@ class ProfileViewModel(
 
     fun loadProfile(userId: String, forceRefresh: Boolean = false) {
         if (userId.isBlank()) {
+            profileLoadGeneration += 1
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 errorMessage = "Your profile could not be found"
