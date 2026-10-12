@@ -22,7 +22,7 @@ data class ProfileFormState(
 )
 
 data class ProfileUiState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val profileUser: ProfileUser? = null,
     val form: ProfileFormState = ProfileFormState(),
