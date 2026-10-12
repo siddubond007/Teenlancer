@@ -403,6 +403,10 @@ fun OrdersScreen(
     val checkoutConfig = state.checkoutConfig
     LaunchedEffect(checkoutConfig?.orderId) {
         val config = checkoutConfig ?: return@LaunchedEffect
+        if (state.selectedOrder?.id != config.orderId) {
+            viewModel.consumeCheckoutConfig()
+            return@LaunchedEffect
+        }
         viewModel.consumeCheckoutConfig()
 
         if (BuildConfig.DEBUG && !config.isTestMode) {
