@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class HomeUiState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val home: HomeState? = null,
     val clientDashboard: ClientDashboardState? = null,
     val isClientDashboardLoading: Boolean = false,
