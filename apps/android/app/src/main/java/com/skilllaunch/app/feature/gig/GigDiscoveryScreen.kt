@@ -150,6 +150,12 @@ fun GigDiscoveryScreen(
                     )
             )
 
+            // Keep pull-to-refresh active for empty and error states as well as loaded feeds.
+            PullToRefreshBox(
+                isRefreshing = uiState.isLoading,
+                onRefresh = { gigViewModel.loadGigs(forceRefresh = true) },
+                modifier = Modifier.fillMaxSize()
+            ) {
             when {
                 uiState.isLoading && uiState.gigs.isEmpty() -> {
                     Column(
@@ -220,11 +226,6 @@ fun GigDiscoveryScreen(
                 }
 
                 else -> {
-                    PullToRefreshBox(
-                        isRefreshing = uiState.isLoading,
-                        onRefresh = { gigViewModel.loadGigs(forceRefresh = true) },
-                        modifier = Modifier.fillMaxSize()
-                    ) {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
