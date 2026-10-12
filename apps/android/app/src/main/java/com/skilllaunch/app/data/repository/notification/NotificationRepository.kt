@@ -5,6 +5,7 @@ import com.skilllaunch.app.data.api.NotificationApi
 import com.skilllaunch.app.data.model.auth.ApiErrorResponse
 import com.skilllaunch.app.data.model.notification.Notification
 import com.skilllaunch.app.data.model.notification.NotificationResponse
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 
 class NotificationRepository(
@@ -13,24 +14,27 @@ class NotificationRepository(
     private val gson = Gson()
 
     suspend fun getMyNotifications(): Result<NotificationResponse> =
-        runCatching { api.getMyNotifications() }
-            .recoverCatching {
-                throw mapError(it, "Unable to load notifications right now.")
-            }
+        safeCall("Unable to load notifications right now.") { api.getMyNotifications() }
 
     suspend fun markAsRead(notificationId: String): Result<Notification> =
-        runCatching { api.markAsRead(notificationId) }
-            .recoverCatching {
-                throw mapError(it, "Unable to update this notification.")
-            }
+        safeCall("Unable to update this notification.") { api.markAsRead(notificationId) }
 
     suspend fun markAllAsRead(): Result<Unit> =
-        runCatching {
+        safeCall("Unable to update your notifications.") {
             api.markAllAsRead()
             Unit
-        }.recoverCatching {
-            throw mapError(it, "Unable to update your notifications.")
         }
+
+    private suspend fun <T> safeCall(
+        fallback: String,
+        block: suspend () -> T
+    ): Result<T> = try {
+        Result.success(block())
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Result.failure(mapError(error, fallback))
+    }
 
     private fun mapError(error: Throwable, fallback: String): IllegalStateException {
         if (error is HttpException) {
