@@ -76,9 +76,10 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
                 mutableStateOf<Boolean?>(true)
             }
             val effectiveDarkTheme = localThemeOverride ?: true
-            val darkThemeState: State<Boolean> = androidx.compose.runtime.derivedStateOf {
-                effectiveDarkTheme
-            }
+            // Keep a stable State holder so child screens do not receive a new wrapper
+            // on every unrelated recomposition.
+            val darkThemeState: State<Boolean> =
+                androidx.compose.runtime.rememberUpdatedState(effectiveDarkTheme)
 
             SkillLaunchTheme(darkTheme = effectiveDarkTheme) {
                 val view = LocalView.current
