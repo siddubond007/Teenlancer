@@ -473,7 +473,14 @@ fun JobDiscoveryScreen(
                     key = "category",
                     label = displayCategoryLabel(selectedCategory),
                     artworkIndex = jobCategoryArtwork(selectedCategory),
-                    onRemove = { selectedCategory = "All" }
+                    onRemove = {
+                        selectedCategory = "All"
+                        selectedSkills = selectedSkills.filter { skill ->
+                            state.jobs.any { job ->
+                                job.skills.any { it.equals(skill, ignoreCase = true) }
+                            }
+                        }
+                    }
                 )
             )
         }
@@ -720,15 +727,7 @@ fun JobDiscoveryScreen(
                                     darkTheme = darkTheme,
                                     onClick = { chooseCategory("All") }
                                 )
-                                if (
-                                    selectedCategory != "All" &&
-                                    featuredCategories.none {
-                                        displayCategoryLabel(it).equals(
-                                            displayCategoryLabel(selectedCategory),
-                                            ignoreCase = true
-                                        )
-                                    }
-                                ) {
+                                if (selectedCategory != "All") {
                                     ExploreCategoryTile(
                                         label = displayCategoryLabel(selectedCategory),
                                         selected = true,
