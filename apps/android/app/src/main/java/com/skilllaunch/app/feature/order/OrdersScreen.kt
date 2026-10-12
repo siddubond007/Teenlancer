@@ -115,7 +115,9 @@ private class OrdersViewModel(
         }
     }
 
-    fun selectOrder(orderId: String, clearActionMessage: Boolean = true) {
+    fun selectOrder(orderId: String) = selectOrderInternal(orderId, clearActionMessage = true)
+
+    private fun selectOrderInternal(orderId: String, clearActionMessage: Boolean) {
         // Invalidate work tied to the previous order before changing the active selection.
         ordersRequestGeneration += 1
         actionRequestGeneration += 1
@@ -299,7 +301,7 @@ private class OrdersViewModel(
                         actionMessage = response.message,
                         errorMessage = null
                     )
-                    selectOrder(orderId, clearActionMessage = false)
+                    selectOrderInternal(orderId, clearActionMessage = false)
                     load()
                 }
                 .onFailure { error ->
@@ -324,7 +326,7 @@ private class OrdersViewModel(
                         actionMessage = response.message,
                         errorMessage = null
                     )
-                    selectOrder(orderId, clearActionMessage = false)
+                    selectOrderInternal(orderId, clearActionMessage = false)
                     load()
                 }
                 .onFailure { error ->
@@ -349,7 +351,7 @@ private class OrdersViewModel(
                         actionMessage = response.message,
                         errorMessage = null
                     )
-                    selectOrder(orderId, clearActionMessage = false)
+                    selectOrderInternal(orderId, clearActionMessage = false)
                     load()
                 }
                 .onFailure { error ->
