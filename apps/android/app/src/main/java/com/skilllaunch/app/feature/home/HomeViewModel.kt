@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class HomeUiState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val home: HomeState? = null,
     val clientDashboard: ClientDashboardState? = null,
     val isClientDashboardLoading: Boolean = false,
@@ -36,6 +36,7 @@ class HomeViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    private var loadGeneration = 0
 
     private val _matchedJobs = MutableStateFlow<List<HomeRecommendedJob>>(emptyList())
     val matchedJobs: StateFlow<List<HomeRecommendedJob>> = _matchedJobs.asStateFlow()
@@ -63,6 +64,7 @@ class HomeViewModel(
 
     fun load(forceRefresh: Boolean = false) {
         if (!forceRefresh && _uiState.value.home != null) return
+        val requestGeneration = ++loadGeneration
 
         if (forceRefresh) {
             _matchedJobs.value = emptyList()
@@ -85,7 +87,9 @@ class HomeViewModel(
 
             // Render Room data immediately, then revalidate against the API.
             if (currentHome == null) {
-                repository.getCachedHomeState(userId)?.let { cachedHome ->
+                val cachedHome = repository.getCachedHomeState(userId)
+                if (requestGeneration != loadGeneration) return@launch
+                if (cachedHome != null) {
                     _uiState.value = _uiState.value.copy(
                         home = cachedHome,
                         isShowingCachedHome = true
@@ -95,6 +99,7 @@ class HomeViewModel(
 
             repository.getHomeState(userId)
                 .onSuccess { loadResult ->
+                    if (requestGeneration != loadGeneration) return@onSuccess
                     val loadedHome = loadResult.state
                     val isClient = loadedHome.role?.equals("CLIENT", ignoreCase = true) == true
                     val isStudent = loadedHome.role?.equals("STUDENT_FREELANCER", ignoreCase = true) == true
@@ -116,16 +121,17 @@ class HomeViewModel(
                     )
 
                     _discoveryLoading.value = true
-                    viewModelScope.launch { loadDiscovery() }
+                    viewModelScope.launch { loadDiscovery(requestGeneration) }
 
                     if (isStudent) {
-                        viewModelScope.launch { loadProfileNudges() }
-                        viewModelScope.launch { loadMarketplaceAnalytics() }
+                        viewModelScope.launch { loadProfileNudges(requestGeneration) }
+                        viewModelScope.launch { loadMarketplaceAnalytics(requestGeneration) }
                     }
 
                     if (isClient) {
                         clientDashboardRepository.getDashboard()
                             .onSuccess { dashboard ->
+                                if (requestGeneration != loadGeneration) return@onSuccess
                                 _uiState.value = _uiState.value.copy(
                                     clientDashboard = dashboard,
                                     isClientDashboardLoading = false,
@@ -133,6 +139,7 @@ class HomeViewModel(
                                 )
                             }
                             .onFailure { error ->
+                                if (requestGeneration != loadGeneration) return@onFailure
                                 _uiState.value = _uiState.value.copy(
                                     isClientDashboardLoading = false,
                                     clientDashboardErrorMessage = error.message
@@ -142,6 +149,7 @@ class HomeViewModel(
                     }
                 }
                 .onFailure { error ->
+                    if (requestGeneration != loadGeneration) return@onFailure
                     val rejectedResponse = generateSequence(error) { it.cause }
                         .filterIsInstance<HttpException>()
                         .firstOrNull()
@@ -170,9 +178,11 @@ class HomeViewModel(
         }
     }
 
-    private suspend fun loadDiscovery() {
+    private suspend fun loadDiscovery(requestGeneration: Int) {
+        if (requestGeneration != loadGeneration) return
         repository.getHomeDiscovery()
             .onSuccess { discovery: HomeDiscoveryResponse ->
+                if (requestGeneration != loadGeneration) return@onSuccess
                 _matchedJobs.value = discovery.recommendedJobs
                 _matchedGigs.value = discovery.topVerifiedGigs
                 _discoveryCategory.value = discovery.discoveryCategory
@@ -189,6 +199,7 @@ class HomeViewModel(
                 )
             }
             .onFailure { error ->
+                if (requestGeneration != loadGeneration) return@onFailure
                 _matchedJobs.value = emptyList()
                 _matchedGigs.value = emptyList()
                 _discoveryCategory.value = null
@@ -196,26 +207,31 @@ class HomeViewModel(
                 _discoveryError.value = error.message
                     ?: "Personalized discovery is temporarily unavailable."
             }
-        _discoveryLoading.value = false
+        if (requestGeneration == loadGeneration) _discoveryLoading.value = false
     }
 
-    private suspend fun loadMarketplaceAnalytics() {
+    private suspend fun loadMarketplaceAnalytics(requestGeneration: Int) {
+        if (requestGeneration != loadGeneration) return
         // If analytics fail to load, do not render a fabricated/zero-filled section.
         repository.getHomeAnalytics()
             .onSuccess { analytics ->
+                if (requestGeneration != loadGeneration) return@onSuccess
                 _uiState.value = _uiState.value.copy(
                     marketplaceAnalytics = analytics
                 )
             }
     }
 
-    private suspend fun loadProfileNudges() {
+    private suspend fun loadProfileNudges(requestGeneration: Int) {
+        if (requestGeneration != loadGeneration) return
         repository.getProfileNudges()
             .onSuccess { nudges ->
+                if (requestGeneration != loadGeneration) return@onSuccess
                 _profileNudges.value = nudges
                 _profileNudgesError.value = null
             }
             .onFailure { error ->
+                if (requestGeneration != loadGeneration) return@onFailure
                 _profileNudges.value = emptyList()
                 _profileNudgesError.value = error.message
                     ?: "Your profile suggestions could not be loaded right now."

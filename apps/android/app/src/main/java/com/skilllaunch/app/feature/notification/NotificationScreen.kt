@@ -52,9 +52,11 @@ private class NotificationViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(NotificationUiState())
     val state = _state.asStateFlow()
+    private var requestGeneration = 0
 
     fun load(forceRefresh: Boolean = false) {
         if (!forceRefresh && !_state.value.isLoading && _state.value.notifications.isNotEmpty()) return
+        val requestId = ++requestGeneration
 
         viewModelScope.launch {
             _state.value = _state.value.copy(
@@ -64,6 +66,7 @@ private class NotificationViewModel(
 
             repository.getMyNotifications()
                 .onSuccess { response ->
+                    if (requestId != requestGeneration) return@onSuccess
                     _state.value = NotificationUiState(
                         isLoading = false,
                         notifications = response.notifications,
@@ -71,6 +74,7 @@ private class NotificationViewModel(
                     )
                 }
                 .onFailure { error ->
+                    if (requestId != requestGeneration) return@onFailure
                     _state.value = _state.value.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Unable to load notifications."
@@ -83,6 +87,7 @@ private class NotificationViewModel(
         val id = notification.id ?: return
         if (notification.isRead) return
 
+        val actionGeneration = ++requestGeneration
         _state.value = _state.value.copy(
             notifications = _state.value.notifications.map { current ->
                 if (current.id == id) current.copy(isRead = true) else current
@@ -93,7 +98,7 @@ private class NotificationViewModel(
         viewModelScope.launch {
             repository.markAsRead(id)
                 .onFailure {
-                    load(forceRefresh = true)
+                    if (actionGeneration == requestGeneration) load(forceRefresh = true)
                 }
         }
     }
@@ -101,6 +106,7 @@ private class NotificationViewModel(
     fun markAllAsRead() {
         if (_state.value.unread == 0) return
 
+        val actionGeneration = ++requestGeneration
         _state.value = _state.value.copy(
             notifications = _state.value.notifications.map { it.copy(isRead = true) },
             unread = 0
@@ -109,7 +115,7 @@ private class NotificationViewModel(
         viewModelScope.launch {
             repository.markAllAsRead()
                 .onFailure {
-                    load(forceRefresh = true)
+                    if (actionGeneration == requestGeneration) load(forceRefresh = true)
                 }
         }
     }
@@ -130,7 +136,8 @@ private class NotificationViewModel(
 
 @Composable
 fun NotificationScreen(
-    repository: NotificationRepository
+    repository: NotificationRepository,
+    refreshVersion: Int = 0
 ) {
     val viewModel: NotificationViewModel = viewModel(
         factory = remember(repository) {
@@ -139,7 +146,7 @@ fun NotificationScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycleCompat()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(refreshVersion) {
         viewModel.load(forceRefresh = true)
     }
 
@@ -211,6 +218,41 @@ fun NotificationScreen(
                 contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 28.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                if (state.isLoading && state.notifications.isNotEmpty()) {
+                    item(key = "notifications-loading") {
+                        androidx.compose.material3.LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                if (state.errorMessage != null && state.notifications.isNotEmpty()) {
+                    item(key = "notifications-inline-error") {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Column(Modifier.padding(14.dp)) {
+                                Text(
+                                    "Notifications couldn't refresh",
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    state.errorMessage.orEmpty(),
+                                    Modifier.padding(top = 4.dp),
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                androidx.compose.material3.TextButton(
+                                    onClick = { viewModel.load(forceRefresh = true) },
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Text("Retry")
+                                }
+                            }
+                        }
+                    }
+                }
                 if (state.unread > 0) {
                     item {
                         Box(

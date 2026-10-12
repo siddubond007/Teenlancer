@@ -1,5 +1,6 @@
 package com.skilllaunch.app.feature.chat
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,12 +63,17 @@ private class ChatViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(ChatUiState())
     val state = _state.asStateFlow()
+    private var ordersRequestGeneration = 0
+    private var messagesRequestGeneration = 0
+    private var sendRequestGeneration = 0
 
     fun loadOrders() {
+        val requestGeneration = ++ordersRequestGeneration
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, errorMessage = null)
             repository.getMyOrders()
                 .onSuccess { orders ->
+                    if (requestGeneration != ordersRequestGeneration) return@onSuccess
                     _state.value = _state.value.copy(
                         isLoading = false,
                         orders = orders,
@@ -75,6 +81,7 @@ private class ChatViewModel(
                     )
                 }
                 .onFailure { error ->
+                    if (requestGeneration != ordersRequestGeneration) return@onFailure
                     _state.value = _state.value.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Unable to load conversations."
@@ -83,22 +90,39 @@ private class ChatViewModel(
         }
     }
 
+    fun refresh() {
+        val activeOrderId = _state.value.selectedOrderId
+        loadOrders()
+        activeOrderId?.let(::selectOrder)
+    }
+
     fun selectOrder(orderId: String) {
+        val requestGeneration = ++messagesRequestGeneration
+        sendRequestGeneration += 1
         viewModelScope.launch {
             _state.value = _state.value.copy(
                 selectedOrderId = orderId,
                 isLoadingMessages = true,
+                isSending = false,
                 messages = emptyList(),
                 errorMessage = null
             )
             repository.getMessages(orderId)
                 .onSuccess { messages ->
+                    if (
+                        requestGeneration != messagesRequestGeneration ||
+                        _state.value.selectedOrderId != orderId
+                    ) return@onSuccess
                     _state.value = _state.value.copy(
                         isLoadingMessages = false,
                         messages = messages
                     )
                 }
                 .onFailure { error ->
+                    if (
+                        requestGeneration != messagesRequestGeneration ||
+                        _state.value.selectedOrderId != orderId
+                    ) return@onFailure
                     _state.value = _state.value.copy(
                         isLoadingMessages = false,
                         errorMessage = error.message ?: "Unable to load this conversation."
@@ -108,9 +132,13 @@ private class ChatViewModel(
     }
 
     fun clearSelection() {
+        messagesRequestGeneration += 1
+        sendRequestGeneration += 1
         _state.value = _state.value.copy(
             selectedOrderId = null,
             messages = emptyList(),
+            isLoadingMessages = false,
+            isSending = false,
             errorMessage = null
         )
     }
@@ -118,6 +146,7 @@ private class ChatViewModel(
     fun sendMessage(content: String) {
         val orderId = _state.value.selectedOrderId ?: return
         if (content.trim().isBlank() || _state.value.isSending) return
+        val requestGeneration = ++sendRequestGeneration
 
         viewModelScope.launch {
             _state.value = _state.value.copy(
@@ -126,12 +155,20 @@ private class ChatViewModel(
             )
             repository.sendMessage(orderId, content)
                 .onSuccess { message ->
+                    if (
+                        requestGeneration != sendRequestGeneration ||
+                        _state.value.selectedOrderId != orderId
+                    ) return@onSuccess
                     _state.value = _state.value.copy(
                         isSending = false,
                         messages = _state.value.messages + message
                     )
                 }
                 .onFailure { error ->
+                    if (
+                        requestGeneration != sendRequestGeneration ||
+                        _state.value.selectedOrderId != orderId
+                    ) return@onFailure
                     _state.value = _state.value.copy(
                         isSending = false,
                         errorMessage = error.message ?: "Unable to send message."
@@ -153,7 +190,8 @@ private class ChatViewModel(
 @Composable
 fun ChatScreen(
     user: AuthUser,
-    repository: OrderRepository
+    repository: OrderRepository,
+    refreshVersion: Int = 0
 ) {
     val viewModel: ChatViewModel = viewModel(
         factory = remember(repository) {
@@ -162,11 +200,16 @@ fun ChatScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycleCompat()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadOrders()
+    LaunchedEffect(refreshVersion) {
+        viewModel.refresh()
     }
 
     val selectedId = state.selectedOrderId
+
+    // Back returns from an open conversation to the conversation list before leaving Chat.
+    BackHandler(enabled = selectedId != null) {
+        viewModel.clearSelection()
+    }
 
     if (selectedId != null) {
         ChatConversation(
@@ -189,7 +232,7 @@ fun ChatScreen(
             }
         }
 
-        state.orders.isEmpty() -> {
+        state.orders.isEmpty() && state.errorMessage == null -> {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -212,7 +255,7 @@ fun ChatScreen(
             }
         }
 
-        state.errorMessage != null -> {
+        state.errorMessage != null && state.orders.isEmpty() -> {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -241,6 +284,41 @@ fun ChatScreen(
                 contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 28.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                if (state.isLoading) {
+                    item(key = "chat-list-loading") {
+                        androidx.compose.material3.LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                if (state.errorMessage != null) {
+                    item(key = "chat-list-error") {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Column(Modifier.padding(14.dp)) {
+                                Text(
+                                    "Conversation refresh failed",
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    state.errorMessage.orEmpty(),
+                                    Modifier.padding(top = 4.dp),
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                TextButton(
+                                    onClick = viewModel::loadOrders,
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Text("Refresh conversations")
+                                }
+                            }
+                        }
+                    }
+                }
                 item {
                     Text(
                         "Conversations",

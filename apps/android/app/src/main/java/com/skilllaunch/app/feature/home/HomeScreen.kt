@@ -129,6 +129,7 @@ fun HomeScreen(
     clientDashboardRepository: ClientDashboardRepository,
     onOpenDestination: (AppDestination) -> Unit,
     onLogout: () -> Unit,
+    refreshVersion: Int = 0,
     darkTheme: Boolean,
     onToggleTheme: () -> Unit
 ) {
@@ -152,7 +153,8 @@ fun HomeScreen(
     val profileNudges by viewModel.profileNudges.collectAsStateWithLifecycleCompat()
     val profileNudgesError by viewModel.profileNudgesError.collectAsStateWithLifecycleCompat()
 
-    LaunchedEffect(user.id) {
+    LaunchedEffect(user.id, refreshVersion) {
+        // Refresh data when Back reveals Home after returning from a detail/workspace.
         viewModel.load(forceRefresh = true)
     }
 

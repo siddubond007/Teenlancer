@@ -3,6 +3,7 @@ package com.skilllaunch.app.data.repository.gig
 import com.skilllaunch.app.data.api.GigApi
 import com.skilllaunch.app.data.model.gig.Gig
 import com.skilllaunch.app.data.model.gig.GigAnalyticsEventRequest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,25 +16,11 @@ class GigRepository(
     // allows click telemetry to survive Explore's navigation entry being removed.
     private val analyticsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    suspend fun getGigs(): Result<List<Gig>> {
-        return runCatching {
-            gigApi.getGigs()
-        }.recoverCatching { error ->
-            throw Exception(
-                error.message ?: "Unable to load gigs right now"
-            )
-        }
-    }
+    suspend fun getGigs(): Result<List<Gig>> =
+        safeCall("Unable to load gigs right now") { gigApi.getGigs() }
 
-    suspend fun getGigById(gigId: String): Result<Gig> {
-        return runCatching {
-            gigApi.getGigById(gigId)
-        }.recoverCatching { error ->
-            throw Exception(
-                error.message ?: "Unable to load this Gig right now"
-            )
-        }
-    }
+    suspend fun getGigById(gigId: String): Result<Gig> =
+        safeCall("Unable to load this Gig right now") { gigApi.getGigById(gigId) }
 
     /**
      * Best-effort analytics collection; callers must never block the UI on a failed event.
@@ -42,7 +29,7 @@ class GigRepository(
         gigId: String,
         type: String,
         eventId: String
-    ): Result<Boolean> = runCatching {
+    ): Result<Boolean> = safeCall("Unable to record gig analytics.") {
         gigApi.recordAnalyticsEvent(
             gigId = gigId,
             event = GigAnalyticsEventRequest(
@@ -64,5 +51,16 @@ class GigRepository(
         analyticsScope.launch {
             recordAnalyticsEvent(gigId, type, eventId)
         }
+    }
+
+    private suspend fun <T> safeCall(
+        fallback: String,
+        block: suspend () -> T
+    ): Result<T> = try {
+        Result.success(block())
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Result.failure(IllegalStateException(error.message ?: fallback, error))
     }
 }

@@ -1,5 +1,8 @@
 package com.skilllaunch.app.core.navigation
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -22,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.BusinessCenter
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Explore
@@ -37,12 +41,18 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
@@ -94,6 +104,43 @@ private val shellDestinations = listOf(
     AppDestination.Profile
 )
 
+private fun AppDestination.toSavedToken(): String = when (this) {
+    AppDestination.Home -> "home"
+    AppDestination.Explore -> "explore"
+    is AppDestination.GigDetails -> "gig:$gigId"
+    is AppDestination.JobDetails -> "job:$jobId"
+    is AppDestination.ClientProjectDetails -> "client-project:$jobId"
+    AppDestination.PostJob -> "post-job"
+    AppDestination.Orders -> "orders"
+    is AppDestination.OrderWorkspace -> "order-workspace:$orderId"
+    AppDestination.Chat -> "chat"
+    AppDestination.Profile -> "profile"
+    AppDestination.Notifications -> "notifications"
+}
+
+private fun destinationFromSavedToken(token: String): AppDestination = when {
+    token == "home" -> AppDestination.Home
+    token == "explore" -> AppDestination.Explore
+    token.startsWith("gig:") -> AppDestination.GigDetails(token.substringAfter("gig:"))
+    token.startsWith("job:") -> AppDestination.JobDetails(token.substringAfter("job:"))
+    token.startsWith("client-project:") ->
+        AppDestination.ClientProjectDetails(token.substringAfter("client-project:"))
+    token == "post-job" -> AppDestination.PostJob
+    token == "orders" -> AppDestination.Orders
+    token.startsWith("order-workspace:") ->
+        AppDestination.OrderWorkspace(token.substringAfter("order-workspace:"))
+    token == "chat" -> AppDestination.Chat
+    token == "profile" -> AppDestination.Profile
+    token == "notifications" -> AppDestination.Notifications
+    else -> AppDestination.Home
+}
+
+private tailrec fun Context.findActivityOrNull(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivityOrNull()
+    else -> null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthenticatedAppShell(
@@ -111,37 +158,81 @@ fun AuthenticatedAppShell(
     themeState: State<Boolean>,
     onToggleTheme: () -> Unit
 ) {
-    val backStack = remember {
+    // Persist the actual route stack across theme/system configuration changes.
+    // Destinations are stored as primitive tokens so SavedStateRegistry can restore them.
+    val backStack = rememberSaveable(
+        saver = listSaver<SnapshotStateList<AppDestination>, String>(
+            save = { stack -> stack.map { it.toSavedToken() } },
+            restore = { tokens ->
+                mutableStateListOf<AppDestination>().apply {
+                    addAll(tokens.map(::destinationFromSavedToken))
+                    if (isEmpty()) add(AppDestination.Home)
+                }
+            }
+        )
+    ) {
         mutableStateListOf<AppDestination>(AppDestination.Home)
     }
+    val screenRefreshVersion = remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
     val current = backStack.lastOrNull() ?: AppDestination.Home
+    // Detail pages keep their parent tab selected in the floating dock.
+    val selectedRootDestination =
+        backStack.lastOrNull { it in shellDestinations } ?: AppDestination.Home
 
     fun openDestination(destination: AppDestination) {
-        if (destination == AppDestination.Home) {
-            backStack.clear()
-            backStack.add(AppDestination.Home)
-        } else if (destination != current) {
-            // Every current Gig Details entry point is a gig-card tap (Explore or
-            // Home recommendations). Record one CLICK centrally to cover both paths
-            // without double-counting Explore and without cancelling on navigation.
-            if (destination is AppDestination.GigDetails) {
-                gigRepository.recordAnalyticsEventInBackground(
-                    gigId = destination.gigId,
-                    type = "CLICK",
-                    eventId = UUID.randomUUID().toString()
-                )
+        if (destination in shellDestinations) {
+            // Bottom dock selections are root navigation, while detail/workspace
+            // destinations are pushed and retain the originating screen underneath.
+            if (backStack.size != 1 || current != destination) {
+                backStack.clear()
+                backStack.add(destination)
             }
-            backStack.clear()
-            backStack.add(AppDestination.Home)
-            backStack.add(destination)
+            // Re-selecting the current tab is also an explicit refresh gesture.
+            screenRefreshVersion.intValue += 1
+            return
+        }
+
+        if (destination == current) return
+
+        // Every current Gig Details entry point is a gig-card tap (Explore or
+        // Home recommendations). Record one CLICK centrally to cover both paths.
+        if (destination is AppDestination.GigDetails) {
+            gigRepository.recordAnalyticsEventInBackground(
+                gigId = destination.gigId,
+                type = "CLICK",
+                eventId = UUID.randomUUID().toString()
+            )
+        }
+
+        // Preserve the current destination so Back returns to the correct page.
+        backStack.add(destination)
+    }
+
+    fun navigateBack() {
+        if (backStack.size > 1) {
+            backStack.removeLastOrNull()
+            // Refresh whatever screen was underneath the route we just popped.
+            screenRefreshVersion.intValue += 1
+        } else {
+            // Back at a root tab follows Android convention and closes the activity.
+            context.findActivityOrNull()?.finish()
         }
     }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            if (current != AppDestination.Home && current != AppDestination.Profile && current != AppDestination.Explore) {
+            if (current !in shellDestinations) {
                 CenterAlignedTopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = ::navigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    },
                     title = {
                         Text(
                             text = destinationTitle(current),
@@ -158,7 +249,7 @@ fun AuthenticatedAppShell(
         Box(modifier = Modifier.fillMaxSize()) {
             NavDisplay(
             backStack = backStack,
-            onBack = { backStack.removeLastOrNull() },
+            onBack = ::navigateBack,
             transitionSpec = {
                 fadeIn(animationSpec = tween(220)) togetherWith
                     fadeOut(animationSpec = tween(180))
@@ -180,6 +271,7 @@ fun AuthenticatedAppShell(
                             clientDashboardRepository = clientDashboardRepository,
                             onOpenDestination = ::openDestination,
                             onLogout = onLogout,
+                            refreshVersion = screenRefreshVersion.intValue,
                             darkTheme = themeState.value,
                             onToggleTheme = onToggleTheme
                         )
@@ -191,6 +283,7 @@ fun AuthenticatedAppShell(
                                 repository = jobRepository,
                                 profileRepository = profileRepository,
                                 userId = user.id,
+                                refreshVersion = screenRefreshVersion.intValue,
                                 onOpenJob = { jobId ->
                                     openDestination(AppDestination.JobDetails(jobId))
                                 },
@@ -201,6 +294,7 @@ fun AuthenticatedAppShell(
                         } else {
                             GigDiscoveryScreen(
                                 repository = gigRepository,
+                                refreshVersion = screenRefreshVersion.intValue,
                                 onOpenGig = { gigId ->
                                     openDestination(AppDestination.GigDetails(gigId))
                                 }
@@ -241,7 +335,8 @@ fun AuthenticatedAppShell(
                     AppDestination.Orders -> NavEntry(key) {
                         OrdersScreen(
                             user = user,
-                            repository = orderRepository
+                            repository = orderRepository,
+                            refreshVersion = screenRefreshVersion.intValue
                         )
                     }
 
@@ -249,14 +344,17 @@ fun AuthenticatedAppShell(
                         OrdersScreen(
                             user = user,
                             repository = orderRepository,
-                            initialOrderId = key.orderId
+                            initialOrderId = key.orderId,
+                            refreshVersion = screenRefreshVersion.intValue,
+                            onBackFromWorkspace = ::navigateBack
                         )
                     }
 
                     AppDestination.Chat -> NavEntry(key) {
                         ChatScreen(
                             user = user,
-                            repository = orderRepository
+                            repository = orderRepository,
+                            refreshVersion = screenRefreshVersion.intValue
                         )
                     }
 
@@ -266,13 +364,14 @@ fun AuthenticatedAppShell(
                             repository = profileRepository,
                             onLogout = onLogout,
                             onOpenOnboarding = onOpenOnboarding,
-                            refreshVersion = profileRefreshVersion
+                            refreshVersion = screenRefreshVersion.intValue + profileRefreshVersion
                         )
                     }
 
                     AppDestination.Notifications -> NavEntry(key) {
                         NotificationScreen(
-                            repository = notificationRepository
+                            repository = notificationRepository,
+                            refreshVersion = screenRefreshVersion.intValue
                         )
                     }
                 }
@@ -283,7 +382,7 @@ fun AuthenticatedAppShell(
                 .padding(innerPadding)
         )
             FloatingNavigationDock(
-                current = current,
+                current = selectedRootDestination,
                 onSelectDestination = ::openDestination,
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
@@ -308,7 +407,7 @@ private fun FloatingNavigationDock(
     val dockShape = RoundedCornerShape(32.dp)
     val dockBrush = Brush.linearGradient(
         if (darkTheme) {
-            listOf(Color(0xF0162035), Color(0xE42C2947), Color(0xE51C3040))
+            listOf(Color(0xFF080809), Color(0xFF141415), Color(0xFF09090A))
         } else {
             listOf(Color(0xF7FFFFFF), Color(0xEDEBE8FF), Color(0xE8FFF0E9))
         }
@@ -325,7 +424,7 @@ private fun FloatingNavigationDock(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(78.dp)
-                .shadow(24.dp, dockShape, clip = false)
+                .shadow(if (darkTheme) 2.dp else 6.dp, dockShape, clip = false)
                 .clip(dockShape)
                 .background(dockBrush)
                 .border(1.dp, dockOutline, dockShape)

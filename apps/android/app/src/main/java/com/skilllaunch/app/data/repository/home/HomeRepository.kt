@@ -11,6 +11,7 @@ import com.skilllaunch.app.data.model.home.HomeProfileNudge
 import com.skilllaunch.app.data.model.home.HomeState
 import retrofit2.HttpException
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
 
 data class HomeStateLoadResult(
     val state: HomeState,
@@ -35,7 +36,7 @@ class HomeRepository(
             val state = homeApi.getHomeState()
             if (userId.isNotBlank()) {
                 // A Room write failure must never turn a successful network response into a failure.
-                runCatching {
+                try {
                     cacheDao.upsert(
                         HomeCacheEntity(
                             userId = userId,
@@ -43,6 +44,10 @@ class HomeRepository(
                             cachedAtEpochMillis = System.currentTimeMillis()
                         )
                     )
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    // Cache persistence is best-effort; preserve the successful API response.
                 }
             }
             Result.success(
@@ -51,6 +56,8 @@ class HomeRepository(
                     fromCache = false
                 )
             )
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (exception: HttpException) {
             val message = httpErrorMessage(
                 exception = exception,
@@ -86,7 +93,13 @@ class HomeRepository(
      */
     suspend fun clearCachedHomeState(userId: String) {
         if (userId.isBlank()) return
-        runCatching { cacheDao.deleteByUserId(userId) }
+        try {
+            cacheDao.deleteByUserId(userId)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // Cache cleanup is best-effort unless the coroutine itself is cancelled.
+        }
     }
 
     suspend fun getHomeDiscovery(): Result<HomeDiscoveryResponse> =
@@ -118,6 +131,8 @@ class HomeRepository(
                 state = state,
                 fromCache = true
             )
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             null
         }

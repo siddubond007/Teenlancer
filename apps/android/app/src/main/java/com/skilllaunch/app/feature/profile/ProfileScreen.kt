@@ -76,7 +76,12 @@ fun ProfileScreen(
     var moreMenuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(user.id, refreshVersion) {
-        user.id?.let { profileViewModel.loadProfile(it, forceRefresh = refreshVersion > 0) }
+        // Route missing IDs through the ViewModel's explicit error state instead of
+        // leaving the initial loading indicator visible forever.
+        profileViewModel.loadProfile(
+            userId = user.id.orEmpty(),
+            forceRefresh = refreshVersion > 0
+        )
     }
 
     LaunchedEffect(uiState.successMessage) {

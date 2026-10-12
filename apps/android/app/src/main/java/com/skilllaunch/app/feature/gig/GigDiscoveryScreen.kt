@@ -21,6 +21,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
@@ -53,9 +55,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.Locale
 import java.util.UUID
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GigDiscoveryScreen(
     repository: GigRepository,
+    refreshVersion: Int = 0,
     onOpenGig: (String) -> Unit
 ) {
     val factory = remember(repository) {
@@ -92,8 +96,8 @@ fun GigDiscoveryScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        gigViewModel.loadGigs()
+    LaunchedEffect(refreshVersion) {
+        gigViewModel.loadGigs(forceRefresh = refreshVersion > 0)
     }
 
     LaunchedEffect(listState, filteredGigs) {
@@ -146,6 +150,13 @@ fun GigDiscoveryScreen(
                     )
             )
 
+            // Keep pull-to-refresh active for empty and error states as well as loaded feeds.
+            PullToRefreshBox(
+                isRefreshing = uiState.isLoading && uiState.gigs.isNotEmpty(),
+                onRefresh = { gigViewModel.loadGigs(forceRefresh = true) },
+                // Reserve the same safe area as student Explore so the dock never covers actions.
+                modifier = Modifier.fillMaxSize().padding(bottom = 132.dp)
+            ) {
             when {
                 uiState.isLoading && uiState.gigs.isEmpty() -> {
                     Column(
@@ -212,6 +223,15 @@ fun GigDiscoveryScreen(
                             modifier = Modifier.padding(top = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Button(
+                            onClick = {
+                                gigViewModel.clearError()
+                                gigViewModel.loadGigs(forceRefresh = true)
+                            },
+                            modifier = Modifier.padding(top = 16.dp)
+                        ) {
+                            Text("Refresh marketplace")
+                        }
                     }
                 }
 
@@ -227,6 +247,41 @@ fun GigDiscoveryScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
+                        if (uiState.isLoading && uiState.gigs.isNotEmpty()) {
+                            item(key = "gig-list-loading") {
+                                androidx.compose.material3.LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                        if (uiState.errorMessage != null && uiState.gigs.isNotEmpty()) {
+                            item(key = "gig-list-error") {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = MaterialTheme.colorScheme.errorContainer
+                                ) {
+                                    Column(Modifier.padding(14.dp)) {
+                                        Text(
+                                            "Marketplace refresh failed",
+                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            uiState.errorMessage.orEmpty(),
+                                            Modifier.padding(top = 4.dp),
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                        Button(
+                                            onClick = { gigViewModel.loadGigs(forceRefresh = true) },
+                                            modifier = Modifier.padding(top = 8.dp)
+                                        ) {
+                                            Text("Retry")
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         item {
                             Column {
                                 Text(
@@ -347,6 +402,7 @@ fun GigDiscoveryScreen(
                                 }
                             }
                         }
+                    }
                     }
                 }
             }

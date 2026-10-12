@@ -22,7 +22,7 @@ data class ProfileFormState(
 )
 
 data class ProfileUiState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val profileUser: ProfileUser? = null,
     val form: ProfileFormState = ProfileFormState(),
@@ -38,9 +38,12 @@ class ProfileViewModel(
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     private var loadedUserId: String? = null
+    private var profileLoadGeneration = 0
+    private var profileSaveGeneration = 0
 
     fun loadProfile(userId: String, forceRefresh: Boolean = false) {
         if (userId.isBlank()) {
+            profileLoadGeneration += 1
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 errorMessage = "Your profile could not be found"
@@ -53,6 +56,7 @@ class ProfileViewModel(
         }
 
         loadedUserId = userId
+        val requestGeneration = ++profileLoadGeneration
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -63,14 +67,25 @@ class ProfileViewModel(
 
             repository.getMyProfile()
                 .onSuccess { user ->
-                    _uiState.value = _uiState.value.copy(
+                    if (requestGeneration != profileLoadGeneration) return@onSuccess
+                    val currentState = _uiState.value
+                    val previousForm = currentState.profileUser?.let { it.profile.toFormState() }
+                    val preserveEditedForm = previousForm != null &&
+                        currentState.form != previousForm
+                    _uiState.value = currentState.copy(
                         isLoading = false,
                         profileUser = user,
-                        form = user.profile.toFormState(),
+                        // Automatic refreshes must not silently discard unsaved profile edits.
+                        form = if (preserveEditedForm) {
+                            currentState.form
+                        } else {
+                            user.profile.toFormState()
+                        },
                         errorMessage = null
                     )
                 }
                 .onFailure { error ->
+                    if (requestGeneration != profileLoadGeneration) return@onFailure
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Unable to load your profile right now"
@@ -115,7 +130,11 @@ class ProfileViewModel(
     }
 
     fun saveProfile() {
+        if (_uiState.value.isSaving) return
         val currentState = _uiState.value
+        val requestGeneration = ++profileSaveGeneration
+        // A profile load started before Save must not overwrite the response or the live form.
+        profileLoadGeneration += 1
         val hourlyRate = currentState.form.hourlyRate
             .trim()
             .takeIf { it.isNotEmpty() }
@@ -150,18 +169,25 @@ class ProfileViewModel(
 
             repository.updateProfile(request)
                 .onSuccess { response ->
+                    if (requestGeneration != profileSaveGeneration) return@onSuccess
                     val updatedProfile = response.profile
+                    val formChangedDuringSave = _uiState.value.form != currentState.form
                     _uiState.value = _uiState.value.copy(
                         isSaving = false,
                         profileUser = _uiState.value.profileUser?.copy(
                             profile = updatedProfile
                         ),
-                        form = updatedProfile?.toFormState() ?: _uiState.value.form,
+                        form = if (!formChangedDuringSave) {
+                            updatedProfile?.toFormState() ?: _uiState.value.form
+                        } else {
+                            _uiState.value.form
+                        },
                         errorMessage = null,
                         successMessage = response.message ?: "Profile updated successfully"
                     )
                 }
                 .onFailure { error ->
+                    if (requestGeneration != profileSaveGeneration) return@onFailure
                     _uiState.value = _uiState.value.copy(
                         isSaving = false,
                         errorMessage = error.message ?: "Unable to save your profile right now",

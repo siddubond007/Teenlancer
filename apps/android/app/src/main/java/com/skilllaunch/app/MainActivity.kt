@@ -8,7 +8,6 @@ import com.razorpay.PaymentResultWithDataListener
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -68,21 +67,19 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
         runCatching { Checkout.preload(applicationContext) }
 
         setContent {
-            val systemDarkTheme = isSystemInDarkTheme()
-            var localThemeOverride by rememberSaveable { mutableStateOf<Boolean?>(null) }
-            var lastObservedSystemTheme by rememberSaveable { mutableStateOf(systemDarkTheme) }
-
-            LaunchedEffect(systemDarkTheme) {
-                if (systemDarkTheme != lastObservedSystemTheme) {
-                    localThemeOverride = null
-                    lastObservedSystemTheme = systemDarkTheme
-                }
+            // SkillLaunch defaults to its approved dark appearance regardless of device theme.
+            // The in-app appearance toggle remains available as an explicit user choice.
+            // Keep nullable saved state compatible with older saved instances that stored null.
+            // Null now resolves to the chosen dark default, never the device's light theme.
+            // Version the saveable key so older activity state cannot restore the previous system-light default.
+            var localThemeOverride by rememberSaveable(key = "skilllaunch-dark-theme-v2") {
+                mutableStateOf<Boolean?>(true)
             }
-
-            val effectiveDarkTheme = localThemeOverride ?: systemDarkTheme
-            val darkThemeState: State<Boolean> = androidx.compose.runtime.derivedStateOf {
-                effectiveDarkTheme
-            }
+            val effectiveDarkTheme = localThemeOverride ?: true
+            // Keep a stable State holder so child screens do not receive a new wrapper
+            // on every unrelated recomposition.
+            val darkThemeState: State<Boolean> =
+                androidx.compose.runtime.rememberUpdatedState(effectiveDarkTheme)
 
             SkillLaunchTheme(darkTheme = effectiveDarkTheme) {
                 val view = LocalView.current
@@ -95,7 +92,6 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 
                 SkillLaunchRoot(
                     themeState = darkThemeState,
-                    systemDarkTheme = systemDarkTheme,
                     onToggleTheme = {
                         localThemeOverride = !effectiveDarkTheme
                     }
@@ -165,7 +161,6 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 @Composable
 private fun SkillLaunchRoot(
     themeState: State<Boolean>,
-    systemDarkTheme: Boolean,
     onToggleTheme: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current

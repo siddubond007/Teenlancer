@@ -25,7 +25,7 @@ class ProfileRepository(
     private val gson = Gson()
 
     suspend fun getProfile(userId: String): Result<ProfileUser> {
-        return runCatching {
+        return cancellableResult {
             userApi.getUserProfile(userId)
         }.recoverCatching { error ->
             throw Exception(
@@ -75,7 +75,7 @@ class ProfileRepository(
 
 
     suspend fun uploadResume(context: Context, uri: Uri): Result<com.skilllaunch.app.data.model.upload.ResumeUploadResponse> {
-        return runCatching {
+        return cancellableResult {
             val resolver = context.contentResolver
             val fileName = resolver.query(
                 uri,
@@ -125,7 +125,7 @@ class ProfileRepository(
         context: Context,
         uri: Uri
     ): Result<String> {
-        return runCatching {
+        return cancellableResult {
             val resolver = context.contentResolver
             val fileName = "profile-${System.currentTimeMillis()}.jpg"
             val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
@@ -150,7 +150,7 @@ class ProfileRepository(
     suspend fun updateProfile(
         request: ProfileUpdateRequest
     ): Result<ProfileUpdateResponse> {
-        return runCatching {
+        return cancellableResult {
             userApi.updateProfile(request)
         }.recoverCatching { error ->
             throw Exception(
@@ -162,13 +162,23 @@ class ProfileRepository(
     suspend fun updateOnboarding(
         request: OnboardingUpdateRequest
     ): Result<ProfileUpdateResponse> {
-        return runCatching {
+        return cancellableResult {
             userApi.updateOnboarding(request)
         }.recoverCatching { error ->
             throw Exception(
                 apiErrorMessage(error, "Unable to save your onboarding right now")
             )
         }
+    }
+
+    private suspend fun <T> cancellableResult(
+        block: suspend () -> T
+    ): Result<T> = try {
+        Result.success(block())
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Result.failure(error)
     }
 
     private fun apiErrorMessage(error: Throwable, fallback: String): String {
