@@ -274,7 +274,8 @@ fun OrdersScreen(
     user: AuthUser,
     repository: OrderRepository,
     initialOrderId: String? = null,
-    refreshVersion: Int = 0
+    refreshVersion: Int = 0,
+    onBackFromWorkspace: (() -> Unit)? = null
 ) {
     val viewModel: OrdersViewModel = viewModel(
         factory = remember(repository) { OrdersViewModel.factory(repository) }
@@ -362,7 +363,13 @@ fun OrdersScreen(
             actionMessage = state.actionMessage,
             errorMessage = state.errorMessage,
             isPreparingCheckout = state.isPreparingCheckout,
-            onBack = { viewModel.clearSelection() },
+            onBack = {
+                if (initialOrderId != null) {
+                    onBackFromWorkspace?.invoke() ?: viewModel.clearSelection()
+                } else {
+                    viewModel.clearSelection()
+                }
+            },
             onApprove = { viewModel.approve(selected.id.orEmpty()) },
             onRequestRevision = { revisionOrderId = selected.id },
             onSubmitDelivery = { deliveryOrderId = selected.id },
