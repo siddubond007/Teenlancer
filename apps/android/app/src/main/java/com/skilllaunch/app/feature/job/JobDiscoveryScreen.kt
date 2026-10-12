@@ -433,7 +433,12 @@ fun JobDiscoveryScreen(
             val hasKnownBudget = amount > 0.0
             val matchesMinimum = minBudget == null || (hasKnownBudget && amount >= minBudget)
             val matchesMaximum = maxBudget == null || (hasKnownBudget && amount <= maxBudget)
-            val actualType = if (job.projectType.orEmpty().contains("hour", ignoreCase = true) || job.budgetType.orEmpty().contains("hour", ignoreCase = true)) "Hourly" else "Fixed price"
+            val actualType = when {
+                job.projectType.orEmpty().contains("hour", ignoreCase = true) ||
+                    job.budgetType.orEmpty().contains("hour", ignoreCase = true) -> "Hourly"
+                job.projectType.orEmpty().contains("contest", ignoreCase = true) -> "Contest"
+                else -> "Fixed price"
+            }
             val matchesType = selectedProjectTypes.isEmpty() || actualType in selectedProjectTypes
             val matchesSkills = selectedSkills.isEmpty() || job.skills.any { jobSkill -> selectedSkills.any { selectedSkill -> jobSkill.equals(selectedSkill, ignoreCase = true) } }
             val matchesLocation = locationQuery.isBlank() || job.locationPreferences.orEmpty().contains(locationQuery, ignoreCase = true)
@@ -473,6 +478,7 @@ fun JobDiscoveryScreen(
         selectedSkills.forEach { skill -> add(ActiveExploreFilter("skill:$skill", skill) { selectedSkills = selectedSkills - skill }) }
         if (locationFilter.isNotBlank()) add(ActiveExploreFilter("location", "Location: $locationFilter") { locationFilter = "" })
         if (languageFilter.isNotBlank()) add(ActiveExploreFilter("language", "Language: $languageFilter") { languageFilter = "" })
+        if (sortMode != "Newest") add(ActiveExploreFilter("sort", "Sort: $sortMode") { sortMode = "Newest" })
     }
 
     fun toggleSaved(job: Job) {
@@ -1148,7 +1154,7 @@ private fun ExploreTopTabs(
 ) {
     val shape = RoundedCornerShape(999.dp)
     Surface(
-        modifier = Modifier.fillMaxWidth().shadow(8.dp, shape, clip = false),
+        modifier = Modifier.fillMaxWidth().shadow(if (darkTheme) 2.dp else 5.dp, shape, clip = false),
         shape = shape,
         color = if (darkTheme) Color.White.copy(alpha = 0.045f) else Color.White.copy(alpha = 0.68f),
         border = BorderStroke(
@@ -1209,7 +1215,7 @@ private fun JobSearchField(
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
-            .shadow(12.dp, shape, clip = false)
+            .shadow(if (darkTheme) 2.dp else 5.dp, shape, clip = false)
             .clip(shape)
             .background(searchBackground)
             .border(1.dp, borderColor, shape)
@@ -1360,7 +1366,7 @@ private fun JobSortChip(
     val shape = RoundedCornerShape(20.dp)
     Surface(
         onClick = onClick,
-        modifier = Modifier.shadow(7.dp, shape, clip = false),
+        modifier = Modifier.shadow(if (darkTheme) 2.dp else 4.dp, shape, clip = false),
         shape = shape,
         color = if (darkTheme) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.82f),
         border = BorderStroke(
@@ -1646,7 +1652,7 @@ private fun JobFilterDialog(
                 }
                 Text("PROJECT TYPE", color = textMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    listOf("Fixed price", "Hourly").forEach { type -> FilterChip(selected = type in selectedProjectTypes, onClick = { onToggleProjectType(type) }, label = { Text(type) }) }
+                    listOf("Fixed price", "Hourly", "Contest").forEach { type -> FilterChip(selected = type in selectedProjectTypes, onClick = { onToggleProjectType(type) }, label = { Text(type) }) }
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1911,7 +1917,7 @@ private fun JobCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(13.dp, shape, clip = false),
+            .shadow(if (darkTheme) 2.dp else 5.dp, shape, clip = false),
         shape = shape,
         color = cardSurface,
         border = BorderStroke(1.dp, outline),
