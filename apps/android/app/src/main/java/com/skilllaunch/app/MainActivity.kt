@@ -8,7 +8,6 @@ import com.razorpay.PaymentResultWithDataListener
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -68,18 +67,10 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
         runCatching { Checkout.preload(applicationContext) }
 
         setContent {
-            val systemDarkTheme = isSystemInDarkTheme()
-            var localThemeOverride by rememberSaveable { mutableStateOf<Boolean?>(null) }
-            var lastObservedSystemTheme by rememberSaveable { mutableStateOf(systemDarkTheme) }
-
-            LaunchedEffect(systemDarkTheme) {
-                if (systemDarkTheme != lastObservedSystemTheme) {
-                    localThemeOverride = null
-                    lastObservedSystemTheme = systemDarkTheme
-                }
-            }
-
-            val effectiveDarkTheme = localThemeOverride ?: systemDarkTheme
+            // SkillLaunch defaults to its approved dark appearance regardless of device theme.
+            // The in-app appearance toggle remains available as an explicit user choice.
+            var localThemeOverride by rememberSaveable { mutableStateOf(true) }
+            val effectiveDarkTheme = localThemeOverride
             val darkThemeState: State<Boolean> = androidx.compose.runtime.derivedStateOf {
                 effectiveDarkTheme
             }
@@ -95,7 +86,6 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 
                 SkillLaunchRoot(
                     themeState = darkThemeState,
-                    systemDarkTheme = systemDarkTheme,
                     onToggleTheme = {
                         localThemeOverride = !effectiveDarkTheme
                     }
@@ -165,7 +155,6 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 @Composable
 private fun SkillLaunchRoot(
     themeState: State<Boolean>,
-    systemDarkTheme: Boolean,
     onToggleTheme: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
