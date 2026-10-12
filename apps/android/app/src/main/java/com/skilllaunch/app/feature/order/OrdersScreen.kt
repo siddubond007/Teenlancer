@@ -71,6 +71,7 @@ data class OrdersUiState(
     val isLoading: Boolean = true,
     val orders: List<OrderSummary> = emptyList(),
     val selectedOrder: OrderSummary? = null,
+    val requestedOrderId: String? = null,
     val errorMessage: String? = null,
     val actionMessage: String? = null,
     val isPreparingCheckout: Boolean = false,
@@ -118,6 +119,7 @@ private class OrdersViewModel(
             _state.value = _state.value.copy(
                 isLoading = true,
                 selectedOrder = null,
+                requestedOrderId = orderId,
                 errorMessage = null,
                 actionMessage = null
             )
@@ -126,13 +128,15 @@ private class OrdersViewModel(
                     if (requestGeneration != selectedOrderRequestGeneration) return@onSuccess
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        selectedOrder = order
+                        selectedOrder = order,
+                        requestedOrderId = null
                     )
                 }
                 .onFailure { error ->
                     if (requestGeneration != selectedOrderRequestGeneration) return@onFailure
                     _state.value = _state.value.copy(
                         isLoading = false,
+                        requestedOrderId = null,
                         errorMessage = error.message ?: "Unable to load this workspace."
                     )
                 }
@@ -144,6 +148,7 @@ private class OrdersViewModel(
         _state.value = _state.value.copy(
             isLoading = false,
             selectedOrder = null,
+            requestedOrderId = null,
             actionMessage = null
         )
     }
@@ -375,7 +380,9 @@ fun OrdersScreen(
 
     // In the root Orders tab, Back should close the inline workspace first.
     // A pushed OrderWorkspace route is handled by the app shell's back stack instead.
-    BackHandler(enabled = selected != null && initialOrderId == null) {
+    BackHandler(
+        enabled = (selected != null || state.requestedOrderId != null) && initialOrderId == null
+    ) {
         viewModel.clearSelection()
     }
 
@@ -478,7 +485,7 @@ fun OrdersScreen(
                 contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 28.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (state.isLoading) {
+                if (state.isLoading || state.requestedOrderId != null) {
                     item(key = "orders-loading") {
                         androidx.compose.material3.LinearProgressIndicator(
                             modifier = Modifier.fillMaxWidth()
