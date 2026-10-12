@@ -418,8 +418,10 @@ fun JobDiscoveryScreen(
         }
     }
     val visibleJobs = remember(tabJobs, selectedCategory, sortMode, appliedSearch, minBudgetFilter, maxBudgetFilter, selectedProjectTypes, selectedSkills, locationFilter, languageFilter) {
-        val minBudget = minBudgetFilter.toDoubleOrNull()
-        val maxBudget = maxBudgetFilter.toDoubleOrNull()
+        val minBudget = minBudgetFilter.toDoubleOrNull()?.takeIf { it.isFinite() }
+        val maxBudget = maxBudgetFilter.toDoubleOrNull()?.takeIf { it.isFinite() }
+        val hasMinimumBudget = minBudgetFilter.isNotBlank()
+        val hasMaximumBudget = maxBudgetFilter.isNotBlank()
         val query = appliedSearch.trim()
         val locationQuery = locationFilter.trim()
         val languageQuery = languageFilter.trim()
@@ -433,8 +435,8 @@ fun JobDiscoveryScreen(
             val matchesSearch = query.isBlank() || searchableText.contains(query, ignoreCase = true)
             val amount = jobBudgetValue(job)
             val hasKnownBudget = amount > 0.0
-            val matchesMinimum = minBudget == null || (hasKnownBudget && amount >= minBudget)
-            val matchesMaximum = maxBudget == null || (hasKnownBudget && amount <= maxBudget)
+            val matchesMinimum = !hasMinimumBudget || (minBudget != null && hasKnownBudget && amount >= minBudget)
+            val matchesMaximum = !hasMaximumBudget || (maxBudget != null && hasKnownBudget && amount <= maxBudget)
             val actualType = when {
                 job.projectType.orEmpty().contains("hour", ignoreCase = true) ||
                     job.budgetType.orEmpty().contains("hour", ignoreCase = true) -> "Hourly"
@@ -1602,8 +1604,8 @@ private fun JobFilterDialog(
         (selectedSkills + matching).distinctBy { it.lowercase(Locale.ROOT) }
     }
     val invalidBudgetValue =
-        (minBudget.isNotBlank() && minBudget.toDoubleOrNull() == null) ||
-            (maxBudget.isNotBlank() && maxBudget.toDoubleOrNull() == null)
+        (minBudget.isNotBlank() && minBudget.toDoubleOrNull()?.isFinite() != true) ||
+            (maxBudget.isNotBlank() && maxBudget.toDoubleOrNull()?.isFinite() != true)
     val invalidBudgetRange = invalidBudgetValue || (
         minBudget.toDoubleOrNull()?.let { minimum ->
             maxBudget.toDoubleOrNull()?.let { maximum -> maximum < minimum }
@@ -2383,11 +2385,14 @@ private fun jobBudgetValue(job: Job): Double =
     job.minimumBudget?.takeIf { it > 0 } ?: 0.0
 
 private fun jobCategoryAccent(category: String): Color {
-    val normalized = category.lowercase(Locale.ROOT)
+    val normalized = displayCategoryLabel(category).lowercase(Locale.ROOT)
+    val hasStandaloneToken = { token: String ->
+        Regex("(^|[^a-z])" + Regex.escape(token) + "([^a-z]|$)").containsMatchIn(normalized)
+    }
     return when {
-        "design" in normalized || "creative" in normalized || "ui" in normalized -> Color(0xFF8870DE)
+        "design" in normalized || "creative" in normalized || "ui/ux" in normalized || hasStandaloneToken("ui") -> Color(0xFF8870DE)
         "writing" in normalized || "content" in normalized || "research" in normalized -> Color(0xFFC77A55)
-        "ai" in normalized || "data" in normalized -> Color(0xFF4E8DCB)
+        hasStandaloneToken("ai") || "machine learning" in normalized || "data science" in normalized || "analytics" in normalized -> Color(0xFF4E8DCB)
         "video" in normalized || "marketing" in normalized -> Color(0xFFB18A39)
         "education" in normalized || "tutoring" in normalized -> Color(0xFF6C75CD)
         else -> Color(0xFF258E7A)
