@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
             // Keep nullable saved state compatible with older saved instances that stored null.
             // Null now resolves to the chosen dark default, never the device's light theme.
             // Version the saveable key so older activity state cannot restore the previous system-light default.
-            var localThemeOverride by rememberSaveable("skilllaunch-dark-theme-v2") {
+            var localThemeOverride by rememberSaveable(key = "skilllaunch-dark-theme-v2") {
                 mutableStateOf<Boolean?>(true)
             }
             val effectiveDarkTheme = localThemeOverride ?: true
