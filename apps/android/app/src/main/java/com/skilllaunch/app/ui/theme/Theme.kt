@@ -1,6 +1,5 @@
 package com.skilllaunch.app.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -53,7 +52,7 @@ private val SkillLaunchLightColorScheme = lightColorScheme(
 
 @Composable
 fun SkillLaunchTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) {
