@@ -111,6 +111,8 @@ private class OrdersViewModel(
     }
 
     fun selectOrder(orderId: String) {
+        // An older list refresh must not clear the loading state or overwrite a new selection.
+        ordersRequestGeneration += 1
         val requestGeneration = ++selectedOrderRequestGeneration
         viewModelScope.launch {
             _state.value = _state.value.copy(
@@ -475,6 +477,41 @@ fun OrdersScreen(
                 contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 28.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                if (state.isLoading) {
+                    item(key = "orders-loading") {
+                        androidx.compose.material3.LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                state.errorMessage?.let { error ->
+                    item(key = "orders-inline-error") {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Column(Modifier.padding(14.dp)) {
+                                Text(
+                                    "Order update failed",
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    error,
+                                    Modifier.padding(top = 4.dp),
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                TextButton(
+                                    onClick = viewModel::load,
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Text("Refresh orders")
+                                }
+                            }
+                        }
+                    }
+                }
                 items(
                     items = state.orders,
                     key = { it.id ?: it.createdAt.orEmpty() }
