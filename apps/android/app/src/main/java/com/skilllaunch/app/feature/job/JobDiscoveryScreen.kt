@@ -2241,14 +2241,17 @@ private fun DomainArtwork(
         DomainArtworkAtlas.load(context.applicationContext)
     }
     val safeIndex = index.coerceIn(0, 19)
-    val cellSize = 80
-    val painter = remember(atlas, safeIndex) {
-        atlas?.let {
+    val cellWidth = atlas?.width?.div(5) ?: 0
+    val cellHeight = atlas?.height?.div(4) ?: 0
+    val painter = remember(atlas, safeIndex, cellWidth, cellHeight) {
+        if (atlas != null && cellWidth > 0 && cellHeight > 0) {
             BitmapPainter(
-                image = it,
-                srcOffset = IntOffset((safeIndex % 5) * cellSize, (safeIndex / 5) * cellSize),
-                srcSize = IntSize(cellSize, cellSize)
+                image = atlas,
+                srcOffset = IntOffset((safeIndex % 5) * cellWidth, (safeIndex / 5) * cellHeight),
+                srcSize = IntSize(cellWidth, cellHeight)
             )
+        } else {
+            null
         }
     }
 
