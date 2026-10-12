@@ -58,8 +58,6 @@ class HomeRepository(
             )
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (cancelled: CancellationException) {
-            throw cancelled
         } catch (exception: HttpException) {
             val message = httpErrorMessage(
                 exception = exception,
