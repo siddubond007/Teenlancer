@@ -87,7 +87,7 @@ private class NotificationViewModel(
         val id = notification.id ?: return
         if (notification.isRead) return
 
-        requestGeneration += 1
+        val actionGeneration = ++requestGeneration
         _state.value = _state.value.copy(
             notifications = _state.value.notifications.map { current ->
                 if (current.id == id) current.copy(isRead = true) else current
@@ -98,7 +98,7 @@ private class NotificationViewModel(
         viewModelScope.launch {
             repository.markAsRead(id)
                 .onFailure {
-                    load(forceRefresh = true)
+                    if (actionGeneration == requestGeneration) load(forceRefresh = true)
                 }
         }
     }
@@ -106,7 +106,7 @@ private class NotificationViewModel(
     fun markAllAsRead() {
         if (_state.value.unread == 0) return
 
-        requestGeneration += 1
+        val actionGeneration = ++requestGeneration
         _state.value = _state.value.copy(
             notifications = _state.value.notifications.map { it.copy(isRead = true) },
             unread = 0
@@ -115,7 +115,7 @@ private class NotificationViewModel(
         viewModelScope.launch {
             repository.markAllAsRead()
                 .onFailure {
-                    load(forceRefresh = true)
+                    if (actionGeneration == requestGeneration) load(forceRefresh = true)
                 }
         }
     }
