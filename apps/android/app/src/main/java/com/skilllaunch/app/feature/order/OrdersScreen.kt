@@ -81,12 +81,16 @@ private class OrdersViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(OrdersUiState())
     val state = _state.asStateFlow()
+    private var ordersRequestGeneration = 0
+    private var selectedOrderRequestGeneration = 0
 
     fun load() {
+        val requestGeneration = ++ordersRequestGeneration
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, errorMessage = null)
             repository.getMyOrders()
                 .onSuccess { orders ->
+                    if (requestGeneration != ordersRequestGeneration) return@onSuccess
                     _state.value = _state.value.copy(
                         isLoading = false,
                         orders = orders,
@@ -96,6 +100,7 @@ private class OrdersViewModel(
                     )
                 }
                 .onFailure { error ->
+                    if (requestGeneration != ordersRequestGeneration) return@onFailure
                     _state.value = _state.value.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Unable to load orders."
@@ -105,20 +110,24 @@ private class OrdersViewModel(
     }
 
     fun selectOrder(orderId: String) {
+        val requestGeneration = ++selectedOrderRequestGeneration
         viewModelScope.launch {
             _state.value = _state.value.copy(
                 isLoading = true,
+                selectedOrder = null,
                 errorMessage = null,
                 actionMessage = null
             )
             repository.getOrder(orderId)
                 .onSuccess { order ->
+                    if (requestGeneration != selectedOrderRequestGeneration) return@onSuccess
                     _state.value = _state.value.copy(
                         isLoading = false,
                         selectedOrder = order
                     )
                 }
                 .onFailure { error ->
+                    if (requestGeneration != selectedOrderRequestGeneration) return@onFailure
                     _state.value = _state.value.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Unable to load this workspace."
@@ -128,6 +137,7 @@ private class OrdersViewModel(
     }
 
     fun clearSelection() {
+        selectedOrderRequestGeneration += 1
         _state.value = _state.value.copy(selectedOrder = null, actionMessage = null)
     }
 
