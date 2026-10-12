@@ -232,7 +232,7 @@ fun ChatScreen(
             }
         }
 
-        state.orders.isEmpty() -> {
+        state.orders.isEmpty() && state.errorMessage == null -> {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -255,7 +255,7 @@ fun ChatScreen(
             }
         }
 
-        state.errorMessage != null -> {
+        state.errorMessage != null && state.orders.isEmpty() -> {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -284,6 +284,41 @@ fun ChatScreen(
                 contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 28.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                if (state.isLoading) {
+                    item(key = "chat-list-loading") {
+                        androidx.compose.material3.LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                if (state.errorMessage != null) {
+                    item(key = "chat-list-error") {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Column(Modifier.padding(14.dp)) {
+                                Text(
+                                    "Conversation refresh failed",
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    state.errorMessage.orEmpty(),
+                                    Modifier.padding(top = 4.dp),
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                TextButton(
+                                    onClick = viewModel::loadOrders,
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Text("Refresh conversations")
+                                }
+                            }
+                        }
+                    }
+                }
                 item {
                     Text(
                         "Conversations",
