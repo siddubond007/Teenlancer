@@ -423,7 +423,7 @@ private fun FloatingNavigationDock(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(78.dp)
-                .shadow(24.dp, dockShape, clip = false)
+                .shadow(if (darkTheme) 8.dp else 16.dp, dockShape, clip = false)
                 .clip(dockShape)
                 .background(dockBrush)
                 .border(1.dp, dockOutline, dockShape)
