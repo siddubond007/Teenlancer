@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class GigUiState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val gigs: List<Gig> = emptyList(),
     val errorMessage: String? = null
 )
