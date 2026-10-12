@@ -458,7 +458,7 @@ fun JobDiscoveryScreen(
                     jobBudgetValue(it).takeIf { amount -> amount > 0.0 } ?: Double.POSITIVE_INFINITY
                 }
             )
-            else -> matching.sortedByDescending { it.createdAt.orEmpty() }
+            else -> matching.sortedByDescending { jobCreatedAtSortKey(it.createdAt) }
         }
     }
 
@@ -2309,6 +2309,18 @@ private fun displayCategoryLabel(category: String): String = when (category.lowe
     "software, desktop & cloud" -> "Software & Cloud"
     "legal services" -> "Legal Services"
     else -> category
+}
+
+private fun jobCreatedAtSortKey(value: String?): Long {
+    if (value.isNullOrBlank()) return Long.MIN_VALUE
+    return runCatching { java.time.Instant.parse(value).toEpochMilli() }.getOrNull()
+        ?: runCatching { java.time.OffsetDateTime.parse(value).toInstant().toEpochMilli() }.getOrNull()
+        ?: runCatching {
+            java.time.LocalDateTime.parse(value)
+                .toInstant(java.time.ZoneOffset.UTC)
+                .toEpochMilli()
+        }.getOrNull()
+        ?: Long.MIN_VALUE
 }
 
 private fun formatTimeAgo(value: String?): String {
