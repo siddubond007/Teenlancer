@@ -223,7 +223,7 @@ fun AuthenticatedAppShell(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            if (current != AppDestination.Home && current != AppDestination.Profile && current != AppDestination.Explore) {
+            if (current !in shellDestinations) {
                 CenterAlignedTopAppBar(
                     navigationIcon = {
                         IconButton(onClick = ::navigateBack) {
