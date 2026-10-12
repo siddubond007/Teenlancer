@@ -68,10 +68,19 @@ class ProfileViewModel(
             repository.getMyProfile()
                 .onSuccess { user ->
                     if (requestGeneration != profileLoadGeneration) return@onSuccess
-                    _uiState.value = _uiState.value.copy(
+                    val currentState = _uiState.value
+                    val previousProfile = currentState.profileUser?.profile
+                    val preserveEditedForm = previousProfile != null &&
+                        currentState.form != previousProfile.toFormState()
+                    _uiState.value = currentState.copy(
                         isLoading = false,
                         profileUser = user,
-                        form = user.profile.toFormState(),
+                        // Automatic refreshes must not silently discard unsaved profile edits.
+                        form = if (preserveEditedForm) {
+                            currentState.form
+                        } else {
+                            user.profile.toFormState()
+                        },
                         errorMessage = null
                     )
                 }
