@@ -23,11 +23,13 @@ class GigViewModel(
     val uiState: StateFlow<GigUiState> = _uiState.asStateFlow()
 
     private var hasLoaded = false
+    private var requestGeneration = 0
 
     fun loadGigs(forceRefresh: Boolean = false) {
         if (hasLoaded && !forceRefresh) {
             return
         }
+        val requestId = ++requestGeneration
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -37,6 +39,7 @@ class GigViewModel(
 
             repository.getGigs()
                 .onSuccess { gigs ->
+                    if (requestId != requestGeneration) return@onSuccess
                     hasLoaded = true
                     _uiState.value = GigUiState(
                         isLoading = false,
@@ -45,6 +48,7 @@ class GigViewModel(
                     )
                 }
                 .onFailure { error ->
+                    if (requestId != requestGeneration) return@onFailure
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = error.message
