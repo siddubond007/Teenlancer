@@ -125,7 +125,7 @@ class ProfileRepository(
         context: Context,
         uri: Uri
     ): Result<String> {
-        return runCatching {
+        return cancellableResult {
             val resolver = context.contentResolver
             val fileName = "profile-${System.currentTimeMillis()}.jpg"
             val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
