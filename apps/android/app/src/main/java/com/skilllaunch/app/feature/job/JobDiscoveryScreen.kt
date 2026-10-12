@@ -329,13 +329,15 @@ fun JobDiscoveryScreen(
         }.distinctBy { displayCategoryLabel(it).lowercase(Locale.ROOT) }
             .sortedBy { it.lowercase(Locale.ROOT) }
     }
-    val pickerCategories = remember(allCategories) {
-        (allCategories + fallbackExploreCategories)
-            .distinctBy { displayCategoryLabel(it).lowercase(Locale.ROOT) }
-            .sortedBy { displayCategoryLabel(it).lowercase(Locale.ROOT) }
-    }
+    // Only expose filters that can actually match returned projects. Static placeholders
+    // made the picker offer domains that silently produced zero results.
+    val pickerCategories = allCategories
     val featuredCategories = remember(allCategories, state.jobs, profileCategory, profileSkills) {
-        val curatedFallback = fallbackExploreCategories
+        val curatedFallback = fallbackExploreCategories.mapNotNull { preferred ->
+            allCategories.firstOrNull {
+                displayCategoryLabel(it).equals(displayCategoryLabel(preferred), ignoreCase = true)
+            }
+        }.distinctBy { displayCategoryLabel(it).lowercase(Locale.ROOT) }
         val profileDomain = profileCategory.trim()
         val profileDomainTokens = normalizedTokens(profileDomain)
         val normalizedSkills = profileSkills.map { it.lowercase(Locale.ROOT).trim() }
