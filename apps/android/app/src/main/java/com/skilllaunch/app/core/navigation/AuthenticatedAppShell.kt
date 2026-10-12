@@ -344,7 +344,8 @@ fun AuthenticatedAppShell(
                             user = user,
                             repository = orderRepository,
                             initialOrderId = key.orderId,
-                            refreshVersion = screenRefreshVersion.intValue
+                            refreshVersion = screenRefreshVersion.intValue,
+                            onBackFromWorkspace = ::navigateBack
                         )
                     }
 
