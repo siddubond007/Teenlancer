@@ -1,6 +1,7 @@
 package com.skilllaunch.app.feature.order
 
 import android.app.Activity
+import androidx.activity.compose.BackHandler
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.foundation.BorderStroke
@@ -369,6 +370,12 @@ fun OrdersScreen(
     }
 
     val selected = state.selectedOrder
+
+    // In the root Orders tab, Back should close the inline workspace first.
+    // A pushed OrderWorkspace route is handled by the app shell's back stack instead.
+    BackHandler(enabled = selected != null && initialOrderId == null) {
+        viewModel.clearSelection()
+    }
 
     if (selected != null) {
         OrderWorkspace(
