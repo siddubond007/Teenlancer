@@ -52,9 +52,11 @@ private class NotificationViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(NotificationUiState())
     val state = _state.asStateFlow()
+    private var requestGeneration = 0
 
     fun load(forceRefresh: Boolean = false) {
         if (!forceRefresh && !_state.value.isLoading && _state.value.notifications.isNotEmpty()) return
+        val requestId = ++requestGeneration
 
         viewModelScope.launch {
             _state.value = _state.value.copy(
@@ -64,6 +66,7 @@ private class NotificationViewModel(
 
             repository.getMyNotifications()
                 .onSuccess { response ->
+                    if (requestId != requestGeneration) return@onSuccess
                     _state.value = NotificationUiState(
                         isLoading = false,
                         notifications = response.notifications,
@@ -71,6 +74,7 @@ private class NotificationViewModel(
                     )
                 }
                 .onFailure { error ->
+                    if (requestId != requestGeneration) return@onFailure
                     _state.value = _state.value.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Unable to load notifications."
@@ -83,6 +87,7 @@ private class NotificationViewModel(
         val id = notification.id ?: return
         if (notification.isRead) return
 
+        requestGeneration += 1
         _state.value = _state.value.copy(
             notifications = _state.value.notifications.map { current ->
                 if (current.id == id) current.copy(isRead = true) else current
@@ -101,6 +106,7 @@ private class NotificationViewModel(
     fun markAllAsRead() {
         if (_state.value.unread == 0) return
 
+        requestGeneration += 1
         _state.value = _state.value.copy(
             notifications = _state.value.notifications.map { it.copy(isRead = true) },
             unread = 0
