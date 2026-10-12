@@ -49,12 +49,19 @@ class JobRepository(
                 page += 1
             }
 
+            val uniqueJobs = combinedJobs.fold(mutableListOf<Job>()) { collected, job ->
+                // Only deduplicate records with IDs; separate records with missing IDs stay visible.
+                if (job.id.isNullOrBlank() || collected.none { it.id == job.id }) {
+                    collected.add(job)
+                }
+                collected
+            }
             firstPage.copy(
-                jobs = combinedJobs.distinctBy { it.id },
+                jobs = uniqueJobs,
                 pagination = firstPage.pagination.copy(
                     page = 1,
-                    limit = combinedJobs.distinctBy { it.id }.size,
-                    totalPages = if (combinedJobs.isEmpty()) 0 else 1
+                    limit = uniqueJobs.size,
+                    totalPages = if (uniqueJobs.isEmpty()) 0 else 1
                 )
             )
         }
