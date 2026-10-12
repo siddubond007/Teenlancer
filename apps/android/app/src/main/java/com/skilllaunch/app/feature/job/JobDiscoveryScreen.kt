@@ -1290,8 +1290,7 @@ private fun ExploreCategoryTile(
 ) {
     val shape = RoundedCornerShape(17.dp)
     val tileBackground = when {
-        darkTheme && selected -> Color(0xFF181818)
-        darkTheme -> Color(0xFF101011)
+        darkTheme -> Color(0xFF050505)
         selected -> Color(0xFFECE7FC)
         else -> Color(0xFFF7F5FB)
     }
@@ -1521,8 +1520,15 @@ private fun DomainPickerRow(
             .clip(RoundedCornerShape(14.dp))
             .background(
                 if (selected) {
-                    if (darkTheme) Color(0xFF18181A) else Color(0xFFF0ECFF)
+                    if (darkTheme) Color(0xFF080809) else Color(0xFFF0ECFF)
                 } else Color.Transparent
+            )
+            .border(
+                width = if (selected) 1.dp else 0.dp,
+                color = if (selected) {
+                    if (darkTheme) Color.White.copy(alpha = 0.14f) else Color(0xFF8D82C0).copy(alpha = 0.24f)
+                } else Color.Transparent,
+                shape = RoundedCornerShape(14.dp)
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 9.dp),
@@ -1941,7 +1947,7 @@ private fun JobCard(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(iconShape)
-                        .background(if (darkTheme) Color(0xFF1A1A1C) else Color(0xFFF0EDF8))
+                        .background(if (darkTheme) Color(0xFF050505) else Color(0xFFF0EDF8))
                         .border(1.dp, if (darkTheme) Color.White.copy(alpha = 0.08f) else Color(0xFFE0DBEE), iconShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -2269,7 +2275,7 @@ private fun DomainArtwork(
         Image(
             painter = painter,
             contentDescription = contentDescription,
-            modifier = modifier
+            modifier = modifier.clip(RoundedCornerShape(10.dp))
         )
     } else {
         Box(
