@@ -1,5 +1,6 @@
 package com.skilllaunch.app.feature.job
 
+import android.content.Context
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -78,6 +79,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.unit.IntOffset
@@ -89,12 +91,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.SubcomposeAsyncImage
 import com.skilllaunch.app.core.common.collectAsStateWithLifecycleCompat
 import com.skilllaunch.app.data.model.job.Job
 import com.skilllaunch.app.data.model.job.SubmitBidRequest
 import com.skilllaunch.app.data.repository.job.JobRepository
 import com.skilllaunch.app.data.repository.profile.ProfileRepository
 import com.skilllaunch.app.R
+import kotlinx.coroutines.Job as CoroutineJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -111,6 +115,14 @@ private val RationaleFontFamily = FontFamily(
 )
 private val ViaodaLibreFontFamily = FontFamily(
     Font(R.font.viaoda_libre_regular, FontWeight.Normal)
+)
+
+private val fallbackExploreCategories = listOf(
+    "Web Development",
+    "Mobile App Development",
+    "Design & Creative",
+    "Data Science",
+    "Digital Marketing & SEO"
 )
 
 private fun normalizedTokens(value: String): Set<String> =
@@ -144,9 +156,12 @@ private class JobDiscoveryViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(JobDiscoveryUiState())
     val state = _state.asStateFlow()
+    private var loadJob: CoroutineJob? = null
 
     fun load(query: String? = null) {
-        viewModelScope.launch {
+        // A newer search/refresh must win over any older in-flight request.
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _state.value = _state.value.copy(
                 isLoading = true,
                 errorMessage = null
@@ -260,6 +275,8 @@ fun JobDiscoveryScreen(
     var returnToFiltersAfterDomainPicker by rememberSaveable { mutableStateOf(false) }
 
     var profileCategory by rememberSaveable { mutableStateOf("") }
+    var profileAvatarUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var profileDisplayName by rememberSaveable { mutableStateOf("Student") }
     var profileSkills by remember { mutableStateOf<List<String>>(emptyList()) }
     var savedJobIds by remember {
         mutableStateOf(
@@ -277,6 +294,12 @@ fun JobDiscoveryScreen(
     LaunchedEffect(profileRepository, userId) {
         profileRepository.getMyProfile().onSuccess { profileUser ->
             val profile = profileUser.profile
+            profileAvatarUrl = profile?.avatarUrl?.trim()?.takeIf(String::isNotBlank)
+            profileDisplayName = profileUser.fullName?.trim()?.takeIf(String::isNotBlank)
+                ?: listOfNotNull(profileUser.firstName?.trim(), profileUser.lastName?.trim())
+                    .filter(String::isNotBlank)
+                    .joinToString(" ")
+                    .ifBlank { "Student" }
             profileCategory = sequenceOf(
                 profile?.category,
                 profile?.onboardingData?.primaryDomain
@@ -302,19 +325,16 @@ fun JobDiscoveryScreen(
     val allCategories = remember(state.jobs) {
         state.jobs.mapNotNull {
             it.category?.trim()?.takeIf(String::isNotBlank)
-        }.distinctBy { it.lowercase(Locale.ROOT) }
+        }.distinctBy { displayCategoryLabel(it).lowercase(Locale.ROOT) }
             .sortedBy { it.lowercase(Locale.ROOT) }
     }
+    val pickerCategories = remember(allCategories) {
+        (allCategories + fallbackExploreCategories)
+            .distinctBy { displayCategoryLabel(it).lowercase(Locale.ROOT) }
+            .sortedBy { displayCategoryLabel(it).lowercase(Locale.ROOT) }
+    }
     val featuredCategories = remember(allCategories, state.jobs, profileCategory, profileSkills) {
-        val curatedFallback = listOf(
-            "Web Development",
-            "Mobile App Development",
-            "Design & Creative",
-            "AI, Machine Learning & Data Science",
-            "Digital Marketing & SEO"
-        ).filter { preferred ->
-            allCategories.any { it.equals(preferred, ignoreCase = true) }
-        }
+        val curatedFallback = fallbackExploreCategories
         val profileDomain = profileCategory.trim()
         val profileDomainTokens = normalizedTokens(profileDomain)
         val normalizedSkills = profileSkills.map { it.lowercase(Locale.ROOT).trim() }
@@ -362,7 +382,7 @@ fun JobDiscoveryScreen(
         }
         (personalized + curatedFallback + ranked)
             .distinctBy { displayCategoryLabel(it).lowercase(Locale.ROOT) }
-            .take(3)
+            .take(5)
     }
 
     val skillScopeCategory = if (showFilterDialog || returnToFiltersAfterDomainPicker) {
@@ -573,6 +593,8 @@ fun JobDiscoveryScreen(
                     ExploreBrandHeader(
                         darkTheme = darkTheme,
                         textPrimary = textPrimary,
+                        avatarUrl = profileAvatarUrl,
+                        displayName = profileDisplayName,
                         onOpenNotifications = onOpenNotifications
                     )
                 }
@@ -647,17 +669,33 @@ fun JobDiscoveryScreen(
                     }
                 }
 
-                if (allCategories.isNotEmpty()) {
+                if (featuredCategories.isNotEmpty()) {
                     item(key = "explore-categories") {
                         Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                            Text(
-                                "RECOMMENDED DOMAINS",
-                                color = textMuted,
-                                fontFamily = RationaleFontFamily,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.0.sp
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "RECOMMENDED DOMAINS",
+                                    modifier = Modifier.weight(1f),
+                                    color = textMuted,
+                                    fontFamily = RationaleFontFamily,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.0.sp
+                                )
+                                TextButton(
+                                    onClick = {
+                                        domainSearch = ""
+                                        returnToFiltersAfterDomainPicker = false
+                                        showDomainPicker = true
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) {
+                                    Text("View all  ›", color = lavender, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
                             Row(
                                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -714,17 +752,6 @@ fun JobDiscoveryScreen(
                                         }
                                     )
                                 }
-                                ExploreCategoryTile(
-                                    label = "All domains",
-                                    selected = showDomainPicker,
-                                    artworkIndex = -2,
-                                    darkTheme = darkTheme,
-                                    onClick = {
-                                        domainSearch = ""
-                                        returnToFiltersAfterDomainPicker = false
-                                        showDomainPicker = true
-                                    }
-                                )
                             }
                         }
                     }
@@ -927,7 +954,7 @@ fun JobDiscoveryScreen(
 
     if (showDomainPicker) {
         DomainPickerDialog(
-            categories = allCategories,
+            categories = pickerCategories,
             selectedCategory = if (returnToFiltersAfterDomainPicker) draftSelectedCategory else selectedCategory,
             query = domainSearch,
             onQueryChange = { domainSearch = it },
@@ -2083,12 +2110,18 @@ private fun JobCard(
 }
 
 private fun jobCategoryArtwork(category: String): Int {
-    val normalized = category.lowercase(Locale.ROOT)
+    val normalized = displayCategoryLabel(category).lowercase(Locale.ROOT)
+    fun hasStandaloneAi(): Boolean =
+        Regex("(^|[^a-z])ai([^a-z]|$)").containsMatchIn(normalized)
+
     return when {
-        "admin" in normalized || "customer support" in normalized || "virtual assistant" in normalized -> 7
-        "ai" in normalized || "machine learning" in normalized || "artificial intelligence" in normalized -> 10
+        "admin" in normalized || "customer support" in normalized ||
+            "virtual assistant" in normalized || "support" in normalized -> 7
+        hasStandaloneAi() || "machine learning" in normalized ||
+            "artificial intelligence" in normalized -> 10
         "cyber" in normalized || "security" in normalized || "legal" in normalized -> 11
-        "business" in normalized || "finance" in normalized || "human resources" in normalized || " hr" in normalized -> 6
+        "business" in normalized || "finance" in normalized ||
+            Regex("(^|[^a-z])hr([^a-z]|$)").containsMatchIn(normalized) -> 6
         "design" in normalized || "creative" in normalized || "ui/ux" in normalized -> 2
         "marketing" in normalized || "seo" in normalized || "advertis" in normalized -> 4
         "e-commerce" in normalized || "ecommerce" in normalized || "retail" in normalized -> 17
@@ -2097,10 +2130,12 @@ private fun jobCategoryArtwork(category: String): Int {
         "events" in normalized || "drones" in normalized || "local services" in normalized -> 16
         "gaming" in normalized || "esports" in normalized -> 12
         "data science" in normalized || "analytics" in normalized || "statistics" in normalized -> 3
-        "mobile" in normalized || "android" in normalized || "ios" in normalized || "app development" in normalized -> 1
+        "mobile" in normalized || "android" in normalized || "ios" in normalized ||
+            "app development" in normalized -> 1
         "photography" in normalized || "image editing" in normalized || "photo" in normalized -> 15
         "social media" in normalized || "community" in normalized -> 18
-        "software" in normalized || "desktop" in normalized || "cloud" in normalized || "web development" in normalized || "web" in normalized -> 0
+        "software" in normalized || "desktop" in normalized || "cloud" in normalized ||
+            "web development" in normalized || normalized == "web" -> 0
         "translation" in normalized || "transcription" in normalized || "language" in normalized -> 14
         "video" in normalized || "audio" in normalized || "animation" in normalized -> 8
         "writing" in normalized || "content" in normalized || "copywriting" in normalized -> 13
@@ -2115,16 +2150,11 @@ private fun DomainArtwork(
     contentDescription: String? = null
 ) {
     val context = LocalContext.current
-    val atlas = remember(context) {
-        runCatching {
-            BitmapFactory.decodeResource(
-                context.resources,
-                R.drawable.domain_art_sprite
-            )?.asImageBitmap()
-        }.getOrNull()
+    val atlas = remember(context.applicationContext) {
+        DomainArtworkAtlas.load(context.applicationContext)
     }
     val safeIndex = index.coerceIn(0, 19)
-    val cellSize = 48
+    val cellSize = 80
     val painter = remember(atlas, safeIndex) {
         atlas?.let {
             BitmapPainter(
