@@ -1908,7 +1908,11 @@ private fun JobCard(
     val tint = jobCategoryAccent(categoryName)
     val isHourly = job.projectType.orEmpty().contains("hour", ignoreCase = true) ||
         job.budgetType.orEmpty().contains("hour", ignoreCase = true)
-    val budgetCaption = if (isHourly) "HOURLY RATE" else "FIXED BUDGET"
+    val budgetCaption = when {
+        isHourly -> "HOURLY RATE"
+        job.projectType.orEmpty().contains("contest", ignoreCase = true) -> "CONTEST PRIZE"
+        else -> "FIXED BUDGET"
+    }
     val shape = RoundedCornerShape(25.dp)
     val cardSurface = if (darkTheme) Color(0xF5121213) else Color(0xF7FFFFFF)
     val outline = if (darkTheme) Color.White.copy(alpha = 0.10f) else Color(0xFF9C90C7).copy(alpha = 0.14f)
