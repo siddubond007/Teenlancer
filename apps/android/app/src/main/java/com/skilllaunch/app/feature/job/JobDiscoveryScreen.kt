@@ -440,7 +440,8 @@ fun JobDiscoveryScreen(
             val actualType = when {
                 job.projectType.orEmpty().contains("hour", ignoreCase = true) ||
                     job.budgetType.orEmpty().contains("hour", ignoreCase = true) -> "Hourly"
-                job.projectType.orEmpty().contains("contest", ignoreCase = true) -> "Contest"
+                job.projectType.orEmpty().contains("contest", ignoreCase = true) ||
+                    job.budgetType.orEmpty().contains("contest", ignoreCase = true) -> "Contest"
                 else -> "Fixed price"
             }
             val matchesType = selectedProjectTypes.isEmpty() || actualType in selectedProjectTypes
@@ -1920,7 +1921,8 @@ private fun JobCard(
         job.budgetType.orEmpty().contains("hour", ignoreCase = true)
     val budgetCaption = when {
         isHourly -> "HOURLY RATE"
-        job.projectType.orEmpty().contains("contest", ignoreCase = true) -> "CONTEST PRIZE"
+        job.projectType.orEmpty().contains("contest", ignoreCase = true) ||
+            job.budgetType.orEmpty().contains("contest", ignoreCase = true) -> "CONTEST PRIZE"
         else -> "FIXED BUDGET"
     }
     val shape = RoundedCornerShape(25.dp)
