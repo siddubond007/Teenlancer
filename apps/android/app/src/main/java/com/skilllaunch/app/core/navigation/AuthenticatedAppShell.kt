@@ -187,8 +187,9 @@ fun AuthenticatedAppShell(
             if (backStack.size != 1 || current != destination) {
                 backStack.clear()
                 backStack.add(destination)
-                screenRefreshVersion.intValue += 1
             }
+            // Re-selecting the current tab is also an explicit refresh gesture.
+            screenRefreshVersion.intValue += 1
             return
         }
 
