@@ -138,7 +138,11 @@ private class OrdersViewModel(
 
     fun clearSelection() {
         selectedOrderRequestGeneration += 1
-        _state.value = _state.value.copy(selectedOrder = null, actionMessage = null)
+        _state.value = _state.value.copy(
+            isLoading = false,
+            selectedOrder = null,
+            actionMessage = null
+        )
     }
 
     fun prepareCheckout(orderId: String) {
