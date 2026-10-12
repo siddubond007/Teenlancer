@@ -71,7 +71,10 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
             // The in-app appearance toggle remains available as an explicit user choice.
             // Keep nullable saved state compatible with older saved instances that stored null.
             // Null now resolves to the chosen dark default, never the device's light theme.
-            var localThemeOverride by rememberSaveable { mutableStateOf<Boolean?>(true) }
+            // Version the saveable key so older activity state cannot restore the previous system-light default.
+            var localThemeOverride by rememberSaveable("skilllaunch-dark-theme-v2") {
+                mutableStateOf<Boolean?>(true)
+            }
             val effectiveDarkTheme = localThemeOverride ?: true
             val darkThemeState: State<Boolean> = androidx.compose.runtime.derivedStateOf {
                 effectiveDarkTheme
