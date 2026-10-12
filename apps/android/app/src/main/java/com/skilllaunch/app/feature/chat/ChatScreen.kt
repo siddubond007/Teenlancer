@@ -1,5 +1,6 @@
 package com.skilllaunch.app.feature.chat
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -204,6 +205,11 @@ fun ChatScreen(
     }
 
     val selectedId = state.selectedOrderId
+
+    // Back returns from an open conversation to the conversation list before leaving Chat.
+    BackHandler(enabled = selectedId != null) {
+        viewModel.clearSelection()
+    }
 
     if (selectedId != null) {
         ChatConversation(
